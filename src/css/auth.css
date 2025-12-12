@@ -1,0 +1,105 @@
+/* src/css/auth.css */
+.auth-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 60vh;
+  padding: 20px;
+}
+
+.auth-card {
+  background: #13151c;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 40px;
+  border-radius: 24px;
+  width: 100%;
+  max-width: 400px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+  text-align: center;
+}
+
+.auth-card h2 {
+  margin: 0 0 10px;
+  font-size: 2rem;
+  background: linear-gradient(to right, #fff, #a5a5a5);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.auth-desc {
+  color: #888;
+  margin-bottom: 30px;
+  font-size: 0.95rem;
+}
+
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.auth-input {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 14px;
+  border-radius: 12px;
+  color: #fff;
+  font-size: 1rem;
+  transition: all 0.2s;
+}
+
+.auth-input:focus {
+  border-color: #4ae8ff;
+  background: rgba(255, 255, 255, 0.08);
+  box-shadow: 0 0 15px rgba(74, 232, 255, 0.1);
+}
+
+.auth-btn {
+  background: linear-gradient(135deg, #4ae8ff, #4a8aff);
+  color: #000;
+  border: none;
+  padding: 14px;
+  border-radius: 12px;
+  font-weight: 700;
+  font-size: 1rem;
+  cursor: pointer;
+  margin-top: 10px;
+  transition: transform 0.2s;
+}
+
+.auth-btn:hover {
+  transform: scale(1.02);
+}
+
+.auth-switch {
+  margin-top: 20px;
+  font-size: 0.9rem;
+  color: #aaa;
+}
+
+.auth-switch span {
+  color: #4ae8ff;
+  cursor: pointer;
+  font-weight: 600;
+  text-decoration: underline;
+}
+
+.auth-error {
+  background: rgba(255, 80, 80, 0.1);
+  color: #ff5050;
+  padding: 10px;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  margin-bottom: 15px;
+  border: 1px solid rgba(255, 80, 80, 0.2);
+}
+
+.auth-success {
+  background: rgba(0, 230, 118, 0.1);
+  color: #00e676;
+  padding: 10px;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  margin-bottom: 15px;
+  border: 1px solid rgba(0, 230, 118, 0.2);
+}

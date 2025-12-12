@@ -1,0 +1,168 @@
+/* src/css/archive.css */
+.archive-container {
+  padding-top: 20px;
+}
+
+.archive-header {
+  margin-bottom: 30px;
+}
+
+.archive-header h1 {
+  font-size: 2.5rem;
+  margin: 0 0 10px 0;
+}
+
+.filter-bar {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  background: #13151c;
+  padding: 15px;
+  border-radius: 16px;
+  border: 1px solid rgba(255,255,255,0.08);
+  align-items: center;
+  position: relative; /* Importante per il dropdown */
+  z-index: 10;
+}
+
+.filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  position: relative;
+}
+
+.filter-label {
+  font-size: 0.75rem;
+  color: #888;
+  font-weight: 600;
+  text-transform: uppercase;
+  margin-left: 4px;
+}
+
+.filter-select, .filter-trigger {
+  background: #0f1016;
+  border: 1px solid rgba(255,255,255,0.15);
+  color: #fff;
+  padding: 10px 14px;
+  border-radius: 8px;
+  min-width: 140px;
+  cursor: pointer;
+  appearance: none;
+  font-size: 0.9rem;
+  text-align: left;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* Freccetta custom per select normale */
+.filter-select {
+  background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23cccccc%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px top 50%;
+  background-size: 10px auto;
+}
+
+.filter-select option {
+  background-color: #0f1016;
+  color: #fff;
+  padding: 10px;
+}
+
+.filter-select:hover, .filter-trigger:hover {
+  border-color: #fff;
+}
+
+/* --- MULTI SELECT DROPDOWN --- */
+.dropdown-menu {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  margin-top: 5px;
+  background: #1a1d26;
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 12px;
+  padding: 10px;
+  width: 300px; /* Più largo per le colonne */
+  z-index: 50;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+  display: grid;
+  grid-template-columns: 1fr 1fr; /* Due colonne */
+  gap: 5px;
+}
+
+.dropdown-item {
+  padding: 8px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #ccc;
+  transition: all 0.2s;
+}
+
+.dropdown-item:hover {
+  background: rgba(255,255,255,0.05);
+  color: #fff;
+}
+
+.dropdown-item.selected {
+  background: rgba(74, 232, 255, 0.15);
+  color: #4ae8ff;
+  font-weight: 600;
+}
+
+/* Checkbox simulato */
+.checkbox-circle {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 2px solid #555;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.dropdown-item.selected .checkbox-circle {
+  border-color: #4ae8ff;
+  background: #4ae8ff;
+}
+
+.dropdown-item.selected .checkbox-circle::after {
+  content: '';
+  width: 6px;
+  height: 6px;
+  background: #000;
+  border-radius: 50%;
+}
+
+/* Chiusura dropdown background */
+.dropdown-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+}
+
+/* Stile Badge Rating */
+.rating-badge {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  font-weight: 800;
+  font-size: 0.85rem;
+  padding: 4px 8px;
+  border-radius: 6px;
+  color: #000;
+  z-index: 5;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+}
+
+.load-more-container {
+  display: flex;
+  justify-content: center;
+  margin-top: 40px;
+  margin-bottom: 20px;
+}

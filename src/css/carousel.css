@@ -1,0 +1,117 @@
+/* src/css/carousel.css */
+
+.carousel-wrapper {
+  position: relative;
+  margin-top: 40px;
+  margin-bottom: 40px;
+  /* Quando passi il mouse sopra, le frecce appaiono dolcemente */
+  &:hover .carousel-btn {
+    opacity: 1;
+    transform: translateY(-50%) scale(1);
+  }
+}
+
+.carousel-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 15px;
+  padding-left: 20px; /* Allineato col padding della pagina */
+}
+
+.carousel-title {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: #fff;
+  margin: 0;
+  text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+}
+
+.carousel-icon {
+  font-size: 1.4rem;
+}
+
+/* TRACK SCORREVOLE */
+.carousel-track {
+  display: flex;
+  gap: 16px;
+  overflow-x: auto;
+  padding: 20px 20px 40px 20px; /* Spazio extra sotto per l'hover delle card */
+  
+  /* --- LA MAGIA PER LA FLUIDITÀ --- */
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch; /* Fluido su mobile */
+  
+  /* Nascondi scrollbar */
+  scrollbar-width: none; 
+  -ms-overflow-style: none;
+}
+
+.carousel-track::-webkit-scrollbar {
+  display: none;
+}
+
+.carousel-item {
+  flex: 0 0 auto;
+  width: 200px;
+  transition: transform 0.3s ease;
+}
+
+/* BOTTONI NAVIGAZIONE */
+.carousel-btn {
+  position: absolute;
+  top: 50%; /* Perfettamente centrati */
+  z-index: 20;
+  
+  background: rgba(20, 20, 20, 0.7); /* Scuro semitrasparente */
+  color: #fff;
+  border: none;
+  width: 50px; /* Più grandi */
+  height: 50px;
+  border-radius: 50%;
+  cursor: pointer;
+  
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  
+  /* Transizioni fluide per apparizione */
+  opacity: 0; 
+  transform: translateY(-50%) scale(0.8);
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+  
+  backdrop-filter: blur(4px);
+  box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+}
+
+.carousel-btn:hover {
+  background: #fff;
+  color: #000;
+  transform: translateY(-50%) scale(1.15) !important; /* Ingrandisce all'hover */
+  box-shadow: 0 0 20px rgba(255, 255, 255, 0.4);
+}
+
+.carousel-btn.left {
+  left: 10px; /* Leggermente interno */
+}
+
+.carousel-btn.right {
+  right: 10px; /* Leggermente interno */
+}
+
+/* Disabilita selezione */
+.carousel-wrapper {
+  user-select: none;
+}
+
+/* MOBILE */
+@media (max-width: 768px) {
+  .carousel-item {
+    width: 140px; /* Più piccoli su mobile */
+  }
+  /* Su mobile le frecce spesso danno fastidio, meglio lo swipe naturale */
+  .carousel-btn {
+    display: none;
+  }
+}
