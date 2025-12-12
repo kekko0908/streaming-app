@@ -1,6 +1,7 @@
 import "../css/navbar.css";
 import { ViewType } from "../types/types";
 import { Session } from "@supabase/supabase-js";
+import logo from "../assets/logo.png"; 
 
 interface NavbarProps {
   view: ViewType;
@@ -22,7 +23,7 @@ export default function Navbar({
       <div className="nav-left">
         {/* LOGO */}
         <div className="logo" onClick={() => { setView("home"); resetSelection(); }}>
-          <span className="badge">SFA</span>
+         <img src={logo} alt="SFA Logo" className="logo-img" />
           <div>
             <div className="logo-title">Streaming For All</div>
             <div className="logo-sub">Cinema a casa tua</div>

@@ -26,7 +26,16 @@
   align-items: center;
   gap: 12px;
   cursor: pointer;
-  min-width: max-content;
+  transition: transform 0.2s;
+}
+.logo:hover {
+  transform: scale(1.02);
+}
+.logo-img {
+  height: 60px;       /* Altezza giusta per la navbar */
+  width: auto;        /* Mantiene le proporzioni */
+  border-radius: 8px; /* Arrotonda leggermente gli angoli se ha lo sfondo */
+  object-fit: contain;
 }
 
 .badge {
