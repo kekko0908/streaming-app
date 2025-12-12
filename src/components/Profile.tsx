@@ -12,7 +12,10 @@ const AVATAR_OPTIONS = [
   "https://api.dicebear.com/7.x/bottts/svg?seed=C-3PO",
   "https://api.dicebear.com/7.x/bottts/svg?seed=R2D2",
   "https://api.dicebear.com/7.x/avataaars/svg?seed=Scooby",
-  "https://api.dicebear.com/7.x/avataaars/svg?seed=Shaggy"
+  "https://api.dicebear.com/7.x/avataaars/svg?seed=Shaggy",
+  "https://api.dicebear.com/9.x/avataaars/svg?seed=Wyatt",
+  "https://api.dicebear.com/9.x/avataaars/svg?seed=Liam",
+  "https://api.dicebear.com/9.x/avataaars/svg?seed=Oliver"
 ];
 
 const COLORS = ['#4ae8ff', '#ff1744', '#ffd700', '#00e676', '#d500f9']; 
