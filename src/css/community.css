@@ -1,0 +1,99 @@
+/* src/css/community.css */
+
+.community-pulse-container {
+  margin: 30px 0;
+  padding: 0 20px;
+  overflow: hidden; /* Nasconde quello che esce dai bordi */
+}
+
+.community-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 15px;
+}
+
+.community-header h3 {
+  font-size: 1.2rem;
+  color: #fff;
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+/* Pallino rosso pulsante */
+.pulse-dot {
+  width: 10px;
+  height: 10px;
+  background-color: #ff1744;
+  border-radius: 50%;
+  box-shadow: 0 0 0 rgba(255, 23, 68, 0.4);
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(255, 23, 68, 0.7); }
+  70% { transform: scale(1); box-shadow: 0 0 0 10px rgba(255, 23, 68, 0); }
+  100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(255, 23, 68, 0); }
+}
+
+/* --- ANIMAZIONE SCORRIMENTO INFINITO --- */
+
+/* Il contenitore che si muove */
+.activity-track {
+  display: flex;
+  gap: 15px;
+  width: max-content; /* Si allarga quanto serve */
+  /* Durata: 40s per fare un giro completo. Linear per non farlo rallentare. Infinite. */
+  animation: scroll 60s linear infinite; 
+}
+
+/* Quando passi col mouse, si ferma per leggere */
+.activity-track:hover {
+  animation-play-state: paused;
+}
+
+@keyframes scroll {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    /* Sposta a sinistra del 50% (perché abbiamo duplicato la lista nel componente) */
+    transform: translateX(-50%);
+  }
+}
+
+/* Card Attività */
+.activity-card {
+  flex: 0 0 auto;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 50px;
+  padding: 5px 20px 5px 5px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 0.9rem;
+  white-space: nowrap; /* Impedisce al testo di andare a capo */
+}
+
+.activity-poster {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid #4ae8ff;
+}
+
+.user-name { color: #4ae8ff; font-weight: bold; }
+.action-text { color: #aaa; }
+.media-title { color: #fff; font-weight: 600; }
+.activity-crown { margin-left: 5px; }
+
+.time-ago {
+  font-size: 0.7rem;
+  color: #666;
+  margin-left: 10px;
+  border-left: 1px solid #444;
+  padding-left: 10px;
+}
