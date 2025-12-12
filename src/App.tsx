@@ -30,7 +30,7 @@ import CastList from "./components/CastList";
 import Profile from "./components/Profile";
 import CommunityPulse from "./components/CommunityPulse"; 
 import SiteLock from "./components/SiteLock"; 
-import ShuffleModal from "./components/ShuffleMOdal"; 
+import ShuffleModal from "./components/ShuffleModal"; 
 import ShuffleFilterModal from "./components/ShuffleFilterModal"; 
 
 export default function App() {
