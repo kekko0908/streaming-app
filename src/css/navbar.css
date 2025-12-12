@@ -140,3 +140,32 @@
   }
   .nav-links::-webkit-scrollbar { display: none; }
 }
+/* 1. Transizione fluida per tutti i bottoni */
+.pill {
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+/* 2. HOVER sui bottoni inattivi (Ghost) */
+.pill.ghost:hover {
+  background: rgba(74, 232, 255, 0.1); /* Sfondo azzurrino appena accennato (non nero!) */
+  color: #4ae8ff;                       /* Testo che diventa Blu/Ciano Elettrico */
+  border-color: #4ae8ff;                /* Anche il bordo si illumina */
+  transform: translateY(-2px);          /* Piccolo effetto di sollevamento */
+  box-shadow: 0 4px 12px rgba(74, 232, 255, 0.2); /* Glow leggero sotto */
+}
+
+/* 3. HOVER sul bottone attivo (Solid - es. "Home" quando sei in Home) */
+.pill.solid:hover {
+  filter: brightness(1.15); /* Diventa leggermente più luminoso */
+  transform: translateY(-2px);
+  box-shadow: 0 6px 15px rgba(74, 232, 255, 0.4);
+}
+
+/* 4. Opzionale: Fix specifico per il bottone ESCI (che è rosso) */
+/* Questo serve per non farlo diventare blu, ma rosso acceso */
+.pill.ghost:last-child:hover {
+    background: rgba(255, 80, 80, 0.1);
+    color: #ff5050 !important;
+    border-color: #ff5050 !important;
+    box-shadow: 0 4px 12px rgba(255, 80, 80, 0.2);
+}
