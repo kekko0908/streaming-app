@@ -30,7 +30,7 @@ export default function Card({ item, onClick, progress, onRemove, isUpcoming, sh
   
   // Calcoliamo lo stato solo se è una TV e abbiamo progresso
   if (item.type === 'tv' && progress) {
-    const isMarkedCompleted = item.status === 'visto' || (item as any).status === 'gia-guardato';
+    const isMarkedCompleted = item.status === 'gia-guardato';
     if (item.seasons && item.seasons > progress.season) { 
         hasNewEpisodes = true; 
     } else if (isMarkedCompleted) { 
@@ -50,7 +50,7 @@ export default function Card({ item, onClick, progress, onRemove, isUpcoming, sh
     <article className={`card ${isCompleted ? 'is-completed' : ''}`} onClick={onClick}>
       {/* Gestione poster sicuro */}
       <img 
-        src={item.posterPath ? `https://image.tmdb.org/t/p/w500${item.posterPath}` : (item.poster || "https://via.placeholder.com/500x750")} 
+        src={item.poster ? `https://image.tmdb.org/t/p/w500${item.poster}` : (item.poster || "https://via.placeholder.com/500x750")} 
         alt={item.title} 
         loading="lazy" 
       />
