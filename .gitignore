@@ -1,0 +1,25 @@
+# Dipendenze (GIGANTI - Non caricare mai)
+node_modules/
+
+# Cartella di Build (Si ricrea da sola)
+dist/
+dist-ssr/
+
+# Variabili d'Ambiente (Password segrete)
+.env
+.env.local
+.env.*.local
+
+# File di Sistema inutili
+.DS_Store
+Thumbs.db
+
+# Log di errore npm
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Editor
+.vscode/
+.idea/
