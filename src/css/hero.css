@@ -459,3 +459,82 @@
   from { opacity: 1; transform: translate(-50%, -50%) scale(0); }
   to { opacity: 0; transform: translate(-50%, -50%) scale(2); }
 }
+/* Stile Base (Desktop) */
+.star-rating-container {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center; /* Centra il contenuto */
+  gap: 8px;
+  margin-top: 15px;
+  padding: 8px 15px;
+  background: rgba(0, 0, 0, 0.6);
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(4px);
+  position: relative;
+  width: fit-content; /* Si adatta al contenuto */
+}
+
+.rating-label-text {
+  margin-right: 5px;
+  opacity: 0.9;
+  color: #ddd;
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: 1px;
+}
+
+.stars-wrapper {
+  display: flex;
+  gap: 2px;
+}
+
+.star-btn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  font-size: 1.4rem; /* Dimensione stelle desktop */
+  line-height: 1;
+  transition: transform 0.2s, color 0.2s;
+}
+
+.rating-score {
+  margin-left: 10px;
+  font-weight: 800;
+  font-size: 1.1rem;
+  color: #FFD700;
+  min-width: 35px;
+  text-align: right;
+}
+
+/* --- MOBILE RESPONSIVE (Modifiche specifiche per il telefono) --- */
+@media (max-width: 768px) {
+  
+  /* 1. Centriamo il contenitore nella pagina */
+  .star-rating-container {
+    display: flex;
+    width: 100%; /* Occupa tutta la larghezza */
+    justify-content: space-between; /* Spazia bene gli elementi */
+    padding: 10px 15px;
+    margin-bottom: 20px; /* Stacca dai bottoni sotto */
+    box-sizing: border-box;
+  }
+
+  /* 2. Rimpiccioliamo le stelle per farle entrare tutte */
+  .star-btn {
+    font-size: 1.1rem; /* Stelle più piccole */
+  }
+
+  /* 3. Testo più compatto */
+  .rating-label-text {
+    font-size: 0.75rem;
+    margin-right: 0;
+  }
+
+  .rating-score {
+    font-size: 0.9rem;
+    margin-left: 5px;
+    min-width: auto;
+  }
+}

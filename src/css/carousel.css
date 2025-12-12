@@ -115,3 +115,19 @@
     display: none;
   }
 }
+@media (max-width: 768px) {
+  /* Nascondi le frecce su mobile (si usa lo swipe) */
+  .carousel-btn {
+    display: none;
+  }
+  
+  .carousel-track {
+    padding-left: 15px; /* Margine sinistro per non attaccare al bordo */
+    scroll-snap-type: x mandatory; /* Scatto magnetico opzionale */
+  }
+  
+  .carousel-item {
+    width: 140px; /* Card leggermente più piccole */
+    scroll-snap-align: start;
+  }
+}

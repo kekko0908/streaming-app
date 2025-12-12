@@ -95,3 +95,35 @@ input.search-input, input[type="text"], input[type="number"] {
   border: 1px solid rgba(255,255,255,0.2);
 }
 input::placeholder { color: #888; }
+
+/* --- RESPONSIVE MOBILE (Sotto 768px) --- */
+@media (max-width: 768px) {
+  /* La griglia diventa a 2 colonne fisse */
+  .grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px; /* Meno spazio tra le card */
+    padding: 0 10px;
+  }
+
+  /* Testi più piccoli */
+  h1 { font-size: 1.8rem; }
+  h2 { font-size: 1.4rem; }
+  
+  /* I bottoni delle sezioni (Home, Archivio) diventano più piccoli */
+  .pill {
+    padding: 6px 12px;
+    font-size: 0.8rem;
+  }
+  .app {
+    background-color: #141414; 
+  }
+
+  /* Rimuove margini strani tra Hero e Cast su mobile */
+  .hero + .cast-list, 
+  .hero + div {
+    position: relative;
+    z-index: 20; /* Sta sopra l'immagine fissa */
+    background: #141414; /* Continua lo sfondo nero */
+    padding-bottom: 20px;
+  }
+}

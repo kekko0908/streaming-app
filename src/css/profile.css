@@ -154,3 +154,36 @@
   height: 12px;
   border-radius: 50%;
 }
+@media (max-width: 768px) {
+  .profile-container {
+    padding: 20px 15px;
+  }
+
+  .profile-header h1 {
+    font-size: 2rem;
+  }
+
+  /* Le statistiche (ore, film, serie) vanno su 2 colonne o 1 */
+  .stats-grid {
+    grid-template-columns: 1fr; /* Una sotto l'altra per impatto */
+  }
+
+  /* La sezione divisa diventa una colonna unica */
+  .profile-split {
+    grid-template-columns: 1fr;
+    gap: 30px;
+  }
+
+  /* Grafico a torta centrato */
+  .chart-section {
+    flex-direction: column;
+    text-align: center;
+  }
+  
+  /* Avatar più piccolo */
+  .profile-avatar {
+    width: 90px;
+    height: 90px;
+    font-size: 2rem;
+  }
+}
