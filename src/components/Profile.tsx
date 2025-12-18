@@ -58,12 +58,33 @@ export default function Profile() {
 
   // --- HANDLERS AZIONI ---
 
-  const handleUpdateAvatar = async (url: string) => {
+ const handleUpdateAvatar = async (url: string) => {
+    // 1. Aggiorna la tabella PROFILES (per la Community)
+    if (user && user.id) {
+        const { error } = await supabase
+            .from('profiles')
+            .upsert({ 
+                id: user.id, 
+                avatar_url: url,
+                updated_at: new Date().toISOString()
+            });
+            
+        if (error) {
+            console.error("Errore salvataggio profilo:", error);
+            alert("Errore nel salvataggio dell'avatar.");
+            return;
+        }
+    }
+
+    // 2. Aggiorna i metadati Auth (per la sessione locale veloce)
     const { data } = await supabase.auth.updateUser({ data: { avatar_url: url } });
-    setUser(data.user);
+    
+    // 3. Aggiorna la UI
+    if (data.user) {
+        setUser(data.user);
+    }
     setShowAvatarModal(false);
   };
-
   const handleUpdatePassword = async () => {
     setActionLoading(true);
     const { error } = await supabase.auth.updateUser({ password: newPassword });

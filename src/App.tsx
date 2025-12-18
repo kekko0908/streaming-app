@@ -256,6 +256,7 @@ const runSmartShuffle = async (genreId: number | null) => {
                 <Hero 
                   item={selected} myList={myList} progress={getProgress(selected.tmdbId)}
                   onPlay={handlePlay} onAddToList={handleAddToList} onRate={handleRate}
+                  onRemoveFromList={() => removeFromList(selected.tmdbId)}
                   onClose={() => setSelected(null)} onSelectCollectionItem={selectItem} 
                 />
                 <CastList cast={cast} />
@@ -287,7 +288,7 @@ const runSmartShuffle = async (genreId: number | null) => {
                 </div>
               ) : (
                 <div style={{ marginTop: '20px' }}>
-                  {session && <CommunityPulse />}
+                  {session && <CommunityPulse onItemClick={selectItem} />}
                   
                   {session && myList.some(m => m.status === 'in-corso') && (
                       <CarouselSection title="Continua a guardare" icon="✋" items={myList.filter(m => m.status === 'in-corso').map(m => m as TmdbItem)} onSelect={selectItem} />

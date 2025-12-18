@@ -1,12 +1,21 @@
 export type MediaType = "movie" | "tv";
 export type WatchStatus = "da-guardare" | "in-corso" | "pianificato" | "gia-guardato";
 
-// CORREZIONE QUI: Aggiunto "profile" alla lista
 export type ViewType = "home" | "list" | "archive" | "auth" | "profile";
 
 export interface SeasonDetail {
   season_number: number;
   episode_count: number;
+}
+
+// --- NUOVA INTERFACCIA EPISODIO ---
+export interface Episode {
+  id: number;
+  episode_number: number;
+  name: string;
+  air_date?: string; // Data di uscita (YYYY-MM-DD)
+  still_path?: string;
+  overview?: string;
 }
 
 export interface TmdbItem {
@@ -24,13 +33,12 @@ export interface TmdbItem {
   seasons?: number;
   seasonsDetails?: SeasonDetail[];
   popularity?: number;
-  status?: WatchStatus; // Opzionale per i risultati di ricerca
+  status?: WatchStatus;
 
-  // NUOVO CAMPO COLLEZIONE
   collection?: {
     id: number;
     name: string;
-    parts: TmdbItem[]; // I film della saga
+    parts: TmdbItem[];
   };
 }
 

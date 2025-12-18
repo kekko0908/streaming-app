@@ -219,3 +219,17 @@ export async function fetchCredits(tmdbId: string, type: MediaType): Promise<Cas
     }));
   } catch (e) { return []; }
 }
+// --- NUOVA FUNZIONE PER SCARICARE GLI EPISODI ---
+// Accetta string o number per l'ID per evitare errori di tipo
+export async function fetchSeasonEpisodes(tvId: string | number, seasonNumber: number): Promise<any[]> {
+  try {
+    const res = await fetch(
+      `https://api.themoviedb.org/3/tv/${tvId}/season/${seasonNumber}?api_key=${TMDB_KEY}&language=it-IT`
+    );
+    const data = await res.json();
+    return data.episodes || [];
+  } catch (error) {
+    console.error("Errore fetch episodi stagione:", error);
+    return [];
+  }
+}
