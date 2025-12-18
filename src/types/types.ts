@@ -1,8 +1,7 @@
 export type MediaType = "movie" | "tv";
 export type WatchStatus = "da-guardare" | "in-corso" | "pianificato" | "gia-guardato";
 
-export type ViewType = "home" | "list" | "archive" | "auth" | "profile";
-
+export type ViewType = "home" | "list" | "archive" | "auth" | "profile" | "ranking"; 
 export interface SeasonDetail {
   season_number: number;
   episode_count: number;

@@ -56,6 +56,12 @@ export default function Navbar({
         >
           Archivio
         </button>
+        <button 
+  className={`pill ${view === "ranking" ? "solid" : "ghost"}`} 
+  onClick={() => { setView("ranking"); resetSelection(); }}
+>
+  Classifica 🏆
+</button>
 
         {/* LOGICA BOTTONI UTENTE LOGGATO */}
         {session ? (

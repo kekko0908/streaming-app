@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import "./css/global.css";
 import "./css/archive.css"; 
 import "./css/shuffle.css"; 
-
+import Ranking from "./components/Ranking";
 import { ViewType, TmdbItem, STATUS_SECTIONS, WatchStatus } from "./types/types";
 import { 
   fetchCollection, 
@@ -375,6 +375,8 @@ const runSmartShuffle = async (genreId: number | null) => {
       {view === "list" && !session && (
         <div style={{textAlign:'center', padding:'50px'}}><h2>Accesso Negato</h2><button className="pill solid" onClick={() => setView('auth')}>Vai al Login</button></div>
       )}
+
+      {view === "ranking" && <Ranking />}
 
       {showPlayer && selected && (
         <PlayerDrawer item={selected} season={playerState.season} episode={playerState.episode} onClose={() => setShowPlayer(false)} />
