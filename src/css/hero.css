@@ -526,3 +526,43 @@
     padding: 10px 15px;
   }
 }
+/* src/css/hero.css - Aggiunte per episodi visti */
+
+/* Stile per la card intera quando è vista */
+.episode-card.watched {
+  opacity: 0.7; /* Leggermente trasparente per dare focus a quello corrente */
+  border-color: rgba(74, 232, 255, 0.3); /* Bordo blu tenue */
+}
+
+.episode-card.watched:hover {
+  opacity: 1;
+  border-color: #fff;
+}
+
+/* Overlay con la spunta ✔ */
+.watched-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6); /* Scurisce l'immagine */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.checkmark {
+  font-size: 2rem;
+  color: #4ae8ff; /* Colore primario (Ciano) */
+  font-weight: bold;
+  text-shadow: 0 0 10px rgba(0,0,0,0.8);
+  animation: popIn 0.3s ease-out;
+}
+
+@keyframes popIn {
+  from { transform: scale(0); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+/* Modifica al titolo dell'episodio visto (opzionale, già gestito inline nel TSX) */
+.episode-card.watched .episode-title {
+  color: #aaa; /* Titolo grigio per indicare "passato" */
+}

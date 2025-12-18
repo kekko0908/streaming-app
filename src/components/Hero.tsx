@@ -1,3 +1,4 @@
+/* src/components/Hero.tsx */
 import { useState, useEffect, useRef } from "react";
 import "../css/hero.css";
 import { TmdbItem, SavedItem, WatchStatus, STATUS_SECTIONS, Episode } from "../types/types";
@@ -37,18 +38,19 @@ export default function Hero({
   const userRating = savedItem ? savedItem.rating : 0;
   const currentListStatus = savedItem?.status;
 
-  // Reset al cambio film
+  // 1. Reset al cambio film
   useEffect(() => {
     setUiSelectedSeason(progress.season);
     setTrailerKey(null);
     fetchTrailer(item.tmdbId, item.type).then(setTrailerKey);
   }, [item.tmdbId, progress.season, item.type]);
 
-  // Scarica episodi al cambio stagione
+  // 2. Scarica episodi al cambio stagione
   useEffect(() => {
     if (item.type === 'tv') {
       setLoadingEpisodes(true);
-      // Resetta la posizione dello scroll quando cambi stagione
+      
+      // Reset momentaneo scroll
       if (episodeListRef.current) episodeListRef.current.scrollTo({ left: 0 });
       
       fetchSeasonEpisodes(item.tmdbId, uiSelectedSeason).then((data) => {
@@ -58,7 +60,30 @@ export default function Hero({
     }
   }, [item.tmdbId, uiSelectedSeason, item.type]);
 
-  // Funzione scroll con le frecce
+  // 3. AUTO-SCROLL (IL TELETRASPORTO 🚀)
+  // Appena finisce il caricamento, cerca l'episodio corrente e centra la vista su di lui
+  useEffect(() => {
+    if (!loadingEpisodes && episodesList.length > 0) {
+        // Cerchiamo l'elemento nel DOM con l'ID specifico
+        const currentCard = document.getElementById("current-episode-anchor");
+        
+        if (currentCard && episodeListRef.current) {
+            const container = episodeListRef.current;
+            
+            // Calcolo matematico per centrare l'elemento
+            // Posizione Card - Metà Schermo + Metà Larghezza Card
+            const scrollPos = currentCard.offsetLeft - (container.clientWidth / 2) + (currentCard.clientWidth / 2);
+
+            // Esegui lo scroll fluido
+            container.scrollTo({
+                left: Math.max(0, scrollPos), // Evita valori negativi
+                behavior: 'smooth'
+            });
+        }
+    }
+  }, [loadingEpisodes, episodesList]);
+
+  // Funzione scroll manuale con le frecce
   const scrollEpisodes = (direction: 'left' | 'right') => {
     if (episodeListRef.current) {
       const { current } = episodeListRef;
@@ -122,7 +147,6 @@ export default function Hero({
             <button className="trailer-btn" onClick={() => setShowTrailer(true)}>▶ Trailer</button>
           )}
 
-          {/* Lista Stati */}
           {STATUS_SECTIONS.map(s => (
             <button
               key={s.id}
@@ -133,7 +157,6 @@ export default function Hero({
             </button>
           ))}
           
-          {/* Bottone Rimuovi (Se attivo) */}
           {currentListStatus && (
             <button 
                 className="status-btn remove" 
@@ -177,12 +200,17 @@ export default function Hero({
                   {loadingEpisodes ? (
                      <p style={{color:'#888', fontStyle:'italic', padding:'20px'}}>Caricamento episodi...</p>
                   ) : episodesList.length > 0 ? (
-                     // MAPPATURA EPISODI REALI A CARD
                      episodesList.map((ep) => {
                         const released = isEpisodeReleased(ep);
+                        
+                        // LOGICA EPISODIO CORRENTE
                         const isCurrent = uiSelectedSeason === progress.season && ep.episode_number === progress.episode;
                         
-                        // Immagine episodio o fallback
+                        // LOGICA EPISODIO VISTO (Precedente)
+                        const isWatched = 
+                            (uiSelectedSeason < progress.season) || 
+                            (uiSelectedSeason === progress.season && ep.episode_number < progress.episode);
+
                         const imgUrl = ep.still_path 
                             ? `https://image.tmdb.org/t/p/w500${ep.still_path}`
                             : (item.backdrop || "https://via.placeholder.com/500x280?text=No+Image");
@@ -190,13 +218,23 @@ export default function Hero({
                         return (
                             <div
                                 key={ep.id}
-                                className={`episode-card ${isCurrent ? 'current' : ''} ${!released ? 'locked' : ''}`}
+                                // ASSEGNIAMO UN ID UNIVOCO ALL'EPISODIO CORRENTE PER IL TELETRASPORTO
+                                id={isCurrent ? "current-episode-anchor" : undefined}
+                                className={`episode-card ${isCurrent ? 'current' : ''} ${isWatched ? 'watched' : ''} ${!released ? 'locked' : ''}`}
                                 onClick={() => { if (released) onPlay(uiSelectedSeason, ep.episode_number); }}
                                 title={!released ? `Esce il ${ep.air_date}` : ep.name}
                             >
                                 <div className="episode-img-container">
                                     <img src={imgUrl} alt={ep.name} className="episode-img" loading="lazy" />
                                     <div className="episode-number-badge">{ep.episode_number}</div>
+                                    
+                                    {/* Overlay "Visto" */}
+                                    {isWatched && (
+                                        <div className="watched-overlay">
+                                            <span className="checkmark">✔</span>
+                                        </div>
+                                    )}
+
                                     {!released && (
                                         <div className="locked-overlay">
                                             <span style={{fontSize:'1.5rem'}}>🔒</span>
@@ -205,14 +243,15 @@ export default function Hero({
                                     )}
                                 </div>
                                 <div className="episode-info">
-                                    <h4 className="episode-title">{ep.name || `Episodio ${ep.episode_number}`}</h4>
+                                    <h4 className="episode-title" style={isWatched ? {color: '#888'} : {}}>
+                                        {ep.name || `Episodio ${ep.episode_number}`}
+                                    </h4>
                                     <p className="episode-desc">{ep.overview || "Nessuna trama disponibile."}</p>
                                 </div>
                             </div>
                         );
                      })
                   ) : (
-                     // FALLBACK VECCHIO STILE (Se API fallisce o vuota)
                      <p style={{color:'#666', padding:'20px'}}>Nessun episodio disponibile.</p>
                   )}
                 </div>
@@ -223,7 +262,7 @@ export default function Hero({
           </div>
         )}
 
-        {/* --- SEZIONE SAGA / COLLEZIONE --- */}
+        {/* --- SAGA COLLECTION --- */}
         {item.collection && (
           <div className="collection-container">
              <div className="collection-title">
