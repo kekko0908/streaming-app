@@ -347,7 +347,6 @@ const runSmartShuffle = async (genreId: number | null) => {
                 <p style={{opacity:0.6}}>Gestisci i tuoi titoli salvati.</p>
              </div>
              <div className="filter-bar" style={{ marginBottom: '40px' }}>
-                {/* ...Filtri Lista... */}
                 <div className="filter-group"><span className="filter-label">Cerca</span><input className="filter-select" placeholder="Titolo..." value={listSearch} onChange={e => setListSearch(e.target.value)} style={{ width:'200px', cursor:'text', backgroundImage:'none' }}/></div>
                 <div className="filter-group"><span className="filter-label">Tipologia</span><select className="filter-select" value={listTypeFilter} onChange={e => setListTypeFilter(e.target.value as any)}><option value="all">Tutti</option><option value="movie">Film</option><option value="tv">Serie TV</option></select></div>
                 <div className="filter-group"><span className="filter-label">Stato</span><select className="filter-select" value={listStatusFilter} onChange={e => setListStatusFilter(e.target.value as any)}><option value="all">Tutti gli stati</option>{STATUS_SECTIONS.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}</select></div>
@@ -376,7 +375,17 @@ const runSmartShuffle = async (genreId: number | null) => {
         <div style={{textAlign:'center', padding:'50px'}}><h2>Accesso Negato</h2><button className="pill solid" onClick={() => setView('auth')}>Vai al Login</button></div>
       )}
 
-      {view === "ranking" && <Ranking />}
+      {/* --- MOSTRA LA CLASSIFICA SOLO SE LOGGATO --- */}
+      {view === "ranking" && session && <Ranking />}
+
+      {/* --- FALLBACK SE L'UTENTE PROVA AD ACCEDERE ALLA CLASSIFICA DA SLOGGATO --- */}
+      {view === "ranking" && !session && (
+         <div style={{textAlign:'center', padding:'50px'}}>
+            <h2>Community Riservata</h2>
+            <p style={{marginBottom:'20px', color:'#aaa'}}>Accedi per visualizzare le classifiche, sfidare gli amici e vedere i "Critici Top".</p>
+            <button className="pill solid" onClick={() => setView('auth')}>Vai al Login</button>
+         </div>
+      )}
 
       {showPlayer && selected && (
         <PlayerDrawer item={selected} season={playerState.season} episode={playerState.episode} onClose={() => setShowPlayer(false)} />
