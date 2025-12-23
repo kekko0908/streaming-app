@@ -49,6 +49,12 @@ export default function Navbar({
         >
           Home
         </button>
+        <button 
+  className={`pill ${view === 'suggestions' ? "solid" : "ghost"}`} 
+  onClick={() => setView('suggestions')}
+>
+  💡 Consigli
+</button>
         
         <button 
           className={`pill ${view === "archive" ? "solid" : "ghost"}`} 

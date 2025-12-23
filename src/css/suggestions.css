@@ -1,0 +1,133 @@
+/* src/css/suggestions.css */
+
+.suggestions-header {
+  text-align: center;
+  margin-bottom: 40px;
+  animation: fadeIn 0.5s ease;
+}
+
+.suggestions-container {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+/* Modulo di inserimento */
+.suggestion-form-panel {
+  background: rgba(15, 16, 22, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 20px;
+  padding: 25px;
+  margin-bottom: 50px;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+}
+
+.suggestion-tabs {
+  display: flex;
+  justify-content: center;
+  gap: 15px;
+  margin-bottom: 25px;
+}
+
+.suggestion-input-group {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.suggestion-textarea {
+  width: 100%;
+  background: #13151c;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  color: #fff;
+  padding: 15px;
+  resize: vertical;
+  min-height: 80px;
+  font-family: inherit;
+  margin-top: 15px;
+}
+
+.suggestion-textarea:focus {
+  border-color: var(--primary);
+  outline: none;
+}
+
+/* Wrapper per la card con il badge dell'utente */
+.suggestion-card-wrapper {
+  position: relative;
+  transition: transform 0.3s ease;
+}
+
+.suggestion-card-wrapper:hover {
+  transform: translateY(-5px);
+  z-index: 10;
+}
+
+/* Badge "Consigliato da..." */
+.suggester-badge {
+  position: absolute;
+  bottom: -15px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(6, 7, 13, 0.95);
+  border: 1px solid var(--secondary);
+  padding: 6px 12px;
+  border-radius: 20px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+  width: max-content;
+  max-width: 90%;
+  z-index: 5;
+}
+
+.suggester-avatar {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--primary);
+  color: #000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  font-size: 0.8rem;
+}
+
+.suggester-name {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #fff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.suggestion-comment {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  right: 10px;
+  background: rgba(0, 0, 0, 0.9);
+  padding: 10px;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  color: #ddd;
+  opacity: 0;
+  transform: translateY(-10px);
+  transition: all 0.3s ease;
+  pointer-events: none;
+  border-left: 2px solid var(--primary);
+}
+
+.suggestion-card-wrapper:hover .suggestion-comment {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}

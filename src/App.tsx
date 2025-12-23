@@ -3,6 +3,7 @@ import "./css/global.css";
 import "./css/archive.css"; 
 import "./css/shuffle.css"; 
 import Ranking from "./components/Ranking";
+import Suggestions from "./components/Suggestions";
 import { ViewType, TmdbItem, STATUS_SECTIONS, WatchStatus } from "./types/types";
 import { 
   fetchCollection, 
@@ -386,6 +387,9 @@ const runSmartShuffle = async (genreId: number | null) => {
             <button className="pill solid" onClick={() => setView('auth')}>Vai al Login</button>
          </div>
       )}
+      {view === "suggestions" && (
+   <Suggestions onSelect={selectItem} session={session} />
+)}
 
       {showPlayer && selected && (
         <PlayerDrawer item={selected} season={playerState.season} episode={playerState.episode} onClose={() => setShowPlayer(false)} />

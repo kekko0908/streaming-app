@@ -1,7 +1,19 @@
 export type MediaType = "movie" | "tv";
 export type WatchStatus = "da-guardare" | "in-corso" | "pianificato" | "gia-guardato";
 
-export type ViewType = "home" | "list" | "archive" | "auth" | "profile" | "ranking"; 
+export type ViewType = "home" | "list" | "archive" | "auth" | "profile" | "ranking" | "suggestions";
+
+export interface SuggestionItem {
+  id: number;
+  user_id: string;
+  tmdb_id: string;
+  tmdb_data: TmdbItem;
+  comment?: string;
+  created_at: string;
+  // Nuovi campi
+  user_name?: string;
+  user_avatar?: string;
+}
 export interface SeasonDetail {
   season_number: number;
   episode_count: number;

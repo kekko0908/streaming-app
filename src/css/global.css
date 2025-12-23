@@ -127,3 +127,281 @@ input::placeholder { color: #888; }
     padding-bottom: 20px;
   }
 }
+
+/* --- SUGGESTIONS SECTION --- */
+
+/* La barra di controllo simile alla Navbar */
+.suggestions-nav {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  background: rgba(6, 7, 13, 0.8); /* Simile alla navbar */
+  backdrop-filter: blur(10px);
+  padding: 15px 30px;
+  border-radius: 50px;
+  border: 1px solid rgba(255,255,255,0.1);
+  margin-bottom: 40px;
+  max-width: fit-content;
+  margin-left: auto;
+  margin-right: auto;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+}
+
+/* Input integrato nella barra */
+.suggestions-nav input {
+  background: transparent !important;
+  border: none !important;
+  border-bottom: 1px solid rgba(255,255,255,0.3) !important;
+  border-radius: 0 !important;
+  padding: 5px 10px;
+  width: 200px;
+  transition: all 0.3s;
+}
+.suggestions-nav input:focus {
+  border-bottom-color: var(--primary) !important;
+  width: 250px;
+}
+
+/* Card Suggerimento Social */
+.suggestion-card-wrapper {
+  position: relative;
+  transition: transform 0.3s ease;
+}
+.suggestion-card-wrapper:hover {
+  transform: translateY(-5px);
+  z-index: 5;
+}
+
+/* Badge "Consigliato da..." */
+.suggester-badge {
+  position: absolute;
+  bottom: -12px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--bg-color);
+  border: 1px solid var(--secondary);
+  color: #fff;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+  z-index: 10;
+}
+
+/* Fumetto del commento */
+.suggestion-bubble {
+  position: absolute;
+  top: -10px;
+  left: 50%;
+  transform: translateX(-50%) translateY(-10px);
+  background: #fff;
+  color: #000;
+  padding: 8px 12px;
+  border-radius: 12px;
+  border-bottom-left-radius: 0;
+  font-size: 0.8rem;
+  font-weight: 600;
+  opacity: 0;
+  pointer-events: none;
+  transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  width: max-content;
+  max-width: 90%;
+  text-align: center;
+  z-index: 20;
+}
+.suggestion-card-wrapper:hover .suggestion-bubble {
+  opacity: 1;
+  transform: translateX(-50%) translateY(-20px);
+}
+/* --- AGGIUNTA SUGGESTIONS STYLES --- */
+
+/* Area di testo professionale "Glass" */
+.suggestion-glass-textarea {
+  width: 100%;
+  background: rgba(0, 0, 0, 0.3); /* Sfondo scuro semitrasparente */
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 16px;
+  padding: 20px;
+  color: #fff;
+  font-family: inherit;
+  font-size: 1rem;
+  resize: none; /* Impedisce il ridimensionamento brutto */
+  transition: all 0.3s ease;
+  backdrop-filter: blur(5px);
+  box-shadow: inset 0 2px 10px rgba(0,0,0,0.2);
+}
+
+.suggestion-glass-textarea:focus {
+  background: rgba(0, 0, 0, 0.5);
+  border-color: var(--primary); /* Si illumina del colore primario */
+  box-shadow: 0 0 20px rgba(74, 232, 255, 0.15), inset 0 2px 10px rgba(0,0,0,0.5);
+  outline: none;
+}
+
+/* Bottone Elimina (Cestino) */
+.delete-btn-overlay {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: rgba(255, 0, 80, 0.9); /* Rosso acceso */
+  color: white;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  border: 1px solid rgba(255,255,255,0.2);
+  z-index: 20; /* Sopra tutto */
+  opacity: 0;
+  transform: scale(0.8);
+  transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.delete-btn-overlay:hover {
+  background: #ff0050;
+  transform: scale(1.1);
+  box-shadow: 0 4px 15px rgba(255, 0, 80, 0.5);
+}
+
+/* Mostra il cestino quando passi sopra la card */
+.suggestion-card-wrapper:hover .delete-btn-overlay {
+  opacity: 1;
+  transform: scale(1);
+}
+
+/* --- TOAST NOTIFICATION --- */
+.toast-notification {
+  position: fixed;
+  bottom: 30px;
+  left: 50%;
+  transform: translateX(-50%) translateY(20px);
+  background: rgba(10, 10, 15, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 12px 24px;
+  border-radius: 50px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: #fff;
+  font-weight: 500;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+  z-index: 1000;
+  opacity: 0;
+  animation: toast-in 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+.toast-notification.success { border-color: #00e676; box-shadow: 0 0 15px rgba(0, 230, 118, 0.2); }
+.toast-notification.error { border-color: #ff0050; box-shadow: 0 0 15px rgba(255, 0, 80, 0.2); }
+
+@keyframes toast-in {
+  to { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
+/* --- CUSTOM DELETE MODAL --- */
+.modal-backdrop-glass {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(8px); /* Effetto sfocato potente */
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  animation: fadeIn 0.2s ease-out;
+}
+
+.modal-glass-box {
+  background: #111;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  width: 100%;
+  max-width: 400px;
+  padding: 30px;
+  border-radius: 20px;
+  text-align: center;
+  box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+  transform: scale(0.9);
+  animation: scaleIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+.modal-glass-box h3 { margin-top: 0; color: #fff; }
+.modal-glass-box p { color: #aaa; margin-bottom: 30px; }
+
+@keyframes scaleIn {
+  to { transform: scale(1); }
+}
+/* --- WALL SECTIONS & DIVIDERS --- */
+
+.wall-section {
+  margin-bottom: 60px;
+  position: relative;
+}
+
+/* Header Neon Impattante */
+.neon-header {
+  font-size: 1.8rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  margin-bottom: 30px;
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Stile specifico per FILM (Ciano) */
+.neon-header.movie {
+  color: var(--primary); /* #4ae8ff */
+  text-shadow: 0 0 20px rgba(74, 232, 255, 0.4);
+  border-bottom-color: rgba(74, 232, 255, 0.3);
+}
+
+.neon-header.movie::before {
+  content: '';
+  display: block;
+  width: 8px;
+  height: 40px;
+  background: var(--primary);
+  box-shadow: 0 0 15px var(--primary);
+  border-radius: 4px;
+}
+
+/* Stile specifico per SERIE TV (Magenta) */
+.neon-header.tv {
+  color: var(--secondary); /* #ff0050 */
+  text-shadow: 0 0 20px rgba(255, 0, 80, 0.4);
+  border-bottom-color: rgba(255, 0, 80, 0.3);
+}
+
+.neon-header.tv::before {
+  content: '';
+  display: block;
+  width: 8px;
+  height: 40px;
+  background: var(--secondary);
+  box-shadow: 0 0 15px var(--secondary);
+  border-radius: 4px;
+}
+
+/* Contatore piccolo accanto al titolo */
+.header-count {
+  font-size: 0.9rem;
+  color: #fff;
+  opacity: 0.5;
+  background: rgba(255,255,255,0.1);
+  padding: 4px 10px;
+  border-radius: 12px;
+  text-shadow: none;
+  font-weight: 600;
+  letter-spacing: 0;
+}
