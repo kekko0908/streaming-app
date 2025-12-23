@@ -197,7 +197,8 @@ input::placeholder { color: #888; }
 /* Fumetto del commento */
 .suggestion-bubble {
   position: absolute;
-  top: -10px;
+  top: 230px;
+
   left: 50%;
   transform: translateX(-50%) translateY(-10px);
   background: #fff;
