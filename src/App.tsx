@@ -125,6 +125,9 @@ export default function App() {
   const selectItem = async (item: TmdbItem) => {
     setView("home"); setShowPlayer(false); window.scrollTo({ top: 0, behavior: "smooth" });
     const fullItem = await fetchDetails(item.tmdbId, item.type);
+    if (typeof item.progressMinutes === "number") {
+      fullItem.progressMinutes = item.progressMinutes;
+    }
     setSelected(fullItem);
     try { const recs = await fetchRecommendations(item.tmdbId, item.type); setRelated(recs); } catch(e) { setRelated([]); }
     try { const actors = await fetchCredits(item.tmdbId, item.type); setCast(actors); } catch(e) { setCast([]); }
@@ -292,7 +295,13 @@ const runSmartShuffle = async (genreId: number | null) => {
                   {session && <CommunityPulse onItemClick={selectItem} />}
                   
                   {session && myList.some(m => m.status === 'in-corso') && (
-                      <CarouselSection title="Continua a guardare" icon="✋" items={myList.filter(m => m.status === 'in-corso').map(m => m as TmdbItem)} onSelect={selectItem} />
+                      <CarouselSection
+                        title="Continua a guardare"
+                        icon="✋"
+                        items={myList.filter(m => m.status === 'in-corso').map(m => m as TmdbItem)}
+                        onSelect={selectItem}
+                        getProgress={getProgress}
+                      />
                   )}
                   
                   <CarouselSection title="Nuove Uscite al Cinema" icon="🆕" items={homeLists.newReleases} onSelect={selectItem} />
@@ -392,7 +401,12 @@ const runSmartShuffle = async (genreId: number | null) => {
 )}
 
       {showPlayer && selected && (
-        <PlayerDrawer item={selected} season={playerState.season} episode={playerState.episode} onClose={() => setShowPlayer(false)} />
+        <PlayerDrawer
+          item={selected}
+          season={playerState.season}
+          episode={playerState.episode}
+          onClose={() => setShowPlayer(false)}
+        />
       )}
     </div>
   );

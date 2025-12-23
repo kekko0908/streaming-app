@@ -46,6 +46,13 @@ export default function Card({ item, onClick, progress, onRemove, isUpcoming, sh
   const ratingStyle = getRatingColor(currentRating);
   const isMasterpiece = currentRating === 10;
 
+  const isMovieInProgress = item.type === "movie" && item.status === "in-corso";
+  const runtimeMinutes = isMovieInProgress && item.runtime ? parseInt(item.runtime, 10) || 0 : 0;
+  const watchedMinutes = isMovieInProgress ? Math.max(0, Math.floor(item.progressMinutes || 0)) : 0;
+  const movieProgress = runtimeMinutes > 0 && watchedMinutes > 0
+    ? Math.min(1, watchedMinutes / runtimeMinutes)
+    : 0;
+
   return (
     <article className={`card ${isCompleted ? 'is-completed' : ''}`} onClick={onClick}>
       {/* Gestione poster sicuro */}
@@ -76,6 +83,20 @@ export default function Card({ item, onClick, progress, onRemove, isUpcoming, sh
 
       {isUpcoming && item.releaseDateFull && formatDate && (
          <div className="upcoming-date">{formatDate(item.releaseDateFull)}</div>
+      )}
+
+      {movieProgress > 0 && (
+        <div className="movie-progress" aria-hidden="true">
+          <div className="movie-progress-bar">
+            <span
+              className="movie-progress-fill"
+              style={{ width: `${Math.max(3, Math.round(movieProgress * 100))}%` }}
+            />
+          </div>
+          <div className="movie-progress-text">
+            {watchedMinutes} di {runtimeMinutes} min
+          </div>
+        </div>
       )}
 
       <div className="card-info-overlay">

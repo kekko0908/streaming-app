@@ -169,7 +169,7 @@ export default function Navbar({
   className={`pill ${view === 'suggestions' ? "solid" : "ghost"}`} 
   onClick={() => setView('suggestions')}
 >
-  Consigli💡
+  Suggerimenti💡
 </button>
         
         <button 

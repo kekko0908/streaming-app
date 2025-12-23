@@ -9,9 +9,10 @@ interface CarouselProps {
   items: TmdbItem[];
   onSelect: (item: TmdbItem) => void;
   isUpcoming?: boolean;
+  getProgress?: (tmdbId: string) => { season: number; episode: number };
 }
 
-export default function CarouselSection({ title, icon, items, onSelect, isUpcoming }: CarouselProps) {
+export default function CarouselSection({ title, icon, items, onSelect, isUpcoming, getProgress }: CarouselProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
 
   if (!items || items.length === 0) return null;
@@ -52,7 +53,8 @@ export default function CarouselSection({ title, icon, items, onSelect, isUpcomi
                 item={item} 
                 onClick={() => onSelect(item)} 
                 isUpcoming={isUpcoming}
-                showRating={false} 
+                showRating={false}
+                progress={item.type === "tv" && getProgress ? getProgress(item.tmdbId) : undefined}
             />
           </div>
         ))}

@@ -26,7 +26,16 @@ export function useStore() {
       .select(`*, media_items ( title, media_type, runtime, poster_path, genres )`);
 
     if (data) {
-      const formattedList: SavedItem[] = data.map((row: any) => ({
+      const formattedList: SavedItem[] = data.map((row: any) => {
+        const progressMinutes = Number(
+          row.current_time ??
+          row.current_minute ??
+          row.progress_minutes ??
+          row.watched_minutes ??
+          0
+        ) || 0;
+
+        return ({
         tmdbId: String(row.tmdb_id),
         type: row.media_items?.media_type || 'movie',
         title: row.media_items?.title || 'Sconosciuto',
@@ -34,9 +43,12 @@ export function useStore() {
         addedAt: row.added_at,
         rating: row.rating || 0,
         poster: row.media_items?.poster_path || "",
+        runtime: row.media_items?.runtime ? `${row.media_items.runtime} min` : "",
         genres: row.media_items?.genres || [],
-        year: "", overview: "", backdrop: ""
-      }));
+        year: "", overview: "", backdrop: "",
+        progressMinutes
+      });
+      });
       
       formattedList.sort((a, b) => new Date(b.addedAt).getTime() - new Date(a.addedAt).getTime());
       setMyList(formattedList);
