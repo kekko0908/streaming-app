@@ -131,8 +131,8 @@ export default function Suggestions({ onSelect, session }: Props) {
               <Card item={s.tmdb_data} onClick={() => onSelect(s.tmdb_data)} />
               
               {session && session.user.id === s.user_id && (
-                <div className="delete-btn-overlay" onClick={(e) => { e.stopPropagation(); setItemToDelete(s.id); }} title="Elimina">
-                  🗑️
+                <div className="delete-btn-overlay" onClick={(e) => { e.stopPropagation(); setItemToDelete(s.id); }} title="Opzioni">
+                  ...
                 </div>
               )}
               

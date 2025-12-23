@@ -2,8 +2,8 @@
 
 /* --- LAYOUT GENERALE DRAWER --- */
 .drawer-responsive {
-  max-width: 1400px;
-  width: 80%;
+  max-width: 1600px;
+  width: 92%;
   display: flex;
   flex-direction: row;
   /* CORREZIONE FONDAMENTALE: stretch forza altezza 100% per entrambi i lati */
@@ -11,14 +11,16 @@
   justify-content: flex-start;
   padding: 0;
   overflow: hidden;
-  height: 85vh;
+  height: 88vh;
+  min-height: 520px;
   background: #000;
   transition: width 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
   box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
 }
 
 .drawer-responsive.party-active {
-  width: 95%;
+  width: 96%;
+  height: 90vh;
 }
 
 /* --- VIDEO CONTAINER (Sinistra) --- */
@@ -61,7 +63,7 @@
 
 /* --- SIDEBAR PARTY (Destra) --- */
 .party-sidebar {
-  width: 320px;
+  width: 360px;
   background: #0a0a0a;
   border-left: 1px solid #333;
   display: flex;
@@ -317,7 +319,7 @@
 /* 1. LAPTOP E SCHERMI MEDI (es. 1024px - 1366px) */
 /* Riduce la sidebar per farla stare meglio su schermi non enormi */
 @media (max-width: 1280px) {
-  .party-sidebar { width: 280px; }
+  .party-sidebar { width: 300px; }
   .room-code-display { font-size: 1.8rem; }
   .party-emoji-big { font-size: 3rem; }
 }
@@ -327,18 +329,18 @@
 @media (max-width: 960px) {
   .drawer-responsive {
     width: 98% !important;
-    height: 92vh;
+    height: 94vh;
     flex-direction: column; /* Video sopra, Chat sotto */
     border-radius: 12px 12px 0 0;
   }
-  .video-container { height: 50%; width: 100%; }
+  .video-container { height: 45%; width: 100%; }
   .party-sidebar {
-    width: 100%; height: 50%;
+    width: 100%; height: 55%;
     border-left: none; border-top: 1px solid #333;
   }
   .room-code-display { font-size: 1.5rem; margin: 5px 0; }
   .party-header { padding: 10px; }
-  .party-users-list { max-height: 80px; }
+  .party-users-list { max-height: 70px; }
   .party-overlay { font-size: 5rem; }
   .party-login-container { padding: 15px; }
 }
@@ -348,4 +350,11 @@
   .video-header { padding: 10px; }
   .video-title { font-size: 0.9rem; max-width: 150px; }
   .party-input-code { font-size: 1.2rem; padding: 10px; }
+  .party-header { padding: 8px; }
+  .party-controls { padding: 8px; }
+  .party-input-area { padding: 8px; }
+  .party-chat-area { padding: 10px; }
+  .chat-message { font-size: 0.9rem; }
+  .btn-party-action { height: 40px; }
+  .btn-send { width: 38px; height: 38px; }
 }

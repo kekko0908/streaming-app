@@ -44,6 +44,19 @@
   color: #fff;
 }
 
+.hero-overview {
+  max-width: 600px;
+  line-height: 1.6;
+  margin-bottom: 20px;
+  font-size: 1.1rem;
+  color: #e0e0e0;
+  text-shadow: 0 2px 4px rgba(0,0,0,0.8);
+}
+
+.hero-rating {
+  margin-bottom: 25px;
+}
+
 /* --- META BADGES (Anno, TMDB, Genere) --- */
 .meta-row {
   display: flex;
@@ -506,26 +519,95 @@
 
 /* --- MOBILE RESPONSIVE --- */
 @media (max-width: 768px) {
+  .hero {
+    min-height: 360px;
+    border-radius: 16px;
+  }
+
+  .hero-content {
+    padding: 24px 20px;
+    max-width: 100%;
+  }
+
+  .hero h1 {
+    font-size: 2rem;
+  }
+
+  .meta-badge {
+    font-size: 0.8rem;
+    padding: 6px 10px;
+  }
+
+  .genre-tag {
+    font-size: 0.75rem;
+    padding: 4px 10px;
+  }
+
+  .hero-overview {
+    max-width: 100%;
+    font-size: 0.95rem;
+    margin-bottom: 16px;
+    display: -webkit-box;
+    -webkit-line-clamp: 4;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .hero-rating {
+    margin-bottom: 16px;
+  }
+
   /* Adatta le card per mobile */
   .episode-card { flex: 0 0 220px; }
-  
+
   /* Nascondi frecce su mobile (usa touch) */
   .ep-nav-btn { display: none; }
-  
+
   /* Adatta wrapper per permettere swipe */
   .episode-carousel-wrapper { margin: 0; }
-  
+
   /* Adatta bottoni status */
   .hero-actions { gap: 8px; }
+  .cta, .trailer-btn { width: 100%; }
   .status-btn { flex-grow: 1; justify-content: center; }
   .status-btn.remove { flex-grow: 0; width: 100%; margin-left: 0; margin-top: 8px; }
-  
+
   /* Star rating mobile */
   .star-rating-container {
     width: 100%; justify-content: space-between;
     padding: 10px 15px;
   }
 }
+
+
+@media (max-width: 520px) {
+  .hero {
+    min-height: 320px;
+  }
+
+  .hero h1 {
+    font-size: 1.7rem;
+  }
+
+  .meta-row {
+    gap: 6px;
+  }
+
+  .meta-badge {
+    font-size: 0.75rem;
+    padding: 5px 8px;
+  }
+
+  .hero-overview {
+    -webkit-line-clamp: 3;
+  }
+
+  .status-btn {
+    font-size: 0.8rem;
+    padding: 8px 12px;
+  }
+}
+
 /* src/css/hero.css - Aggiunte per episodi visti */
 
 /* Stile per la card intera quando è vista */

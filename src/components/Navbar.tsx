@@ -1,6 +1,8 @@
+import { useEffect, useRef, useState } from "react";
 import "../css/navbar.css";
 import { ViewType } from "../types/types";
 import { Session } from "@supabase/supabase-js";
+import { supabase } from "../supabaseClient";
 import logo from "../assets/logo.png"; 
 
 interface NavbarProps {
@@ -14,10 +16,75 @@ interface NavbarProps {
   onLogout: () => void;
 }
 
+const DEFAULT_AVATAR = "https://api.dicebear.com/7.x/adventurer/svg?seed=Default";
+
 export default function Navbar({ 
   view, setView, resetSelection, query, setQuery, onSearch, session, onLogout 
 }: NavbarProps) {
-  
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const menuRefDesktop = useRef<HTMLDivElement | null>(null);
+  const menuRefMobile = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const handleClick = (event: MouseEvent) => {
+      const target = event.target as Node;
+      const isInsideDesktop = menuRefDesktop.current?.contains(target);
+      const isInsideMobile = menuRefMobile.current?.contains(target);
+      if (!isInsideDesktop && !isInsideMobile) setIsMenuOpen(false);
+    };
+    const handleKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setIsMenuOpen(false);
+    };
+    document.addEventListener("mousedown", handleClick);
+    document.addEventListener("keydown", handleKey);
+    return () => {
+      document.removeEventListener("mousedown", handleClick);
+      document.removeEventListener("keydown", handleKey);
+    };
+  }, []);
+
+  useEffect(() => {
+    setIsMenuOpen(false);
+  }, [view, session]);
+
+  useEffect(() => {
+    let isActive = true;
+    const loadAvatar = async () => {
+      if (!session?.user) {
+        setAvatarUrl(null);
+        return;
+      }
+      const fallback = session.user.user_metadata?.avatar_url || session.user.user_metadata?.picture || null;
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("avatar_url")
+        .eq("id", session.user.id)
+        .maybeSingle();
+
+      if (error) {
+        console.warn("Errore caricamento avatar profilo", error);
+      }
+      if (!isActive) return;
+      setAvatarUrl(data?.avatar_url || fallback || DEFAULT_AVATAR);
+    };
+    loadAvatar();
+    return () => {
+      isActive = false;
+    };
+  }, [session?.user?.id, session?.user?.user_metadata?.avatar_url, session?.user?.user_metadata?.picture]);
+
+  const handleMenuNavigate = (nextView: ViewType) => {
+    setView(nextView);
+    resetSelection();
+    setIsMenuOpen(false);
+  };
+
+  const handleLogoutClick = () => {
+    setIsMenuOpen(false);
+    onLogout();
+  };
+
   return (
     <nav className="nav">
       <div className="nav-left">
@@ -40,6 +107,55 @@ export default function Navbar({
             onKeyDown={(e) => e.key === 'Enter' && onSearch()}
           />
         </div>
+
+        {session && (
+          <div className="user-menu mobile-only" ref={menuRefMobile}>
+            <button
+              type="button"
+              className={`user-menu-button ${isMenuOpen ? "open" : ""} ${(view === "profile" || view === "list") ? "active" : ""}`}
+              onClick={() => setIsMenuOpen((prev) => !prev)}
+              aria-haspopup="menu"
+              aria-expanded={isMenuOpen}
+              aria-label="Menu utente"
+            >
+              {avatarUrl ? (
+                <img src={avatarUrl} alt="Avatar utente" />
+              ) : (
+                <span className="user-avatar-fallback">U</span>
+              )}
+            </button>
+
+            {isMenuOpen && (
+              <div className="user-menu-dropdown" role="menu">
+                <button
+                  type="button"
+                  className="user-menu-item"
+                  role="menuitem"
+                  onClick={() => handleMenuNavigate("profile")}
+                >
+                  Profilo
+                </button>
+                <button
+                  type="button"
+                  className="user-menu-item"
+                  role="menuitem"
+                  onClick={() => handleMenuNavigate("list")}
+                >
+                  La mia Lista
+                </button>
+                <div className="user-menu-divider" role="separator" />
+                <button
+                  type="button"
+                  className="user-menu-item danger"
+                  role="menuitem"
+                  onClick={handleLogoutClick}
+                >
+                  Esci
+                </button>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       <div className="nav-links">
@@ -53,7 +169,7 @@ export default function Navbar({
   className={`pill ${view === 'suggestions' ? "solid" : "ghost"}`} 
   onClick={() => setView('suggestions')}
 >
-  💡 Consigli
+  Consigli💡
 </button>
         
         <button 
@@ -69,33 +185,56 @@ export default function Navbar({
   Classifica 🏆
 </button>
 
-        {/* LOGICA BOTTONI UTENTE LOGGATO */}
-        {session ? (
-          <>
-            {/* NUOVO TASTO PROFILO */}
-            <button 
-              className={`pill ${view === "profile" ? "solid" : "ghost"}`} 
-              onClick={() => { setView("profile"); resetSelection(); }}
+        {session && (
+          <div className="user-menu desktop-only" ref={menuRefDesktop}>
+            <button
+              type="button"
+              className={`user-menu-button ${isMenuOpen ? "open" : ""} ${(view === "profile" || view === "list") ? "active" : ""}`}
+              onClick={() => setIsMenuOpen((prev) => !prev)}
+              aria-haspopup="menu"
+              aria-expanded={isMenuOpen}
+              aria-label="Menu utente"
             >
-              Profilo
+              {avatarUrl ? (
+                <img src={avatarUrl} alt="Avatar utente" />
+              ) : (
+                <span className="user-avatar-fallback">U</span>
+              )}
             </button>
 
-            <button 
-              className={`pill ${view === "list" ? "solid" : "ghost"}`} 
-              onClick={() => { setView("list"); resetSelection(); }}
-            >
-              La mia Lista
-            </button>
-            
-            <button 
-              className="pill ghost"
-              onClick={onLogout}
-              style={{ borderColor: 'rgba(255, 80, 80, 0.3)', color: '#ff8080' }}
-            >
-              Esci
-            </button>
-          </>
-        ) : (
+            {isMenuOpen && (
+              <div className="user-menu-dropdown" role="menu">
+                <button
+                  type="button"
+                  className="user-menu-item"
+                  role="menuitem"
+                  onClick={() => handleMenuNavigate("profile")}
+                >
+                  Profilo
+                </button>
+                <button
+                  type="button"
+                  className="user-menu-item"
+                  role="menuitem"
+                  onClick={() => handleMenuNavigate("list")}
+                >
+                  La mia Lista
+                </button>
+                <div className="user-menu-divider" role="separator" />
+                <button
+                  type="button"
+                  className="user-menu-item danger"
+                  role="menuitem"
+                  onClick={handleLogoutClick}
+                >
+                  Esci
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+        {/* LOGICA BOTTONI UTENTE LOGGATO */}
+        {!session && (
           <button 
             className="pill solid"
             style={{ background: '#fff', color: '#000' }}

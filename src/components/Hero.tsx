@@ -129,11 +129,11 @@ export default function Hero({
             {item.type === 'tv' && item.seasons && <span className="meta-badge info">{item.seasons} Stagioni</span>}
         </div>
 
-        <p style={{ maxWidth: '600px', lineHeight: '1.6', marginBottom: '20px', fontSize: '1.1rem', color: '#e0e0e0', textShadow: '0 2px 4px rgba(0,0,0,0.8)' }}>
+        <p className="hero-overview">
             {item.overview}
         </p>
 
-        <div style={{ marginBottom: '25px' }}>
+        <div className="hero-rating">
            <StarRating initialRating={userRating} onRate={onRate} />
         </div>
 

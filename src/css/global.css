@@ -26,8 +26,9 @@ body {
 }
 
 .app {
-  max-width: 1400px;
-  margin: 0 auto 80px;
+  width: 100%;
+  max-width: none;
+  margin: 0 0 80px;
   padding: 16px 18px 72px;
 }
 
@@ -197,28 +198,67 @@ input::placeholder { color: #888; }
 /* Fumetto del commento */
 .suggestion-bubble {
   position: absolute;
-  top: 230px;
-
-  left: 50%;
-  transform: translateX(-50%) translateY(-10px);
-  background: #fff;
-  color: #000;
-  padding: 8px 12px;
-  border-radius: 12px;
-  border-bottom-left-radius: 0;
+  left: 12px;
+  right: 12px;
+  bottom: 52px;
+  transform: translateY(8px);
+  background: rgba(12, 14, 20, 0.9);
+  color: #eef2f6;
+  padding: 10px 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(74, 232, 255, 0.2);
   font-size: 0.8rem;
   font-weight: 600;
+  line-height: 1.45;
+  max-height: 70px;
   opacity: 0;
   pointer-events: none;
-  transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-  width: max-content;
-  max-width: 90%;
-  text-align: center;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-align: left;
   z-index: 20;
+  backdrop-filter: blur(8px);
+  box-shadow: 0 10px 24px rgba(0,0,0,0.45);
+}
+.suggestion-bubble::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 22px;
+  background: linear-gradient(180deg, rgba(12, 14, 20, 0) 0%, rgba(12, 14, 20, 0.9) 80%);
+  border-radius: 0 0 14px 14px;
 }
 .suggestion-card-wrapper:hover .suggestion-bubble {
   opacity: 1;
-  transform: translateX(-50%) translateY(-20px);
+  transform: translateY(0);
+  max-height: 160px;
+  overflow: auto;
+  display: block;
+  -webkit-line-clamp: unset;
+  -webkit-box-orient: initial;
+  pointer-events: auto;
+}
+/* Accessibilita' tastiera */
+.suggestion-card-wrapper:focus-within .suggestion-bubble {
+  opacity: 1;
+  transform: translateY(0);
+  max-height: 160px;
+  overflow: auto;
+  display: block;
+  -webkit-line-clamp: unset;
+  -webkit-box-orient: initial;
+  pointer-events: auto;
+}
+
+.suggestion-card-wrapper:hover .suggestion-bubble::after,
+.suggestion-card-wrapper:focus-within .suggestion-bubble::after {
+  opacity: 0;
+  height: 0;
 }
 /* --- AGGIUNTA SUGGESTIONS STYLES --- */
 
@@ -245,37 +285,46 @@ input::placeholder { color: #888; }
   outline: none;
 }
 
-/* Bottone Elimina (Cestino) */
+/* Menu Opzioni */
 .delete-btn-overlay {
   position: absolute;
   top: 10px;
   right: 10px;
-  background: rgba(255, 0, 80, 0.9); /* Rosso acceso */
-  color: white;
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
+  background: rgba(15, 16, 22, 0.85);
+  color: #e9eef5;
+  width: 34px;
+  height: 34px;
+  border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  border: 1px solid rgba(255,255,255,0.2);
-  z-index: 20; /* Sopra tutto */
+  border: 1px solid rgba(255,255,255,0.15);
+  z-index: 25;
   opacity: 0;
-  transform: scale(0.8);
-  transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  transform: translateY(-4px);
+  transition: all 0.2s ease;
+  font-weight: 700;
+  letter-spacing: 2px;
+  font-size: 0.9rem;
 }
 
 .delete-btn-overlay:hover {
-  background: #ff0050;
-  transform: scale(1.1);
-  box-shadow: 0 4px 15px rgba(255, 0, 80, 0.5);
+  background: rgba(255, 0, 80, 0.15);
+  border-color: rgba(255, 0, 80, 0.4);
+  color: #ff9fb0;
+  box-shadow: 0 6px 16px rgba(255, 0, 80, 0.3);
 }
 
 /* Mostra il cestino quando passi sopra la card */
 .suggestion-card-wrapper:hover .delete-btn-overlay {
   opacity: 1;
-  transform: scale(1);
+  transform: translateY(0);
+}
+/* Accessibilita' tastiera */
+.suggestion-card-wrapper:focus-within .delete-btn-overlay {
+  opacity: 1;
+  transform: translateY(0);
 }
 
 /* --- TOAST NOTIFICATION --- */
