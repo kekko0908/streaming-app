@@ -179,6 +179,7 @@ export default function App() {
     const { error } = await supabase.auth.signOut({ scope: "local" });
     if (error) console.error("Errore logout:", error);
     clearSupabaseAuthStorage();
+    localStorage.setItem(UPDATES_STORAGE_KEY, UPDATES_VERSION);
     setSession(null);
     setView("home");
   };
@@ -334,9 +335,8 @@ const runSmartShuffle = async (genreId: number | null) => {
           { onConflict: "id" }
         );
       if (error) console.error("Errore salvataggio novita profilo:", error);
-    } else {
-      localStorage.setItem(UPDATES_STORAGE_KEY, UPDATES_VERSION);
     }
+    localStorage.setItem(UPDATES_STORAGE_KEY, UPDATES_VERSION);
     setShowUpdates(false);
   };
 
