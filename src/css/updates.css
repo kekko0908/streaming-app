@@ -1,0 +1,126 @@
+/* src/css/updates.css */
+.updates-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(3, 6, 12, 0.75);
+  backdrop-filter: blur(10px);
+  z-index: 2500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  animation: updates-fade 0.25s ease-out;
+}
+
+.updates-modal {
+  width: min(560px, 92vw);
+  background: linear-gradient(160deg, rgba(16, 18, 28, 0.98), rgba(10, 12, 20, 0.98));
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 22px;
+  padding: 26px 26px 22px;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
+  position: relative;
+  animation: updates-pop 0.3s ease-out;
+}
+
+.updates-header h2 {
+  margin: 8px 0 10px;
+  font-size: 1.4rem;
+}
+
+.updates-header p {
+  margin: 0;
+  color: rgba(230, 235, 242, 0.7);
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
+.updates-version {
+  margin-top: 10px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: rgba(230, 235, 242, 0.6);
+}
+
+.updates-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: #071018;
+  background: linear-gradient(90deg, #4ae8ff, #9ad6ff);
+  box-shadow: 0 8px 18px rgba(74, 232, 255, 0.3);
+}
+
+.updates-list {
+  margin: 18px 0 20px;
+  display: grid;
+  gap: 14px;
+}
+
+.updates-item {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.updates-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  margin-top: 6px;
+  background: #4ae8ff;
+  box-shadow: 0 0 10px rgba(74, 232, 255, 0.6);
+}
+
+.updates-title {
+  font-weight: 700;
+  font-size: 0.95rem;
+  margin-bottom: 4px;
+}
+
+.updates-text {
+  font-size: 0.88rem;
+  color: rgba(231, 236, 244, 0.68);
+  line-height: 1.45;
+}
+
+.updates-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.updates-footnote {
+  font-size: 0.75rem;
+  color: rgba(230, 235, 242, 0.55);
+}
+
+@keyframes updates-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes updates-pop {
+  from { opacity: 0; transform: translateY(10px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@media (max-width: 480px) {
+  .updates-modal {
+    padding: 22px 20px 18px;
+  }
+  .updates-header h2 {
+    font-size: 1.2rem;
+  }
+}

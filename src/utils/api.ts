@@ -145,6 +145,12 @@ export async function fetchPopularTV(): Promise<TmdbItem[]> {
   return fetchMultiplePages(url, "tv");
 }
 
+// Nuove uscite al cinema per regione
+export async function fetchNowPlaying(region: string = "IT"): Promise<TmdbItem[]> {
+  const url = `https://api.themoviedb.org/3/movie/now_playing?api_key=${TMDB_KEY}&language=it-IT&region=${region}`;
+  return fetchMultiplePages(url, "movie");
+}
+
 // Raccomandazioni (40 items = 2 pagine)
 export async function fetchRecommendations(tmdbId: string, type: MediaType): Promise<TmdbItem[]> {
   const url = `https://api.themoviedb.org/3/${type}/${tmdbId}/recommendations?api_key=${TMDB_KEY}&language=it-IT`;
@@ -158,6 +164,9 @@ export async function discoverContent(
   genre?: string, 
   year?: string, 
   vote?: string,
+  providers?: string,
+  runtimeMin?: number,
+  runtimeMax?: number,
   page: number = 1
 ): Promise<TmdbItem[]> {
   
@@ -172,6 +181,12 @@ export async function discoverContent(
 
   if (genre) params.append("with_genres", genre);
   if (vote) params.append("vote_average.gte", vote);
+  if (providers) {
+    params.append("with_watch_providers", providers);
+    params.append("watch_region", "IT");
+  }
+  if (typeof runtimeMin === "number") params.append("with_runtime.gte", runtimeMin.toString());
+  if (typeof runtimeMax === "number") params.append("with_runtime.lte", runtimeMax.toString());
   
   if (year) {
     if (type === 'movie') params.append("primary_release_year", year);
@@ -181,6 +196,22 @@ export async function discoverContent(
   const res = await fetch(`https://api.themoviedb.org/3/discover/${type}?${params.toString()}`);
   const data = await res.json();
   return (data.results || []).map((item: any) => mapSearchItem(item, type));
+}
+
+// Crediti attore (film + serie)
+export async function fetchPersonCredits(personId: number): Promise<TmdbItem[]> {
+  try {
+    const res = await fetch(`https://api.themoviedb.org/3/person/${personId}/combined_credits?api_key=${TMDB_KEY}&language=it-IT`);
+    const data = await res.json();
+    const credits = (data.cast || [])
+      .filter((item: any) => item.media_type === "movie" || item.media_type === "tv")
+      .map((item: any) => mapSearchItem(item, item.media_type as MediaType));
+    const uniqueMap = new Map(credits.map((item: TmdbItem) => [`${item.type}-${item.tmdbId}`, item]));
+    return Array.from(uniqueMap.values()).sort((a, b) => (b.popularity || 0) - (a.popularity || 0));
+  } catch (e) {
+    console.error("Errore fetch credits attore:", e);
+    return [];
+  }
 }
 
 // Trailer

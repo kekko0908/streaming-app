@@ -38,7 +38,7 @@ export default function CommunityPulse({ onItemClick }: CommunityPulseProps) {
 
   const loopActivities = [...activities, ...activities];
 
-  const getActionConfig = (act: Activity) => {
+  const getActionConfig = (act: Activity, mediaType: "movie" | "tv") => {
     switch (act.action_type) {
       case 'vote':
         return { icon: '⭐', color: '#ffd700', text: 'ha votato' };
@@ -46,7 +46,7 @@ export default function CommunityPulse({ onItemClick }: CommunityPulseProps) {
         return { icon: '▶️', color: '#00e676', text: 'sta guardando' };
       case 'completed':
         // Se è una serie TV completata, scriviamo "Ha completato la serie"
-        return { icon: '🏆', color: '#4ae8ff', text: act.media_type === 'tv' ? 'ha completato la serie' : 'ha completato' };
+        return { icon: '🏆', color: '#4ae8ff', text: mediaType === 'tv' ? 'ha completato la serie' : 'ha completato' };
       case 'plan':
         return { icon: '📌', color: '#ff0050', text: 'vuole vedere' };
       default:
@@ -64,14 +64,15 @@ export default function CommunityPulse({ onItemClick }: CommunityPulseProps) {
       
       <div className="activity-track">
         {loopActivities.map((act, i) => {
-          const config = getActionConfig(act);
+          const inferredType = act.media_type === 'tv' && (act.season || act.episode) ? 'tv' : 'movie';
+          const config = getActionConfig(act, inferredType);
           const maskedName = act.user_name.includes("@") 
             ? act.user_name.split("@")[0].substring(0, 3) + "***" 
             : act.user_name;
 
           // LOGICA VISUALIZZAZIONE BADGE (S:X E:Y)
           // Mostra SOLO se è una TV e lo stato è "watching" (In corso)
-          const isTV = act.media_type === 'tv';
+          const isTV = inferredType === 'tv';
           const isWatching = act.action_type === 'watching';
           const showEpisodeBadge = isTV && isWatching && act.season && act.episode;
 
@@ -81,7 +82,7 @@ export default function CommunityPulse({ onItemClick }: CommunityPulseProps) {
               className="activity-card"
               onClick={() => onItemClick && onItemClick({
                   tmdbId: act.tmdb_id,
-                  type: act.media_type as any,
+                  type: inferredType as any,
                   title: act.media_title,
                   poster: act.media_poster,
                   year: "", overview: "", backdrop: "", rating: 0

@@ -11,10 +11,13 @@ import {
   fetchDetails, 
   fetchByGenre, 
   fetchPopularTV,
+  fetchNowPlaying,
   fetchRecommendations,
+  fetchPersonCredits,
   fetchCredits, 
   CastMember    
 } from "./utils/api";
+import { formatDate } from "./utils/helper";
 import { useStore } from "./hooks/useStore";
 import { supabase } from "./supabaseClient";
 import { Session } from "@supabase/supabase-js";
@@ -33,8 +36,25 @@ import CommunityPulse from "./components/CommunityPulse";
 import SiteLock from "./components/SiteLock"; 
 import ShuffleModal from "./components/ShuffleModal"; 
 import ShuffleFilterModal from "./components/ShuffleFilterModal"; 
+import UpdatesModal, { UpdateItem } from "./components/UpdatesModal";
 
 export default function App() {
+  const UPDATES_STORAGE_KEY = "sfa_updates_seen";
+  const UPDATES_VERSION = "1.4.1";
+  const updatesItems: UpdateItem[] = [
+    {
+      title: "Film correlati dagli attori",
+      text: "Clicca su un attore per vedere subito i film collegati al suo profilo."
+    },
+    {
+      title: "Filtro Servizio in Archivio",
+      text: "Ora puoi filtrare per piattaforma di streaming direttamente nei risultati."
+    },
+    {
+      title: "Prossime uscite piu chiare",
+      text: "Ogni card mostra la data di uscita senza occupare troppo spazio."
+    }
+  ];
   const [isSiteUnlocked, setIsSiteUnlocked] = useState(() => {
     return sessionStorage.getItem("site_unlocked") === "true";
   });
@@ -62,8 +82,12 @@ export default function App() {
   const [selected, setSelected] = useState<TmdbItem | null>(null);
   const [related, setRelated] = useState<TmdbItem[]>([]);
   const [cast, setCast] = useState<CastMember[]>([]); 
+  const [selectedActor, setSelectedActor] = useState<CastMember | null>(null);
+  const [actorCredits, setActorCredits] = useState<TmdbItem[]>([]);
   const [showPlayer, setShowPlayer] = useState(false);
   const [playerState, setPlayerState] = useState({ season: 1, episode: 1 });
+  const [unavailableItem, setUnavailableItem] = useState<TmdbItem | null>(null);
+  const [showUpdates, setShowUpdates] = useState(false);
 
   // --- STATI SHUFFLE ---
   const [shuffleItem, setShuffleItem] = useState<TmdbItem | null>(null);
@@ -82,6 +106,17 @@ export default function App() {
   }, [view]);
 
   useEffect(() => {
+    if (!isSiteUnlocked) return;
+    if (session?.user) {
+      const seenVersion = session.user.user_metadata?.updates_seen_version;
+      if (seenVersion !== UPDATES_VERSION) setShowUpdates(true);
+      return;
+    }
+    const seenVersion = localStorage.getItem(UPDATES_STORAGE_KEY);
+    if (seenVersion !== UPDATES_VERSION) setShowUpdates(true);
+  }, [isSiteUnlocked, session?.user?.id, session?.user?.user_metadata?.updates_seen_version]);
+
+  useEffect(() => {
     async function loadData() {
       try {
         const [trending, rawUpcoming, popular, action, animation, tvPopular, newReleases] = await Promise.all([
@@ -91,7 +126,7 @@ export default function App() {
           fetchByGenre(28, "movie"),
           fetchByGenre(16, "movie"),
           fetchPopularTV(),
-          fetchCollection("movie/now_playing") 
+          fetchNowPlaying("IT") 
         ]);
         
         const today = new Date().toISOString().split('T')[0];
@@ -129,6 +164,8 @@ export default function App() {
       fullItem.progressMinutes = item.progressMinutes;
     }
     setSelected(fullItem);
+    setSelectedActor(null);
+    setActorCredits([]);
     try { const recs = await fetchRecommendations(item.tmdbId, item.type); setRelated(recs); } catch(e) { setRelated([]); }
     try { const actors = await fetchCredits(item.tmdbId, item.type); setCast(actors); } catch(e) { setCast([]); }
   };
@@ -216,14 +253,56 @@ const runSmartShuffle = async (genreId: number | null) => {
     if (!session) { alert("Devi accedere!"); return; }
     if (selected) rateItem(selected, rating);
   };
+  const handleActorSelect = async (actor: CastMember) => {
+    setSelectedActor(actor);
+    try {
+      const credits = await fetchPersonCredits(actor.id);
+      setActorCredits(credits.filter(c => c.type === "movie"));
+    } catch (e) {
+      console.error(e);
+      setActorCredits([]);
+    }
+  };
+  const isUpcomingMovie = (item: TmdbItem) => {
+    if (item.type !== "movie" || !item.releaseDateFull) return false;
+    const releaseDate = new Date(item.releaseDateFull);
+    if (Number.isNaN(releaseDate.getTime())) return false;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    releaseDate.setHours(0, 0, 0, 0);
+    return releaseDate > today;
+  };
   const handlePlay = (season: number, episode: number) => {
     if (!selected) return;
+    if (isUpcomingMovie(selected)) {
+      setUnavailableItem(selected);
+      return;
+    }
     setPlayerState({ season, episode });
     setShowPlayer(true);
     if (session) {
         updateProgress(selected, season, episode);
         if (!myList.find(m => m.tmdbId === selected.tmdbId)) addToList(selected, "in-corso");
     }
+  };
+
+  const handleCloseUpdates = async () => {
+    if (session?.user) {
+      const { error } = await supabase.auth.updateUser({
+        data: {
+          ...(session.user.user_metadata || {}),
+          updates_seen_version: UPDATES_VERSION
+        }
+      });
+      if (error) console.error("Errore salvataggio novita:", error);
+    } else {
+      localStorage.setItem(UPDATES_STORAGE_KEY, UPDATES_VERSION);
+    }
+    setShowUpdates(false);
+  };
+
+  const handleOpenUpdates = () => {
+    setShowUpdates(true);
   };
 
   const getFilteredList = () => {
@@ -247,7 +326,7 @@ const runSmartShuffle = async (genreId: number | null) => {
       <Navbar 
         view={view} setView={setView} resetSelection={() => setSelected(null)} 
         query={query} setQuery={setQuery} onSearch={runSearch}
-        session={session} onLogout={handleLogout}
+        session={session} onLogout={handleLogout} onShowUpdates={handleOpenUpdates}
       />
 
       {view === "auth" && <AuthForm />}
@@ -263,7 +342,24 @@ const runSmartShuffle = async (genreId: number | null) => {
                   onRemoveFromList={() => removeFromList(selected.tmdbId)}
                   onClose={() => setSelected(null)} onSelectCollectionItem={selectItem} 
                 />
-                <CastList cast={cast} />
+                <CastList cast={cast} onActorSelect={handleActorSelect} />
+                {selectedActor && (
+                    <div className="list-section" style={{ marginTop: '20px' }}>
+                         <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'20px'}}>
+                            <h2>Film con {selectedActor.name}</h2>
+                            <button className="pill ghost" onClick={() => { setSelectedActor(null); setActorCredits([]); }}>Chiudi</button>
+                         </div>
+                         {actorCredits.length > 0 ? (
+                           <div className="grid">
+                              {actorCredits.map(item => (
+                                  <Card key={item.tmdbId} item={item} onClick={() => selectItem(item)} />
+                              ))}
+                           </div>
+                         ) : (
+                           <p style={{ color: '#888' }}>Nessun film trovato.</p>
+                         )}
+                    </div>
+                )}
                 {related.length > 0 && (
                     <div className="list-section" style={{ marginTop: '20px' }}>
                          <div className="carousel-header" style={{ marginBottom: '20px', paddingLeft: '0' }}>
@@ -307,7 +403,7 @@ const runSmartShuffle = async (genreId: number | null) => {
                   <CarouselSection title="Nuove Uscite al Cinema" icon="🆕" items={homeLists.newReleases} onSelect={selectItem} />
                   <CarouselSection title="Popolari su TMDB" icon="🔥" items={homeLists.popular} onSelect={selectItem} />
                   <CarouselSection title="Serie TV del momento" icon="📺" items={homeLists.tvPopular} onSelect={selectItem} />
-                  <CarouselSection title="Prossime Uscite" icon="📅" items={homeLists.upcoming} onSelect={selectItem} />
+                  <CarouselSection title="Prossime Uscite" icon="📅" items={homeLists.upcoming} onSelect={selectItem} isUpcoming={true} formatDate={formatDate} />
                   <CarouselSection title="Azione e Avventura" icon="💣" items={homeLists.action} onSelect={selectItem} />
                   <CarouselSection title="Animazione" icon="✨" items={homeLists.animation} onSelect={selectItem} />
                   
@@ -407,6 +503,20 @@ const runSmartShuffle = async (genreId: number | null) => {
           episode={playerState.episode}
           onClose={() => setShowPlayer(false)}
         />
+      )}
+
+      {unavailableItem && (
+        <div className="modal-backdrop-glass" onClick={() => setUnavailableItem(null)}>
+          <div className="modal-glass-box" onClick={(e) => e.stopPropagation()}>
+            <h3>Film {unavailableItem.title} ancora non disponibile</h3>
+            <p>Non è ancora uscito o non è presente nel catalogo streaming.</p>
+            <button className="pill solid" onClick={() => setUnavailableItem(null)}>Ok</button>
+          </div>
+        </div>
+      )}
+
+      {showUpdates && (
+        <UpdatesModal items={updatesItems} version={UPDATES_VERSION} onClose={handleCloseUpdates} />
       )}
     </div>
   );

@@ -14,12 +14,13 @@ interface NavbarProps {
   onSearch: () => void;
   session: Session | null;
   onLogout: () => void;
+  onShowUpdates: () => void;
 }
 
 const DEFAULT_AVATAR = "https://api.dicebear.com/7.x/adventurer/svg?seed=Default";
 
 export default function Navbar({ 
-  view, setView, resetSelection, query, setQuery, onSearch, session, onLogout 
+  view, setView, resetSelection, query, setQuery, onSearch, session, onLogout, onShowUpdates
 }: NavbarProps) {
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -143,6 +144,14 @@ export default function Navbar({
                 >
                   La mia Lista
                 </button>
+                <button
+                  type="button"
+                  className="user-menu-item"
+                  role="menuitem"
+                  onClick={() => { setIsMenuOpen(false); onShowUpdates(); }}
+                >
+                  Novità
+                </button>
                 <div className="user-menu-divider" role="separator" />
                 <button
                   type="button"
@@ -219,6 +228,14 @@ export default function Navbar({
                   onClick={() => handleMenuNavigate("list")}
                 >
                   La mia Lista
+                </button>
+                <button
+                  type="button"
+                  className="user-menu-item"
+                  role="menuitem"
+                  onClick={() => { setIsMenuOpen(false); onShowUpdates(); }}
+                >
+                  Novità
                 </button>
                 <div className="user-menu-divider" role="separator" />
                 <button

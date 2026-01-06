@@ -34,10 +34,15 @@ export function useStore() {
           row.watched_minutes ??
           0
         ) || 0;
+        const hasTvProgress =
+          row.current_season !== null && row.current_season !== undefined ||
+          row.current_episode !== null && row.current_episode !== undefined ||
+          row.total_watched_episodes !== null && row.total_watched_episodes !== undefined;
+        const inferredType = hasTvProgress ? "tv" : "movie";
 
         return ({
         tmdbId: String(row.tmdb_id),
-        type: row.media_items?.media_type || 'movie',
+        type: inferredType,
         title: row.media_items?.title || 'Sconosciuto',
         status: row.status,
         addedAt: row.added_at,
@@ -55,7 +60,11 @@ export function useStore() {
 
       const progressMap: any = {};
       data.forEach((row: any) => {
-        if (row.media_items?.media_type === 'tv') {
+        const hasTvProgress =
+          row.current_season !== null && row.current_season !== undefined ||
+          row.current_episode !== null && row.current_episode !== undefined ||
+          row.total_watched_episodes !== null && row.total_watched_episodes !== undefined;
+        if (hasTvProgress) {
           progressMap[String(row.tmdb_id)] = { season: row.current_season || 1, episode: row.current_episode || 1 };
         }
       });

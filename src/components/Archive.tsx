@@ -15,6 +15,8 @@ export default function Archive({ onSelect }: ArchiveProps) {
   const [selectedGenres, setSelectedGenres] = useState<string[]>([]);
   const [year, setYear] = useState("");
   const [vote, setVote] = useState("");
+  const [service, setService] = useState("");
+  const [runtime, setRuntime] = useState("");
   
   const [results, setResults] = useState<TmdbItem[]>([]);
   const [page, setPage] = useState(1); // Pagina di partenza attuale
@@ -48,24 +50,50 @@ export default function Archive({ onSelect }: ArchiveProps) {
     { id: "revenue.desc", name: "Incassi" },
   ];
 
+  const services = [
+    { id: "8", name: "Netflix" },
+    { id: "9", name: "Prime Video" },
+    { id: "337", name: "Disney+" },
+    { id: "350", name: "Apple TV+" },
+    { id: "39", name: "Now TV" },
+  ];
+
+  const runtimeOptions = [
+    { id: "", name: "Qualsiasi" },
+    { id: "lt90", name: "Sotto 90 min" },
+    { id: "90-120", name: "90-120 min" },
+    { id: "120-150", name: "120-150 min" },
+    { id: "150plus", name: "Oltre 150 min" },
+  ];
+
+  const getRuntimeRange = (value: string) => {
+    if (value === "lt90") return { min: undefined, max: 89 };
+    if (value === "90-120") return { min: 90, max: 120 };
+    if (value === "120-150") return { min: 120, max: 150 };
+    if (value === "150plus") return { min: 150, max: undefined };
+    return { min: undefined, max: undefined };
+  };
+
+
   // 1. Reset quando cambiano i filtri
   useEffect(() => {
     setPage(1);
     loadResults(1, true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [type, sort, selectedGenres, year, vote]);
+  }, [type, sort, selectedGenres, year, vote, service, runtime]);
 
   // 2. Funzione di caricamento POTENZIATA (Multi-pagina)
   async function loadResults(startPage: number, reset: boolean) {
     setLoading(true);
     try {
       const genreString = selectedGenres.join(",");
+      const { min: runtimeMin, max: runtimeMax } = getRuntimeRange(runtime);
       
       // Creiamo un array di promesse per scaricare 3 pagine in parallelo
       // Es: Se startPage è 1, scarichiamo 1, 2, 3.
       const promises = [];
       for (let i = 0; i < PAGES_PER_LOAD; i++) {
-        promises.push(discoverContent(type, sort, genreString, year, vote, startPage + i));
+        promises.push(discoverContent(type, sort, genreString, year, vote, service, runtimeMin, runtimeMax, startPage + i));
       }
 
       // Attendiamo tutte le risposte
@@ -169,6 +197,21 @@ export default function Archive({ onSelect }: ArchiveProps) {
                <option value="8">8+ (Ottimi)</option>
                <option value="7">7+ (Buoni)</option>
                <option value="6">6+ (Sufficienti)</option>
+             </select>
+          </div>
+
+          <div className="filter-group">
+             <span className="filter-label">Servizio</span>
+             <select className="filter-select" value={service} onChange={e => setService(e.target.value)}>
+               <option value="">Tutti</option>
+               {services.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+             </select>
+          </div>
+
+          <div className="filter-group">
+             <span className="filter-label">Durata</span>
+             <select className="filter-select" value={runtime} onChange={e => setRuntime(e.target.value)}>
+               {runtimeOptions.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
              </select>
           </div>
 

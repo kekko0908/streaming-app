@@ -61,13 +61,15 @@
   position: absolute;
   bottom: 10px;
   right: 10px;
-  background: var(--primary);
-  color: #000;
-  font-weight: 800;
-  font-size: 0.8rem;
-  padding: 4px 8px;
+  background: rgba(0, 0, 0, 0.75);
+  color: #dff6ff;
+  border: 1px solid rgba(74, 232, 255, 0.35);
+  font-weight: 700;
+  font-size: 0.72rem;
+  padding: 3px 6px;
   border-radius: 6px;
-  box-shadow: 0 2px 5px rgba(0,0,0,0.5);
+  backdrop-filter: blur(4px);
+  box-shadow: 0 3px 10px rgba(0,0,0,0.35);
   z-index: 5;
 }
 

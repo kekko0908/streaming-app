@@ -3,9 +3,10 @@ import { CastMember } from "../utils/api";
 
 interface CastListProps {
   cast: CastMember[];
+  onActorSelect?: (actor: CastMember) => void;
 }
 
-export default function CastList({ cast }: CastListProps) {
+export default function CastList({ cast, onActorSelect }: CastListProps) {
   if (!cast || cast.length === 0) return null;
 
   return (
@@ -20,7 +21,11 @@ export default function CastList({ cast }: CastListProps) {
         maskImage: 'linear-gradient(to right, black 90%, transparent 100%)' // Sfumatura a destra
       }}>
         {cast.map(actor => (
-          <div key={actor.id} style={{ minWidth: '100px', textAlign: 'center' }}>
+          <div
+            key={actor.id}
+            onClick={() => onActorSelect && onActorSelect(actor)}
+            style={{ minWidth: '100px', textAlign: 'center', cursor: onActorSelect ? 'pointer' : 'default' }}
+          >
             {/* Foto Attore */}
             <div style={{ 
               width: '80px', 
