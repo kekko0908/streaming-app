@@ -106,15 +106,33 @@ export default function App() {
   }, [view]);
 
   useEffect(() => {
-    if (!isSiteUnlocked) return;
-    if (session?.user) {
-      const seenVersion = session.user.user_metadata?.updates_seen_version;
+    let isActive = true;
+    const loadUpdatesSeen = async () => {
+      if (!isSiteUnlocked) return;
+      if (session?.user) {
+        const { data, error } = await supabase
+          .from("profiles")
+          .select("updates_seen_version")
+          .eq("id", session.user.id)
+          .maybeSingle();
+        if (!isActive) return;
+        if (error) {
+          console.error("Errore lettura novita profilo:", error);
+          setShowUpdates(true);
+          return;
+        }
+        const seenVersion = data?.updates_seen_version;
+        if (seenVersion !== UPDATES_VERSION) setShowUpdates(true);
+        return;
+      }
+      const seenVersion = localStorage.getItem(UPDATES_STORAGE_KEY);
       if (seenVersion !== UPDATES_VERSION) setShowUpdates(true);
-      return;
-    }
-    const seenVersion = localStorage.getItem(UPDATES_STORAGE_KEY);
-    if (seenVersion !== UPDATES_VERSION) setShowUpdates(true);
-  }, [isSiteUnlocked, session?.user?.id, session?.user?.user_metadata?.updates_seen_version]);
+    };
+    loadUpdatesSeen();
+    return () => {
+      isActive = false;
+    };
+  }, [isSiteUnlocked, session?.user?.id]);
 
   useEffect(() => {
     async function loadData() {
@@ -146,7 +164,12 @@ export default function App() {
     loadData();
   }, []);
 
-  const handleLogout = async () => { await supabase.auth.signOut(); setSession(null); setView("home"); };
+  const handleLogout = async () => {
+    const { error } = await supabase.auth.signOut({ scope: "local" });
+    if (error) console.error("Errore logout:", error);
+    setSession(null);
+    setView("home");
+  };
 
   const runSearch = async () => {
     if (!query) return;
@@ -288,13 +311,17 @@ const runSmartShuffle = async (genreId: number | null) => {
 
   const handleCloseUpdates = async () => {
     if (session?.user) {
-      const { error } = await supabase.auth.updateUser({
-        data: {
-          ...(session.user.user_metadata || {}),
-          updates_seen_version: UPDATES_VERSION
-        }
-      });
-      if (error) console.error("Errore salvataggio novita:", error);
+      const { error } = await supabase
+        .from("profiles")
+        .upsert(
+          {
+            id: session.user.id,
+            updates_seen_version: UPDATES_VERSION,
+            updated_at: new Date().toISOString()
+          },
+          { onConflict: "id" }
+        );
+      if (error) console.error("Errore salvataggio novita profilo:", error);
     } else {
       localStorage.setItem(UPDATES_STORAGE_KEY, UPDATES_VERSION);
     }
