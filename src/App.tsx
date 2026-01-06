@@ -164,9 +164,21 @@ export default function App() {
     loadData();
   }, []);
 
+  const clearSupabaseAuthStorage = () => {
+    try {
+      Object.keys(localStorage).forEach((key) => {
+        if (key === "supabase.auth.token") localStorage.removeItem(key);
+        if (key.startsWith("sb-") && key.endsWith("-auth-token")) localStorage.removeItem(key);
+      });
+    } catch (error) {
+      console.error("Errore pulizia storage auth:", error);
+    }
+  };
+
   const handleLogout = async () => {
     const { error } = await supabase.auth.signOut({ scope: "local" });
     if (error) console.error("Errore logout:", error);
+    clearSupabaseAuthStorage();
     setSession(null);
     setView("home");
   };
