@@ -1,6 +1,6 @@
 import "../css/card.css";
 import "../css/archive.css"; 
-import { TmdbItem } from "../types/types"; // Assicurati che l'import sia corretto verso il tuo file types
+import { MediaType, TmdbItem } from "../types/types"; // Assicurati che l'import sia corretto verso il tuo file types
 
 interface CardProps {
   item: TmdbItem;
@@ -10,6 +10,7 @@ interface CardProps {
   isUpcoming?: boolean;
   showRating?: boolean;
   formatDate?: (d?: string) => string;
+  onTypeChange?: (nextType: MediaType) => void;
 }
 
 function getRatingColor(rating: number) {
@@ -19,7 +20,7 @@ function getRatingColor(rating: number) {
   return "#ff1744";
 }
 
-export default function Card({ item, onClick, progress, onRemove, isUpcoming, showRating, formatDate }: CardProps) {
+export default function Card({ item, onClick, progress, onRemove, isUpcoming, showRating, formatDate, onTypeChange }: CardProps) {
   
   const hasValidRating = (item.rating || 0) > 0;
   const shouldDisplayRating = hasValidRating && (showRating || (item.rating || 0) > 0);
@@ -103,6 +104,18 @@ export default function Card({ item, onClick, progress, onRemove, isUpcoming, sh
         <h3>{item.title}</h3>
         {onRemove && (
           <button className="pill tiny danger" onClick={(e) => { e.stopPropagation(); onRemove(); }} style={{ marginTop: '5px' }}>Rimuovi</button>
+        )}
+        {onTypeChange && (
+          <select
+            className="pill tiny ghost"
+            value={item.type}
+            onClick={(e) => e.stopPropagation()}
+            onChange={(e) => onTypeChange(e.target.value as MediaType)}
+            style={{ marginTop: '5px' }}
+          >
+            <option value="movie">Film</option>
+            <option value="tv">Serie TV</option>
+          </select>
         )}
       </div>
     </article>

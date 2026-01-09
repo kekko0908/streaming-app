@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "../supabaseClient";
-import { SavedItem, WatchStatus, TmdbItem } from "../types/types";
+import { MediaType, SavedItem, WatchStatus, TmdbItem } from "../types/types";
 
 export function useStore() {
   const [myList, setMyList] = useState<SavedItem[]>([]);
@@ -236,6 +236,37 @@ export function useStore() {
     }, { onConflict: 'user_id, tmdb_id' });
   };
 
+  const updateMediaType = async (tmdbId: string, mediaType: MediaType) => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    setMyList(prev => prev.map(item => (
+      item.tmdbId === tmdbId ? { ...item, type: mediaType } : item
+    )));
+
+    if (mediaType === "movie") {
+      setWatchProgress(prev => {
+        const { [tmdbId]: _removed, ...rest } = prev;
+        return rest;
+      });
+    }
+
+    await supabase
+      .from('media_items')
+      .update({ media_type: mediaType })
+      .eq('tmdb_id', parseInt(tmdbId));
+
+    if (mediaType === "movie") {
+      await supabase
+        .from('user_library')
+        .update({ current_season: null, current_episode: null, total_watched_episodes: null })
+        .eq('user_id', user.id)
+        .eq('tmdb_id', parseInt(tmdbId));
+    }
+
+    fetchLibrary();
+  };
+
   const getProgress = (tmdbId: string) => watchProgress[tmdbId] || { season: 1, episode: 1 };
 
   const fetchStats = async () => {
@@ -249,5 +280,5 @@ export function useStore() {
     };
   };
 
-  return { myList, addToList, removeFromList, rateItem, updateProgress, getProgress, fetchStats, loading };
+  return { myList, addToList, removeFromList, rateItem, updateProgress, updateMediaType, getProgress, fetchStats, loading };
 }

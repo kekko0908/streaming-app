@@ -62,7 +62,8 @@ export default function App() {
   const [view, setView] = useState<ViewType>("home");
   const [session, setSession] = useState<Session | null>(null);
 
-  const { myList, addToList, removeFromList, updateProgress, getProgress, rateItem, loading: listLoading } = useStore();
+  const { myList, addToList, removeFromList, updateProgress, updateMediaType, getProgress, rateItem, loading: listLoading } = useStore();
+  const isAdmin = session?.user?.id === "1181bb0e-d665-4b31-a71f-125028ea62f8";
 
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<TmdbItem[]>([]);
@@ -508,7 +509,17 @@ const runSmartShuffle = async (genreId: number | null) => {
                      <div key={sec.id} className="list-section" style={{ marginBottom: '60px' }}>
                          <div className="list-section-header"><h2 className="list-section-title">{sec.label} <span style={{fontSize:'0.6em', opacity:0.5, marginLeft:'10px', verticalAlign:'middle'}}>({sectionItems.length})</span></h2></div>
                          <div className="grid">
-                            {[...movies, ...tvShows].map(item => (<Card key={item.tmdbId} item={item} onClick={() => selectItem(item)} onRemove={() => removeFromList(item.tmdbId)} showRating={true} progress={getProgress(item.tmdbId)} />))}
+                            {[...movies, ...tvShows].map(item => (
+                              <Card
+                                key={item.tmdbId}
+                                item={item}
+                                onClick={() => selectItem(item)}
+                                onRemove={() => removeFromList(item.tmdbId)}
+                                showRating={true}
+                                progress={getProgress(item.tmdbId)}
+                                onTypeChange={isAdmin ? (nextType) => updateMediaType(item.tmdbId, nextType) : undefined}
+                              />
+                            ))}
                          </div>
                      </div>
                  );
