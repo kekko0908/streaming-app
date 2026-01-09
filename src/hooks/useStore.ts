@@ -38,7 +38,9 @@ export function useStore() {
           row.current_season !== null && row.current_season !== undefined ||
           row.current_episode !== null && row.current_episode !== undefined ||
           row.total_watched_episodes !== null && row.total_watched_episodes !== undefined;
-        const inferredType = hasTvProgress ? "tv" : "movie";
+        const mediaType = row.media_items?.media_type;
+        const normalizedMediaType = mediaType === "movie" || mediaType === "tv" ? mediaType : undefined;
+        const inferredType = normalizedMediaType ?? (hasTvProgress ? "tv" : "movie");
 
         return ({
         tmdbId: String(row.tmdb_id),
@@ -64,7 +66,10 @@ export function useStore() {
           row.current_season !== null && row.current_season !== undefined ||
           row.current_episode !== null && row.current_episode !== undefined ||
           row.total_watched_episodes !== null && row.total_watched_episodes !== undefined;
-        if (hasTvProgress) {
+        const mediaType = row.media_items?.media_type;
+        const normalizedMediaType = mediaType === "movie" || mediaType === "tv" ? mediaType : undefined;
+        const inferredType = normalizedMediaType ?? (hasTvProgress ? "tv" : "movie");
+        if (inferredType === "tv" && hasTvProgress) {
           progressMap[String(row.tmdb_id)] = { season: row.current_season || 1, episode: row.current_episode || 1 };
         }
       });
@@ -184,6 +189,27 @@ export function useStore() {
   const updateProgress = async (item: TmdbItem, season: number, episode: number) => {
     const userId = (await supabase.auth.getUser()).data.user?.id;
     if (!userId) return;
+
+    if (item.type !== "tv") {
+      await supabase.from('media_items').upsert({ 
+          tmdb_id: parseInt(item.tmdbId), 
+          title: item.title, 
+          media_type: item.type,
+          runtime: parseRuntime(item.runtime),
+          poster_path: item.poster,
+          genres: item.genres || []
+      }, { onConflict: 'tmdb_id' });
+
+      if (typeof item.progressMinutes === "number") {
+        await supabase.from('user_library').upsert({
+            user_id: userId,
+            tmdb_id: parseInt(item.tmdbId),
+            progress_minutes: Math.max(0, Math.floor(item.progressMinutes))
+        }, { onConflict: 'user_id, tmdb_id' });
+      }
+
+      return;
+    }
 
     setWatchProgress((prev: any) => ({ ...prev, [item.tmdbId]: { season, episode } }));
 
