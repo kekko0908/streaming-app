@@ -226,13 +226,24 @@ export function useStore() {
         genres: item.genres || []
     }, { onConflict: 'tmdb_id' });
 
+    // Determinare automaticamente lo stato
+    let newStatus = 'in-corso';
+    if (item.seasonsDetails && item.seasonsDetails.length > 0) {
+        const sortedSeasons = [...item.seasonsDetails].sort((a,b) => a.season_number - b.season_number);
+        const lastSeason = sortedSeasons[sortedSeasons.length - 1];
+        if (season === lastSeason.season_number && episode >= lastSeason.episode_count) {
+             newStatus = 'gia-guardato';
+        }
+    }
+
     // Upsert Library
     await supabase.from('user_library').upsert({
         user_id: userId,
         tmdb_id: parseInt(item.tmdbId),
         current_season: season,
         current_episode: episode,
-        total_watched_episodes: totalEpisodes // <--- SALVIAMO IL TOTALE ANCHE QUI
+        total_watched_episodes: totalEpisodes, // <--- SALVIAMO IL TOTALE ANCHE QUI
+        status: newStatus
     }, { onConflict: 'user_id, tmdb_id' });
   };
 

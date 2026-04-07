@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import "../css/archive.css";
 import "../css/card.css";
 import { MediaType, TmdbItem } from "../types/types";
@@ -179,6 +180,7 @@ export default function Archive({ onSelect }: ArchiveProps) {
              <span className="filter-label">Anno</span>
              <select className="filter-select" value={year} onChange={e => setYear(e.target.value)}>
                <option value="">Tutti</option>
+               <option value="2026">2026</option>
                <option value="2025">2025</option>
                <option value="2024">2024</option>
                <option value="2023">2023</option>
@@ -228,16 +230,26 @@ export default function Archive({ onSelect }: ArchiveProps) {
         </div>
       </div>
 
-      <div className="grid">
+      <motion.div layout className="grid">
+        <AnimatePresence mode="popLayout">
           {results.map((item, index) => (
-             <Card 
-               key={`${item.tmdbId}-${index}`} 
-               item={item} 
-               onClick={() => onSelect(item)} 
-               showRating={true}
-             />
+             <motion.div 
+               layout
+               initial={{ opacity: 0, scale: 0.8 }}
+               animate={{ opacity: 1, scale: 1 }}
+               exit={{ opacity: 0, scale: 0.8 }}
+               transition={{ duration: 0.3 }}
+               key={`${item.tmdbId}-${index}`}
+             >
+               <Card 
+                 item={item} 
+                 onClick={() => onSelect(item)} 
+                 showRating={true}
+               />
+             </motion.div>
           ))}
-      </div>
+        </AnimatePresence>
+      </motion.div>
       
       <div className="load-more-container">
          <button className="pill solid" onClick={handleLoadMore} disabled={loading} style={{ padding: '12px 40px', fontSize: '1.1rem' }}>

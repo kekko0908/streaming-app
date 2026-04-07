@@ -1,13 +1,11 @@
 import { useEffect, useRef, useState } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import "../css/navbar.css";
-import { ViewType } from "../types/types";
 import { Session } from "@supabase/supabase-js";
 import { supabase } from "../supabaseClient";
 import logo from "../assets/logo.png"; 
 
 interface NavbarProps {
-  view: ViewType;
-  setView: (v: ViewType) => void;
   resetSelection: () => void;
   query: string;
   setQuery: (q: string) => void;
@@ -20,12 +18,33 @@ interface NavbarProps {
 const DEFAULT_AVATAR = "https://api.dicebear.com/7.x/adventurer/svg?seed=Default";
 
 export default function Navbar({ 
-  view, setView, resetSelection, query, setQuery, onSearch, session, onLogout, onShowUpdates
+  resetSelection, query, setQuery, onSearch, session, onLogout, onShowUpdates
 }: NavbarProps) {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const path = location.pathname;
+  let view = path === "/" ? "home" : path.substring(1);
+
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const menuRefDesktop = useRef<HTMLDivElement | null>(null);
   const menuRefMobile = useRef<HTMLDivElement | null>(null);
+
+  // DEBOUNCE RICERCA
+  useEffect(() => {
+    if (query.trim().length > 1) {
+      const timer = setTimeout(() => {
+        onSearch();
+        navigate("/");
+      }, 600);
+      return () => clearTimeout(timer);
+    } else if (query.trim() === "") {
+      const timer = setTimeout(() => {
+          onSearch();
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [query]);
 
   useEffect(() => {
     const handleClick = (event: MouseEvent) => {
@@ -47,7 +66,7 @@ export default function Navbar({
 
   useEffect(() => {
     setIsMenuOpen(false);
-  }, [view, session]);
+  }, [location, session]);
 
   useEffect(() => {
     let isActive = true;
@@ -75,8 +94,8 @@ export default function Navbar({
     };
   }, [session?.user?.id, session?.user?.user_metadata?.avatar_url, session?.user?.user_metadata?.picture]);
 
-  const handleMenuNavigate = (nextView: ViewType) => {
-    setView(nextView);
+  const handleMenuNavigate = (nextPath: string) => {
+    navigate(nextPath);
     resetSelection();
     setIsMenuOpen(false);
   };
@@ -90,7 +109,7 @@ export default function Navbar({
     <nav className="nav">
       <div className="nav-left">
         {/* LOGO */}
-        <div className="logo" onClick={() => { setView("home"); resetSelection(); }}>
+        <div className="logo" onClick={() => { navigate("/"); resetSelection(); }}>
          <img src={logo} alt="SFA Logo" className="logo-img" />
           <div>
             <div className="logo-title">Streaming For All</div>
@@ -105,7 +124,12 @@ export default function Navbar({
             placeholder="Cerca film, serie..."
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && onSearch()}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                onSearch();
+                navigate("/");
+              }
+            }}
           />
         </div>
 
@@ -132,7 +156,7 @@ export default function Navbar({
                   type="button"
                   className="user-menu-item"
                   role="menuitem"
-                  onClick={() => handleMenuNavigate("profile")}
+                  onClick={() => handleMenuNavigate("/profile")}
                 >
                   Profilo
                 </button>
@@ -140,7 +164,7 @@ export default function Navbar({
                   type="button"
                   className="user-menu-item"
                   role="menuitem"
-                  onClick={() => handleMenuNavigate("list")}
+                  onClick={() => handleMenuNavigate("/list")}
                 >
                   La mia Lista
                 </button>
@@ -170,26 +194,26 @@ export default function Navbar({
       <div className="nav-links">
         <button 
           className={`pill ${view === "home" ? "solid" : "ghost"}`} 
-          onClick={() => { setView("home"); resetSelection(); }}
+          onClick={() => { navigate("/"); resetSelection(); }}
         >
           Home
         </button>
         <button 
   className={`pill ${view === 'suggestions' ? "solid" : "ghost"}`} 
-  onClick={() => setView('suggestions')}
+  onClick={() => navigate('/suggestions')}
 >
   Suggerimenti💡
 </button>
         
         <button 
           className={`pill ${view === "archive" ? "solid" : "ghost"}`} 
-          onClick={() => { setView("archive"); resetSelection(); }}
+          onClick={() => { navigate("/archive"); resetSelection(); }}
         >
           Archivio
         </button>
         <button 
   className={`pill ${view === "ranking" ? "solid" : "ghost"}`} 
-  onClick={() => { setView("ranking"); resetSelection(); }}
+  onClick={() => { navigate("/ranking"); resetSelection(); }}
 >
   Classifica 🏆
 </button>
@@ -217,7 +241,7 @@ export default function Navbar({
                   type="button"
                   className="user-menu-item"
                   role="menuitem"
-                  onClick={() => handleMenuNavigate("profile")}
+                  onClick={() => handleMenuNavigate("/profile")}
                 >
                   Profilo
                 </button>
@@ -225,7 +249,7 @@ export default function Navbar({
                   type="button"
                   className="user-menu-item"
                   role="menuitem"
-                  onClick={() => handleMenuNavigate("list")}
+                  onClick={() => handleMenuNavigate("/list")}
                 >
                   La mia Lista
                 </button>
@@ -255,7 +279,7 @@ export default function Navbar({
           <button 
             className="pill solid"
             style={{ background: '#fff', color: '#000' }}
-            onClick={() => { setView("auth"); resetSelection(); }}
+            onClick={() => { navigate("/auth"); resetSelection(); }}
           >
             Accedi / Registrati
           </button>

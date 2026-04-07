@@ -4,23 +4,102 @@
 .hero {
   position: relative;
   overflow: hidden;
-  border-radius: 24px;
-  min-height: 500px;
+  min-height: 85vh;
   display: flex;
   align-items: flex-end;
-  margin-bottom: 30px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: 0 30px 60px rgba(0, 0, 0, 0.6);
+  margin: -16px -18px 40px -18px; /* Offset completo del padding per Full Screen */
+  width: calc(100% + 36px);
   background: #000;
+  box-shadow: 0 30px 60px rgba(0, 0, 0, 0.6);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .hero-bg {
   position: absolute;
-  inset: 0;
+  top: 0;
+  left: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;
-  opacity: 0.7;
+  z-index: 0;
+  transition: opacity 1.5s ease-out; /* Animazione morbida Fade-Out */
+}
+
+/* CONTROLLI VOLUME HERO */
+.volume-control-wrapper {
+  position: absolute;
+  top: 20px;
+  right: 40px;
+  display: flex;
+  align-items: center;
+  background: transparent;
+  border-radius: 25px;
+  padding: 0;
+  width: 44px; /* same as circle-btn roughly + padding */
+  height: 44px;
+  overflow: hidden;
+  z-index: 10;
+}
+
+.volume-control-wrapper:hover {
+  width: 180px;
+  background: rgba(0,0,0,0.7);
+  box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+  padding-right: 15px;
+}
+
+.volume-control-wrapper .circle-btn {
+  /* reset pos */
+  position: relative;
+  top: 0;
+  right: 0;
+  margin: 0;
+  flex-shrink: 0;
+}
+
+.volume-slider {
+  flex: 1;
+  margin-left: 10px;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  cursor: pointer;
+}
+
+.volume-control-wrapper:hover .volume-slider {
+  opacity: 1;
+  transition-delay: 0.1s;
+}
+
+/* Stilizzazione base range */
+.volume-slider[type=range] {
+  -webkit-appearance: none;
+  background: transparent;
+}
+.volume-slider[type=range]::-webkit-slider-runnable-track {
+  width: 100%;
+  height: 4px;
+  cursor: pointer;
+  background: #555;
+  border-radius: 2px;
+}
+.volume-slider[type=range]::-webkit-slider-thumb {
+  height: 12px;
+  width: 12px;
+  border-radius: 50%;
+  background: #fff;
+  cursor: pointer;
+  -webkit-appearance: none;
+  margin-top: -4px;
+}
+.volume-slider[type=range]:focus {
+  outline: none;
+}
+
+
+.hero-bg.fade-out {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to top, #06070d 10%, rgba(6, 7, 13, 0.8) 40%, transparent 100%);
 }
 
 .hero-overlay {
@@ -34,7 +113,27 @@
   z-index: 2;
   padding: 40px;
   width: 100%;
-  max-width: 900px;
+}
+
+.hero-grid-container {
+  display: flex;
+  gap: 40px;
+  width: 100%;
+  align-items: flex-end;
+  justify-content: space-between;
+}
+
+.hero-content-left {
+  flex: 1;
+  max-width: 650px;
+}
+
+.hero-content-right {
+  flex: 1.2;
+  min-width: 0; /* Previene overflow di Flexbox figlie con scroll */
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
 }
 
 .hero h1 {
@@ -128,21 +227,22 @@
   align-items: center;
   justify-content: center;
   gap: 10px;
-  margin-top: 15px;
-  padding: 8px 18px;
-  background: rgba(0, 0, 0, 0.6);
-  border-radius: 16px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(8px);
   position: relative;
   width: fit-content;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
 }
 
 .rating-content-group {
   display: flex;
   align-items: center;
   gap: 5px;
+  flex-wrap: nowrap;
+}
+
+.stars-wrapper {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 2px;
 }
 
 .rating-label-text {
@@ -233,62 +333,187 @@
 .hero-actions {
   display: flex;
   gap: 12px;
-  margin-top: 20px;
+  margin-top: 10px;
+  margin-bottom: 30px;
   flex-wrap: wrap;
   align-items: center;
 }
 
-.cta {
+.netflix-play {
   background: #fff;
   color: #000;
   border: none;
-  padding: 14px 28px;
-  border-radius: 12px;
+  padding: 10px 30px;
+  border-radius: 4px;
   font-weight: 700;
-  font-size: 1rem;
+  font-size: 1.1rem;
   cursor: pointer;
-  transition: transform 0.2s;
+  transition: background 0.2s;
 }
-.cta:hover { transform: scale(1.05); }
+.netflix-play:hover { background: rgba(255,255,255,0.75); }
 
-.trailer-btn {
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+.circle-btn {
+  background: rgba(42, 42, 42, 0.6);
+  border: 1px solid rgba(255,255,255,0.4);
   color: #fff;
-  padding: 10px 20px;
-  border-radius: 12px;
-  font-weight: 700;
-  font-size: 1rem;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  backdrop-filter: blur(10px);
-}
-.trailer-btn:hover {
-  background: rgba(255, 0, 0, 0.2);
-  border-color: #ff0000;
-}
-
-.status-btn {
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  color: #ccc;
-  padding: 10px 16px;
-  border-radius: 8px;
-  cursor: pointer;
-  font-weight: 600;
-  font-size: 0.9rem;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
   display: flex;
   align-items: center;
-  gap: 6px;
+  justify-content: center;
+  font-size: 1.2rem;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.2s;
+  backdrop-filter: blur(5px);
 }
-.status-btn:hover { background: rgba(255, 255, 255, 0.15); color: #fff; }
-.status-btn.active {
+.circle-btn:hover {
+  background: rgba(255,255,255,0.1);
+  border-color: #fff;
+  transform: scale(1.05);
+}
+.circle-btn.rating {
+  border-color: #46d369; /* Verde Netflix per score */
+  color: #46d369;
+  font-size: 0.95rem;
+  font-weight: 800;
+}
+.circle-btn.active { /* Sostituisce la colorazione primary del dropdown */
   background: var(--primary);
-  color: #05060a;
   border-color: var(--primary);
+  color: #000;
+}
+
+/* --- TABS NAVIGATION (Netflix-style) --- */
+.hero-tabs-nav {
+  display: flex;
+  gap: 30px;
+  border-bottom: 2px solid rgba(255,255,255,0.1);
+  margin-bottom: 20px;
+}
+
+.hero-tab {
+  background: transparent;
+  border: none;
+  color: #888;
+  font-size: 1.1rem;
   font-weight: 700;
+  padding: 10px 0;
+  cursor: pointer;
+  position: relative;
+  text-transform: uppercase;
+  transition: color 0.2s;
+}
+.hero-tab:hover { color: #fff; }
+.hero-tab.active { color: #fff; }
+.hero-tab.active::after {
+  content: '';
+  position: absolute;
+  bottom: -2px; /* Allineato al border del parent */
+  left: 0;
+  width: 100%;
+  height: 4px;
+  background: #E50914; /* Rosso Netflix / O colore primario base */
+}
+
+/* --- TAB PANORAMICA --- */
+.netflix-overview {
+  max-width: 600px;
+  font-size: 1.2rem;
+  line-height: 1.4;
+  color: #fff;
+  margin-bottom: 15px;
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-shadow: 1px 1px 4px rgba(0,0,0,0.8);
+}
+
+.hero-extra-info {
+  font-size: 0.9rem;
+  color: #ddd;
+}
+.info-label { color: #888; }
+
+/* --- TAB EPISODI --- */
+.episodes-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+}
+.episodes-header h3 { margin: 0; font-size: 1.5rem; }
+
+.netflix-season-select-wrapper {
+  position: relative;
+  background: rgba(0,0,0,0.6);
+  border: 1px solid rgba(255,255,255,0.3);
+  padding: 8px 12px;
+  border-radius: 4px;
+}
+.netflix-season-select {
+  background: transparent;
+  color: #fff;
+  border: none;
+  font-size: 1.1rem;
+  font-weight: 700;
+  outline: none;
+  cursor: pointer;
+}
+.netflix-season-select option { background: #111; color: #fff; }
+
+/* --- CUSTOM DROPDOWN --- */
+.custom-dropdown-container {
+  position: relative;
+}
+
+.custom-dropdown-menu {
+  position: absolute;
+  bottom: 110%; /* Apre verso l'alto sopra al bottone */
+  left: 0;
+  background: rgba(10, 12, 18, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 12px;
+  padding: 8px 0;
+  min-width: 220px;
+  box-shadow: 0 -10px 30px rgba(0,0,0,0.8);
+  backdrop-filter: blur(20px);
+  z-index: 100;
+  overflow: hidden;
+}
+
+.dropdown-item {
+  padding: 12px 18px;
+  color: #ddd;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+}
+
+.dropdown-item:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
+.dropdown-item.selected {
+  color: var(--primary);
+  background: rgba(74, 232, 255, 0.1);
+}
+
+.dropdown-item.remove {
+  color: #ff4a4a;
+  margin-top: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.dropdown-item.remove:hover {
+  background: rgba(255, 74, 74, 0.1);
 }
 
 /* Bottone Rimuovi Stato (Solid Red) */
@@ -307,43 +532,7 @@
   transform: translateY(-2px);
 }
 
-/* --- PLAYER UI & SEASONS --- */
-.player-controls {
-  margin-top: 25px;
-  background: rgba(19, 21, 28, 0.8);
-  padding: 20px;
-  border-radius: 16px;
-  border: 1px solid var(--border-color);
-}
-
-.season-selector {
-  display: flex;
-  gap: 10px;
-  overflow-x: auto;
-  padding-bottom: 10px;
-  margin-bottom: 20px;
-  border-bottom: 1px solid rgba(255,255,255,0.1);
-  scrollbar-width: thin;
-}
-
-.season-btn {
-  background: transparent;
-  border: 1px solid rgba(255,255,255,0.2);
-  color: #aaa;
-  padding: 8px 16px;
-  border-radius: 8px;
-  cursor: pointer;
-  white-space: nowrap;
-  font-weight: 600;
-}
-.season-btn:hover { border-color: #fff; color: #fff; }
-.season-btn.active {
-  background: var(--primary);
-  color: #000;
-  border-color: var(--primary);
-}
-
-/* --- CAROSELLO EPISODI (FIX COMPLETO) --- */
+/* --- CAROSELLO EPISODI (NETFLIX STYLE) --- */
 
 /* Wrapper per posizionamento frecce */
 .episode-carousel-wrapper {
@@ -405,68 +594,105 @@
 .ep-nav-btn.left { left: -20px; }
 .ep-nav-btn.right { right: -20px; }
 
-/* Card Episodio */
-.episode-card {
-  flex: 0 0 280px; /* Larghezza fissa */
+/* Card Episodio Netflix */
+.netflix-ep-card {
+  flex: 0 0 300px; /* Larghezza fissa */
   scroll-snap-align: start;
   position: relative;
-  border-radius: 12px;
-  overflow: hidden;
-  background: #1a1a1a;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: transparent;
   cursor: pointer;
-  transition: transform 0.2s, border-color 0.2s;
   display: flex;
   flex-direction: column;
+  gap: 10px;
+  border: none;
 }
 
-.episode-card:hover {
-  transform: scale(1.03);
-  border-color: rgba(255, 255, 255, 0.4);
-  z-index: 2;
-  box-shadow: 0 10px 20px rgba(0,0,0,0.5);
+.netflix-ep-card.current {
+  opacity: 1; /* Il feedback lo diamo colorando il testo o altro, non coi bordi netti su Netflix */
 }
 
-.episode-card.current {
-  border: 2px solid var(--primary);
-  box-shadow: 0 0 15px rgba(74, 232, 255, 0.2);
-}
-
-.episode-card.locked {
+.netflix-ep-card.locked {
   cursor: not-allowed;
   opacity: 0.6;
 }
 
-/* Immagine Card */
+/* Immagine Episodio */
 .episode-img-container {
   width: 100%;
-  aspect-ratio: 16/9;
+  aspect-ratio: 16 / 9;
   position: relative;
-  background: #000;
-}
-.episode-img { width: 100%; height: 100%; object-fit: cover; }
-.episode-number-badge {
-  position: absolute; top: 8px; left: 8px;
-  background: rgba(0,0,0,0.7); color: #fff;
-  padding: 2px 8px; border-radius: 4px;
-  font-weight: bold; font-size: 0.8rem;
+  background: #222;
+  border-radius: 4px;
+  overflow: hidden;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.3);
 }
 
-/* Info Card */
+.episode-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.3s ease;
+  filter: brightness(0.85);
+}
+
+.netflix-ep-card:hover .episode-img {
+  filter: brightness(1.1);
+  transform: scale(1.05);
+}
+
+/* OVERLAY NUMERO GIGANTE (NETFLIX) */
+.netflix-ep-number {
+  position: absolute;
+  bottom: -5px;
+  left: 10px;
+  font-size: 5rem;
+  font-weight: 900;
+  color: #fff;
+  z-index: 5;
+  text-shadow: 2px 2px 20px rgba(0,0,0,1), -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
+  line-height: 1;
+  font-family: Arial, Helvetica, sans-serif;
+  letter-spacing: -2px;
+}
+
+/* Testi Episodio (Netflix) */
 .episode-info {
-  padding: 12px;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 2px;
+  padding: 0 2px;
 }
+
 .episode-title {
-  font-size: 0.95rem; font-weight: 700; color: #fff;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+  line-height: 1.3;
+  color: #fff;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
+
+.ep-download {
+  font-size: 1.1rem;
+  cursor: pointer;
+  opacity: 0.7;
+}
+.ep-download:hover {
+  opacity: 1;
+}
+
 .episode-desc {
-  font-size: 0.8rem; color: #aaa;
-  display: -webkit-box; -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical; overflow: hidden;
+  font-size: 0.95rem;
+  color: #ccc;
+  line-height: 1.5;
+  margin: 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 /* Overlay Lucchetto */
@@ -482,46 +708,78 @@
   background: rgba(0,0,0,0.8); padding: 2px 6px; border-radius: 4px;
 }
 
-/* Fallback vecchio bottone (se serve per compatibilità) */
-.episode-btn {
-  background: rgba(255,255,255,0.05);
-  border: 1px solid rgba(255,255,255,0.1);
-  color: #fff;
-  aspect-ratio: 1/1;
-  border-radius: 8px;
-  display: flex; align-items: center; justify-content: center;
-  font-weight: 700;
+/* --- COLLEZIONE SAGA (Timeline Style) --- */
+.collection-container {
+  margin-top: 10px;
+  padding: 10px 0;
 }
 
-/* --- COLLEZIONE --- */
-.collection-container {
-  margin-top: 30px;
-  background: rgba(0,0,0,0.3);
-  padding: 20px;
-  border-radius: 16px;
-  border: 1px solid rgba(255,255,255,0.05);
-}
 .collection-scroll {
-  display: flex; gap: 15px; overflow-x: auto;
-  scrollbar-width: thin;
+  display: flex; 
+  gap: 25px; 
+  overflow-x: auto;
+  scrollbar-width: none; /* Hide scrollbar for clean look */
+  padding-bottom: 20px; /* Space for hover expansion */
+  padding-top: 15px; /* Spazio per l'anno volante */
 }
+.collection-scroll::-webkit-scrollbar { display: none; }
+
 .collection-item {
-  flex: 0 0 120px; cursor: pointer; transition: transform 0.2s;
+  flex: 0 0 160px; /* Bigger posters */
+  cursor: pointer; 
   position: relative;
+  transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  opacity: 0.85;
 }
-.collection-item:hover { transform: scale(1.05); }
-.collection-poster { width: 100%; border-radius: 8px; }
+
+.collection-item:hover { 
+  transform: translateY(-8px) scale(1.05); 
+  opacity: 1;
+  z-index: 2;
+}
+
+.collection-poster { 
+  width: 100%; 
+  border-radius: 12px; 
+  box-shadow: 0 10px 20px rgba(0,0,0,0.5);
+  border: 2px solid transparent;
+  transition: border-color 0.3s;
+}
+
+.collection-item:hover .collection-poster {
+  border-color: rgba(255,255,255,0.6);
+  box-shadow: 0 15px 30px rgba(0,0,0,0.8);
+}
+
 .collection-year {
-  position: absolute; bottom: 5px; right: 5px;
-  background: rgba(0,0,0,0.8); color: #fff;
-  font-size: 0.7rem; padding: 2px 6px; border-radius: 4px;
+  position: absolute; 
+  bottom: -5px; /* Float below the poster */
+  top: auto;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(229, 9, 20, 0.9); /* Rosso scuro accentato */
+  color: #fff;
+  font-size: 0.8rem; 
+  font-weight: bold;
+  padding: 4px 12px; 
+  border-radius: 12px;
+  opacity: 0;
+  transition: opacity 0.3s, transform 0.3s;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.collection-item:hover .collection-year {
+  opacity: 1;
+  transform: translateX(-50%) translateY(-5px);
 }
 
 /* --- MOBILE RESPONSIVE --- */
 @media (max-width: 768px) {
   .hero {
-    min-height: 360px;
-    border-radius: 16px;
+    min-height: 50vh;
+    margin: -16px -18px 24px -18px;
   }
 
   .hero-content {
@@ -549,8 +807,20 @@
     margin-bottom: 16px;
     display: -webkit-box;
     -webkit-line-clamp: 4;
+    line-clamp: 4;
     -webkit-box-orient: vertical;
     overflow: hidden;
+  }
+
+  .hero-grid-container {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 20px;
+  }
+
+  .hero-content-left, .hero-content-right {
+    max-width: 100%;
+    width: 100%;
   }
 
   .hero-rating {
@@ -600,6 +870,7 @@
 
   .hero-overview {
     -webkit-line-clamp: 3;
+    line-clamp: 3;
   }
 
   .status-btn {
@@ -701,4 +972,34 @@
 @keyframes fadeIn {
   from { opacity: 0; }
   to { opacity: 1; }
+}
+
+/* --- HERO AUTOPLAY VIDEO --- */
+.hero-bg {
+  transition: opacity 2s ease-in-out;
+}
+.hero-bg.fade-out {
+  opacity: 0;
+}
+.hero-bg-video {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 100vw;
+  height: 56.25vw;
+  min-height: 100vh;
+  min-width: 177.77vh;
+  transform: translate(-50%, -50%);
+  z-index: 1;
+  pointer-events: none;
+  opacity: 0;
+  animation: fadeVideoIn 3s ease-in-out forwards;
+}
+.hero-bg-video iframe {
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+@keyframes fadeVideoIn {
+  to { opacity: 0.65; }
 }

@@ -1,6 +1,9 @@
 import "../css/card.css";
 import "../css/archive.css"; 
-import { MediaType, TmdbItem } from "../types/types"; // Assicurati che l'import sia corretto verso il tuo file types
+import { MediaType, TmdbItem } from "../types/types"; 
+import { useState, useRef, useEffect } from "react";
+import { fetchTrailer } from "../utils/api";
+import YouTube from 'react-youtube';
 
 interface CardProps {
   item: TmdbItem;
@@ -22,6 +25,49 @@ function getRatingColor(rating: number) {
 
 export default function Card({ item, onClick, progress, onRemove, isUpcoming, showRating, formatDate, onTypeChange }: CardProps) {
   
+  const [trailerKey, setTrailerKey] = useState<string | null>(null);
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [isMuted, setIsMuted] = useState(true);
+  const hoverTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const handleMouseEnter = () => {
+    if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
+    hoverTimeoutRef.current = setTimeout(async () => {
+      setIsExpanded(true);
+      try {
+        const key = await fetchTrailer(item.tmdbId, item.type);
+        if (key && hoverTimeoutRef.current) setTrailerKey(key);
+      } catch(e) {}
+    }, 800); 
+  };
+
+  const handleMouseLeave = () => {
+    if (hoverTimeoutRef.current) {
+        clearTimeout(hoverTimeoutRef.current);
+        hoverTimeoutRef.current = null;
+    }
+    setIsExpanded(false);
+    setTrailerKey(null);
+    setIsMuted(true);
+  };
+
+  const handleDirectPlay = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    window.dispatchEvent(new CustomEvent('play_direct', {
+      detail: { 
+        item, 
+        season: progress?.season || 1, 
+        episode: progress?.episode || 1 
+      }
+    }));
+  };
+
+  useEffect(() => {
+    return () => {
+        if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
+    };
+  }, []);
+
   const hasValidRating = (item.rating || 0) > 0;
   const shouldDisplayRating = hasValidRating && (showRating || (item.rating || 0) > 0);
   
@@ -55,69 +101,138 @@ export default function Card({ item, onClick, progress, onRemove, isUpcoming, sh
     : 0;
 
   return (
-    <article className={`card ${isCompleted ? 'is-completed' : ''}`} onClick={onClick}>
-      {/* Gestione poster sicuro */}
-      <img 
-        src={item.poster ? `https://image.tmdb.org/t/p/w500${item.poster}` : (item.poster || "https://via.placeholder.com/500x750")} 
-        alt={item.title} 
-        loading="lazy" 
-      />
-      
-      {isCompleted && <div className="center-status-overlay"><span className="status-label-completed">COMPLETATA</span></div>}
-      {hasNewEpisodes && <div className="center-status-overlay"><span className="status-label-new">NUOVI EPISODI</span></div>}
-      
-      {/* --- BADGE VOTO CON CORONA --- */}
-      {shouldDisplayRating && !isCompleted && (
-         <div 
-           className={`rating-badge ${isMasterpiece ? 'masterpiece' : ''}`}
-           style={!isMasterpiece ? { backgroundColor: ratingStyle } : undefined}
-         >
-           {isMasterpiece && <span className="crown-icon">👑</span>}
-           {currentRating.toFixed(1)}
-         </div>
-      )}
+    <div className="card-wrapper" onMouseEnter={handleMouseEnter} onMouseLeave={handleMouseLeave}>
+        <article 
+            className={`card ${isCompleted ? 'is-completed' : ''}`} 
+            onClick={onClick}
+        >
+          <img 
+            src={item.poster ? `https://image.tmdb.org/t/p/w500${item.poster}` : (item.poster || "https://via.placeholder.com/500x750")} 
+            alt={item.title} 
+            loading="lazy" 
+          />
+          
+          {isCompleted && <div className="center-status-overlay"><span className="status-label-completed">COMPLETATA</span></div>}
+          {hasNewEpisodes && <div className="center-status-overlay"><span className="status-label-new">NUOVI EPISODI</span></div>}
+          
+          {shouldDisplayRating && !isCompleted && (
+             <div 
+               className={`rating-badge ${isMasterpiece ? 'masterpiece' : ''}`}
+               style={!isMasterpiece ? { backgroundColor: ratingStyle } : undefined}
+             >
+               {isMasterpiece && <span className="crown-icon">👑</span>}
+               {currentRating.toFixed(1)}
+             </div>
+          )}
 
-      {/* --- MODIFICA QUI: Controllo item.type === 'tv' --- */}
-      {item.type === 'tv' && progress && !isCompleted && !hasNewEpisodes && (
-        <div className="progress-badge">S:{progress.season} E:{progress.episode}</div>
-      )}
+          {item.type === 'tv' && progress && !isCompleted && !hasNewEpisodes && (
+            <div className="progress-badge">S:{progress.season} E:{progress.episode}</div>
+          )}
 
-      {isUpcoming && item.releaseDateFull && formatDate && (
-         <div className="upcoming-date">{formatDate(item.releaseDateFull)}</div>
-      )}
+          {isUpcoming && item.releaseDateFull && formatDate && (
+             <div className="upcoming-date">{formatDate(item.releaseDateFull)}</div>
+          )}
 
-      {movieProgress > 0 && (
-        <div className="movie-progress" aria-hidden="true">
-          <div className="movie-progress-bar">
-            <span
-              className="movie-progress-fill"
-              style={{ width: `${Math.max(3, Math.round(movieProgress * 100))}%` }}
-            />
+          {movieProgress > 0 && (
+            <div className="movie-progress" aria-hidden="true">
+              <div className="movie-progress-bar">
+                <span
+                  className="movie-progress-fill"
+                  style={{ width: `${Math.max(3, Math.round(movieProgress * 100))}%` }}
+                />
+              </div>
+            </div>
+          )}
+
+          <div className="card-info-overlay">
+            <h3>{item.title}</h3>
+            {onRemove && (
+              <button className="pill tiny danger" onClick={(e) => { e.stopPropagation(); onRemove(); }} style={{ marginTop: '5px' }}>Rimuovi</button>
+            )}
           </div>
-          <div className="movie-progress-text">
-            {watchedMinutes} di {runtimeMinutes} min
-          </div>
-        </div>
-      )}
+        </article>
 
-      <div className="card-info-overlay">
-        <h3>{item.title}</h3>
-        {onRemove && (
-          <button className="pill tiny danger" onClick={(e) => { e.stopPropagation(); onRemove(); }} style={{ marginTop: '5px' }}>Rimuovi</button>
+        {isExpanded && (
+            <div className="card-expanded-modal">
+                <div className="expanded-video-container" onClick={handleDirectPlay}>
+                    {trailerKey ? (
+                        <YouTube
+                            videoId={trailerKey}
+                            opts={{
+                                width: '100%',
+                                height: '100%',
+                                playerVars: {
+                                    autoplay: 1,
+                                    controls: 0,
+                                    showinfo: 0,
+                                    rel: 0,
+                                    loop: 1,
+                                    mute: isMuted ? 1 : 0,
+                                    playlist: trailerKey
+                                }
+                            }}
+                            onReady={(e: any) => {
+                                e.target.setVolume(60);
+                            }}
+                            iframeClassName="card-expanded-video"
+                            style={{ width: '100%', height: '100%' }}
+                        />
+                    ) : (
+                        <img 
+                            src={item.poster ? `https://image.tmdb.org/t/p/w500${item.poster}` : (item.poster || "https://via.placeholder.com/500x750")} 
+                            alt={item.title} 
+                            loading="lazy"
+                            className="expanded-fallback-img"
+                        />
+                    )}
+                    
+                    {trailerKey && (
+                        <button 
+                            className="expanded-mute-btn" 
+                            onClick={(e) => { e.stopPropagation(); setIsMuted(!isMuted); }}
+                        >
+                            {isMuted ? '🔇' : '🔊'}
+                        </button>
+                    )}
+                </div>
+                
+                <div className="expanded-info-container">
+                    <div className="expanded-actions-row">
+                        <div style={{display:'flex', alignItems:'center', gap:'10px'}}>
+                            <button className="exp-btn-play" onClick={handleDirectPlay}>
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="black"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+                            </button>
+                            <span className="exp-title">{item.title}</span>
+                        </div>
+                        <button className="exp-btn-open" onClick={onClick} title="Altre Info">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                        </button>
+                    </div>
+                    
+                    <div className="expanded-meta-row">
+                        <span className="match-score">Match {(item.rating * 10).toFixed(0)}%</span>
+                        <span>{item.year || (item.releaseDateFull ? item.releaseDateFull.substring(0,4) : 'N/D')}</span>
+                        {item.type === 'movie' && item.runtime && <span>{parseInt(item.runtime, 10)} min</span>}
+                        {item.type === 'tv' && item.seasons && <span>{item.seasons} Stagioni</span>}
+                        <span className="hd-badge">HD</span>
+                    </div>
+
+                    {item.genres && item.genres.length > 0 && (
+                        <div className="expanded-genres-row">
+                           {item.genres.join(" • ")}
+                        </div>
+                    )}
+                </div>
+            </div>
         )}
-        {onTypeChange && (
-          <select
-            className="pill tiny ghost"
-            value={item.type}
-            onClick={(e) => e.stopPropagation()}
-            onChange={(e) => onTypeChange(e.target.value as MediaType)}
-            style={{ marginTop: '5px' }}
-          >
-            <option value="movie">Film</option>
-            <option value="tv">Serie TV</option>
-          </select>
-        )}
-      </div>
+    </div>
+  );
+}
+
+export function SkeletonCard() {
+  return (
+    <article className="skeleton-card">
+      <div className="skeleton-shimmer" />
     </article>
   );
 }

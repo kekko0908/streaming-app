@@ -37,9 +37,12 @@ interface PlayerProps {
   season: number;
   episode: number;
   onClose: () => void;
+  isPipMode?: boolean;
+  onTogglePip?: () => void;
+  onNavigateEpisode?: (season: number, episode: number) => void;
 }
 
-export default function PlayerDrawer({ item, season, episode, onClose }: PlayerProps) {
+export default function PlayerDrawer({ item, season, episode, onClose, isPipMode, onTogglePip, onNavigateEpisode }: PlayerProps) {
   const [isPartyMode, setIsPartyMode] = useState(false);
   const [roomInput, setRoomInput] = useState(""); 
   const [activeRoom, setActiveRoom] = useState<string | null>(null);
@@ -197,19 +200,19 @@ export default function PlayerDrawer({ item, season, episode, onClose }: PlayerP
   };
 
   return (
-    <div className="drawer-backdrop" onClick={onClose}>
-      <div className={`drawer drawer-responsive ${isPartyMode ? 'party-active' : ''}`} onClick={e => e.stopPropagation()}>
+    <div className={isPipMode ? "pip-backdrop" : "drawer-backdrop"} onClick={!isPipMode ? onClose : undefined}>
+      <div className={`drawer drawer-responsive ${isPartyMode ? 'party-active' : ''} ${isPipMode ? 'pip-drawer' : ''}`} onClick={e => e.stopPropagation()}>
         
         {/* PLAYER VIDEO */}
         <div className="video-container">
             {countdown !== null && <div className="party-overlay animate-pop">{countdown === 0 ? "▶ PLAY!" : countdown}</div>}
             
             <div className="video-header">
-                <div><h3 className="video-title">{item.title}</h3></div>
-                <div style={{display:'flex', gap: 10}}>
+                {!isPipMode && <div><h3 className="video-title">{item.title}</h3></div>}
+                <div style={{display:'flex', gap: 10, marginLeft: 'auto'}}>
                     
                     {/* 3. CONDIZIONE: Mostra bottone SOLO se isLogged è true */}
-                    {isLogged && (
+                    {isLogged && !isPipMode && (
                         <button 
                             className={`pill ${isPartyMode ? 'active' : 'ghost'}`} 
                             onClick={() => setIsPartyMode(!isPartyMode)} 
@@ -219,6 +222,12 @@ export default function PlayerDrawer({ item, season, episode, onClose }: PlayerP
                         </button>
                     )}
                     
+                    {onTogglePip && (
+                        <button className="pill ghost" onClick={onTogglePip} title={isPipMode ? "Espandi" : "Mini-Player (PiP)"}>
+                           {isPipMode ? '🗖' : '🗗'}
+                        </button>
+                    )}
+
                     <button className="pill ghost" onClick={onClose}><Icons.Close /></button>
                 </div>
             </div>
@@ -229,6 +238,28 @@ export default function PlayerDrawer({ item, season, episode, onClose }: PlayerP
                 title="Player" 
                 className="video-frame"
             />
+            
+            {/* 5. BINGE-WATCHING CONTROL BAR */}
+            {item.type === 'tv' && !isPipMode && onNavigateEpisode && (
+               <div className="binge-bar">
+                   <button 
+                      className="pill ghost" 
+                      disabled={episode <= 1}
+                      onClick={() => onNavigateEpisode(season, episode - 1)}
+                   >◀ Precedente</button>
+                   
+                   <div className="binge-info">
+                       Stagione <span style={{color: '#fff', fontWeight: 'bold'}}>{season}</span> • 
+                       Episodio <span style={{color: '#fff', fontWeight: 'bold'}}>{episode}</span>
+                   </div>
+                   
+                   <button 
+                      className="pill solid"
+                      style={{ background: '#e50914', color: '#fff', border: 'none' }}
+                      onClick={() => onNavigateEpisode(season, episode + 1)}
+                   >Prossimo ▶</button>
+               </div>
+            )}
         </div>
 
         {/* SIDEBAR PARTY (RENDERIZZA SOLO SE LOGGATO E PARTY ATTIVO) */}

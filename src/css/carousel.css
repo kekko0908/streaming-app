@@ -54,7 +54,33 @@
 .carousel-item {
   flex: 0 0 auto;
   width: 200px;
-  transition: transform 0.3s ease;
+  transition: transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+  position: relative;
+}
+
+/* --- NETFLIX PUSH-ASIDE MAGIC (SOLO DESKTOP) --- */
+@media (min-width: 769px) {
+  /* Quando *qualsiasi* card nel track si espande, tutor trasla a sinistra */
+  .carousel-track:has(.card-expanded-modal) .carousel-item {
+    transform: translateX(-120px);
+  }
+
+  /* Ma la card che si espande rimane al centro! */
+  .carousel-track .carousel-item:has(.card-expanded-modal) {
+    transform: translateX(0);
+    z-index: 50; 
+  }
+
+  /* Tutte le card SUCCESSIVE alla card espansa vengono compresse verso destra! */
+  .carousel-track .carousel-item:has(.card-expanded-modal) ~ .carousel-item {
+    transform: translateX(120px);
+  }
+
+  /* Correzzione bordi: Se è il PRIMO elemento, non farlo sbordare a sinistra */
+  .carousel-track .carousel-item:first-child:has(.card-expanded-modal) .card-expanded-modal {
+    left: 0;
+    transform: translateX(0);
+  }
 }
 
 /* BOTTONI NAVIGAZIONE */

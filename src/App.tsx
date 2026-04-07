@@ -1,10 +1,12 @@
 import { useEffect, useState } from "react";
+import { Routes, Route, useNavigate, Navigate, useLocation } from "react-router-dom";
+import { AnimatePresence, motion } from "framer-motion";
 import "./css/global.css";
 import "./css/archive.css"; 
 import "./css/shuffle.css"; 
 import Ranking from "./components/Ranking";
 import Suggestions from "./components/Suggestions";
-import { ViewType, TmdbItem, STATUS_SECTIONS, WatchStatus } from "./types/types";
+import { TmdbItem, STATUS_SECTIONS, WatchStatus } from "./types/types";
 import { 
   fetchCollection, 
   searchTmdb, 
@@ -25,7 +27,7 @@ import { Session } from "@supabase/supabase-js";
 // Components
 import Navbar from "./components/Navbar";
 import Hero from "./components/Hero";
-import Card from "./components/Card";
+import Card, { SkeletonCard } from "./components/Card";
 import PlayerDrawer from "./components/PlayerDrawer";
 import CarouselSection from "./components/CarouselSection"; 
 import Archive from "./components/Archive";
@@ -38,7 +40,23 @@ import ShuffleModal from "./components/ShuffleModal";
 import ShuffleFilterModal from "./components/ShuffleFilterModal"; 
 import UpdatesModal, { UpdateItem } from "./components/UpdatesModal";
 
+function PageTransition({ children }: { children: React.ReactNode }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 15 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -15 }}
+      transition={{ duration: 0.3, ease: "easeOut" }}
+    >
+      {children}
+    </motion.div>
+  );
+}
+
 export default function App() {
+  const location = useLocation();
+  const navigate = useNavigate();
+
   const UPDATES_STORAGE_KEY = "sfa_updates_seen";
   const UPDATES_VERSION = "1.4.1";
   const updatesItems: UpdateItem[] = [
@@ -59,7 +77,6 @@ export default function App() {
     return sessionStorage.getItem("site_unlocked") === "true";
   });
 
-  const [view, setView] = useState<ViewType>("home");
   const [session, setSession] = useState<Session | null>(null);
 
   const { myList, addToList, removeFromList, updateProgress, updateMediaType, getProgress, rateItem, loading: listLoading } = useStore();
@@ -86,7 +103,8 @@ export default function App() {
   const [selectedActor, setSelectedActor] = useState<CastMember | null>(null);
   const [actorCredits, setActorCredits] = useState<TmdbItem[]>([]);
   const [showPlayer, setShowPlayer] = useState(false);
-  const [playerState, setPlayerState] = useState({ season: 1, episode: 1 });
+  const [isPipMode, setIsPipMode] = useState(false);
+  const [playerState, setPlayerState] = useState<{season: number, episode: number} | null>(null);
   const [unavailableItem, setUnavailableItem] = useState<TmdbItem | null>(null);
   const [showUpdates, setShowUpdates] = useState(false);
 
@@ -100,11 +118,11 @@ export default function App() {
     supabase.auth.getSession().then(({ data: { session } }) => setSession(session));
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
-      if (view === 'auth' && session) setView('home');
-      if (!session && (view === 'list' || view === 'profile')) setView('home');
+      if (window.location.pathname === '/auth' && session) navigate('/');
+      if (!session && (window.location.pathname === '/list' || window.location.pathname === '/profile')) navigate('/');
     });
     return () => subscription.unsubscribe();
-  }, [view]);
+  }, [navigate]);
 
   useEffect(() => {
     let isActive = true;
@@ -163,6 +181,33 @@ export default function App() {
       } catch (error) { console.error(error); }
     }
     loadData();
+
+    // Listener globale per Play Diretto dalle Card
+    const handlePlayDirect = async (e: Event) => {
+      const customEvent = e as CustomEvent;
+      const { item, season, episode } = customEvent.detail;
+      
+      try {
+        const fullItem = await fetchDetails(item.tmdbId, item.type);
+        if (typeof item.progressMinutes === "number") fullItem.progressMinutes = item.progressMinutes;
+        setSelected(fullItem);
+        setPlayerState({ season, episode });
+        setShowPlayer(true);
+        
+        // Se non abbiamo session, si può comunque vedere
+        supabase.auth.getSession().then(({ data: { session } }) => {
+          if (session) {
+             updateProgress(fullItem, season, episode);
+          }
+        });
+
+      } catch (error) { console.error("Errore Play Diretto", error); }
+    };
+    window.addEventListener("play_direct", handlePlayDirect);
+
+    return () => {
+      window.removeEventListener("play_direct", handlePlayDirect);
+    };
   }, []);
 
   const clearSupabaseAuthStorage = () => {
@@ -182,20 +227,23 @@ export default function App() {
     clearSupabaseAuthStorage();
     localStorage.setItem(UPDATES_STORAGE_KEY, UPDATES_VERSION);
     setSession(null);
-    setView("home");
+    navigate("/");
   };
 
   const runSearch = async () => {
-    if (!query) return;
+    if (!query || query.trim() === "") {
+      setResults([]);
+      return;
+    }
     try {
       const [movies, tv] = await Promise.all([searchTmdb(query, "movie"), searchTmdb(query, "tv")]);
       const flat = [...movies, ...tv].sort((a, b) => (b.popularity || 0) - (a.popularity || 0));
-      setResults(flat); setView("home"); setSelected(null); setRelated([]);
+      setResults(flat); navigate("/"); setSelected(null); setRelated([]);
     } catch (e) { console.error(e); }
   };
 
   const selectItem = async (item: TmdbItem) => {
-    setView("home"); setShowPlayer(false); window.scrollTo({ top: 0, behavior: "smooth" });
+    navigate("/"); setShowPlayer(false); window.scrollTo({ top: 0, behavior: "smooth" });
     const fullItem = await fetchDetails(item.tmdbId, item.type);
     if (typeof item.progressMinutes === "number") {
       fullItem.progressMinutes = item.progressMinutes;
@@ -283,7 +331,7 @@ const runSmartShuffle = async (genreId: number | null) => {
   // --- RESTO APP ---
 
   const handleAddToList = (status: any) => {
-    if (!session) { alert("Devi accedere!"); setView("auth"); return; }
+    if (!session) { alert("Devi accedere!"); navigate("/auth"); return; }
     if (selected) addToList(selected, status);
   };
   const handleRate = (rating: number) => {
@@ -309,17 +357,18 @@ const runSmartShuffle = async (genreId: number | null) => {
     releaseDate.setHours(0, 0, 0, 0);
     return releaseDate > today;
   };
-  const handlePlay = (season: number, episode: number) => {
-    if (!selected) return;
-    if (isUpcomingMovie(selected)) {
-      setUnavailableItem(selected);
+  const handlePlay = (season: number, episode: number, item?: TmdbItem) => {
+    const target = item || selected;
+    if (!target) return;
+    if (isUpcomingMovie(target)) {
+      setUnavailableItem(target);
       return;
     }
     setPlayerState({ season, episode });
     setShowPlayer(true);
     if (session) {
-        updateProgress(selected, season, episode);
-        if (!myList.find(m => m.tmdbId === selected.tmdbId)) addToList(selected, "in-corso");
+        updateProgress(target, season, episode);
+        if (!myList.find(m => m.tmdbId === target.tmdbId)) addToList(target, "in-corso");
     }
   };
 
@@ -364,21 +413,29 @@ const runSmartShuffle = async (genreId: number | null) => {
   return (
     <div className="app">
       <Navbar 
-        view={view} setView={setView} resetSelection={() => setSelected(null)} 
+        resetSelection={() => setSelected(null)} 
         query={query} setQuery={setQuery} onSearch={runSearch}
         session={session} onLogout={handleLogout} onShowUpdates={handleOpenUpdates}
       />
 
-      {view === "auth" && <AuthForm />}
-      {view === "profile" && session && <Profile />}
+      {/* TASTO SHUFFLE */}
+      {location.pathname === '/' && !selected && (
+         <button className="shuffle-btn" onClick={openShuffleMenu} title="Cosa guardo?">🎲</button>
+      )}
 
-      {view === "home" && (
+      <AnimatePresence mode="wait">
+        <Routes location={location} key={location.pathname}>
+          <Route path="/auth" element={!session ? <PageTransition><AuthForm /></PageTransition> : <Navigate to="/" />} />
+          <Route path="/profile" element={session ? <PageTransition><Profile /></PageTransition> : <Navigate to="/auth" />} />
+
+        <Route path="/" element={
+        <PageTransition>
         <>
           {selected ? (
             <>
                 <Hero 
                   item={selected} myList={myList} progress={getProgress(selected.tmdbId)}
-                  onPlay={handlePlay} onAddToList={handleAddToList} onRate={handleRate}
+                  onPlay={(s, e) => handlePlay(s, e)} onAddToList={handleAddToList} onRate={handleRate}
                   onRemoveFromList={() => removeFromList(selected.tmdbId)}
                   onClose={() => setSelected(null)} onSelectCollectionItem={selectItem} 
                 />
@@ -390,11 +447,22 @@ const runSmartShuffle = async (genreId: number | null) => {
                             <button className="pill ghost" onClick={() => { setSelectedActor(null); setActorCredits([]); }}>Chiudi</button>
                          </div>
                          {actorCredits.length > 0 ? (
-                           <div className="grid">
-                              {actorCredits.map(item => (
-                                  <Card key={item.tmdbId} item={item} onClick={() => selectItem(item)} />
-                              ))}
-                           </div>
+                           <motion.div layout className="grid">
+                             <AnimatePresence mode="popLayout">
+                                {actorCredits.map(item => (
+                                    <motion.div 
+                                      layout
+                                      initial={{ opacity: 0, scale: 0.8 }}
+                                      animate={{ opacity: 1, scale: 1 }}
+                                      exit={{ opacity: 0, scale: 0.8 }}
+                                      transition={{ duration: 0.3 }}
+                                      key={item.tmdbId}
+                                    >
+                                      <Card item={item} onClick={() => selectItem(item)} />
+                                    </motion.div>
+                                ))}
+                             </AnimatePresence>
+                           </motion.div>
                          ) : (
                            <p style={{ color: '#888' }}>Nessun film trovato.</p>
                          )}
@@ -406,11 +474,22 @@ const runSmartShuffle = async (genreId: number | null) => {
                             <span className="carousel-icon">💡</span>
                             <h3 className="carousel-title">Perchè hai scelto "{selected.title}"</h3>
                          </div>
-                         <div className="grid">
-                            {related.map(item => (
-                                <Card key={item.tmdbId} item={item} onClick={() => selectItem(item)} />
-                            ))}
-                         </div>
+                         <motion.div layout className="grid">
+                           <AnimatePresence mode="popLayout">
+                              {related.map(item => (
+                                  <motion.div 
+                                    layout
+                                    initial={{ opacity: 0, scale: 0.8 }}
+                                    animate={{ opacity: 1, scale: 1 }}
+                                    exit={{ opacity: 0, scale: 0.8 }}
+                                    transition={{ duration: 0.3 }}
+                                    key={item.tmdbId}
+                                  >
+                                    <Card item={item} onClick={() => selectItem(item)} />
+                                  </motion.div>
+                              ))}
+                           </AnimatePresence>
+                         </motion.div>
                     </div>
                 )}
             </>
@@ -422,9 +501,22 @@ const runSmartShuffle = async (genreId: number | null) => {
                         <h2>Risultati Ricerca "{query}"</h2>
                         <button className="pill ghost" onClick={() => { setResults([]); setQuery(""); }}>Chiudi ricerca X</button>
                     </div>
-                    <div className="grid">
-                        {results.map(item => <Card key={item.tmdbId} item={item} onClick={() => selectItem(item)} />)}
-                    </div>
+                    <motion.div layout className="grid">
+                      <AnimatePresence mode="popLayout">
+                        {results.map(item => (
+                            <motion.div 
+                              layout
+                              initial={{ opacity: 0, scale: 0.8 }}
+                              animate={{ opacity: 1, scale: 1 }}
+                              exit={{ opacity: 0, scale: 0.8 }}
+                              transition={{ duration: 0.3 }}
+                              key={item.tmdbId}
+                            >
+                              <Card item={item} onClick={() => selectItem(item)} />
+                            </motion.div>
+                        ))}
+                      </AnimatePresence>
+                    </motion.div>
                 </div>
               ) : (
                 <div style={{ marginTop: '20px' }}>
@@ -458,12 +550,8 @@ const runSmartShuffle = async (genreId: number | null) => {
             </>
           )}
         </>
-      )}
-
-      {/* TASTO SHUFFLE */}
-      {view === 'home' && !selected && (
-         <button className="shuffle-btn" onClick={openShuffleMenu} title="Cosa guardo?">🎲</button>
-      )}
+        </PageTransition>
+        } />
 
       {/* MENU FILTRO */}
       {showShuffleFilter && (
@@ -484,10 +572,11 @@ const runSmartShuffle = async (genreId: number | null) => {
          />
       )}
 
-      {view === "archive" && <Archive onSelect={selectItem} />}
-      
-      {view === "list" && session && (
-         <div style={{paddingTop: '20px'}}>
+        <Route path="/archive" element={<PageTransition><Archive onSelect={selectItem} /></PageTransition>} />
+        
+        <Route path="/list" element={
+          session ? (
+         <PageTransition><div style={{paddingTop: '20px'}}>
              <div className="list-page-header">
                 <h1>La mia lista</h1>
                 <p style={{opacity:0.6}}>Gestisci i tuoi titoli salvati.</p>
@@ -498,7 +587,11 @@ const runSmartShuffle = async (genreId: number | null) => {
                 <div className="filter-group"><span className="filter-label">Stato</span><select className="filter-select" value={listStatusFilter} onChange={e => setListStatusFilter(e.target.value as any)}><option value="all">Tutti gli stati</option>{STATUS_SECTIONS.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}</select></div>
                 <div className="filter-group"><span className="filter-label">Ordina per</span><select className="filter-select" value={listSort} onChange={e => setListSort(e.target.value as any)}><option value="added">Data aggiunta</option><option value="rating">Voto Personale</option><option value="year">Anno Uscita</option></select></div>
              </div>
-             {listLoading && <p>Sincronizzazione in corso...</p>}
+             {listLoading && (
+                 <div className="grid">
+                    {Array.from({ length: 12 }).map((_, i) => <SkeletonCard key={i} />)}
+                 </div>
+             )}
              {STATUS_SECTIONS.map(sec => {
                  if (listStatusFilter !== "all" && listStatusFilter !== sec.id) return null;
                  const sectionItems = filteredMyList.filter(m => m.status === sec.id);
@@ -525,33 +618,36 @@ const runSmartShuffle = async (genreId: number | null) => {
                  );
              })}
          </div>
-      )}
+          </PageTransition>) : (
+            <PageTransition><div style={{textAlign:'center', padding:'50px'}}><h2>Accesso Negato</h2><button className="pill solid" onClick={() => navigate('/auth')}>Vai al Login</button></div></PageTransition>
+          )
+        } />
 
-      {view === "list" && !session && (
-        <div style={{textAlign:'center', padding:'50px'}}><h2>Accesso Negato</h2><button className="pill solid" onClick={() => setView('auth')}>Vai al Login</button></div>
-      )}
+        {/* --- CLASSIFICA --- */}
+        <Route path="/ranking" element={
+          session ? <PageTransition><Ranking /></PageTransition> : (
+            <PageTransition><div style={{textAlign:'center', padding:'50px'}}>
+              <h2>Community Riservata</h2>
+              <p style={{marginBottom:'20px', color:'#aaa'}}>Accedi per visualizzare le classifiche, sfidare gli amici e vedere i "Critici Top".</p>
+              <button className="pill solid" onClick={() => navigate('/auth')}>Vai al Login</button>
+            </div></PageTransition>
+          )
+        } />
 
-      {/* --- MOSTRA LA CLASSIFICA SOLO SE LOGGATO --- */}
-      {view === "ranking" && session && <Ranking />}
+        <Route path="/suggestions" element={<PageTransition><Suggestions onSelect={selectItem} session={session} /></PageTransition>} />
 
-      {/* --- FALLBACK SE L'UTENTE PROVA AD ACCEDERE ALLA CLASSIFICA DA SLOGGATO --- */}
-      {view === "ranking" && !session && (
-         <div style={{textAlign:'center', padding:'50px'}}>
-            <h2>Community Riservata</h2>
-            <p style={{marginBottom:'20px', color:'#aaa'}}>Accedi per visualizzare le classifiche, sfidare gli amici e vedere i "Critici Top".</p>
-            <button className="pill solid" onClick={() => setView('auth')}>Vai al Login</button>
-         </div>
-      )}
-      {view === "suggestions" && (
-   <Suggestions onSelect={selectItem} session={session} />
-)}
+        </Routes>
+      </AnimatePresence>
 
-      {showPlayer && selected && (
-        <PlayerDrawer
-          item={selected}
-          season={playerState.season}
-          episode={playerState.episode}
-          onClose={() => setShowPlayer(false)}
+      {showPlayer && playerState && selected && (
+        <PlayerDrawer 
+          item={selected} 
+          season={playerState.season} 
+          episode={playerState.episode} 
+          onClose={() => { setShowPlayer(false); setIsPipMode(false); }}
+          isPipMode={isPipMode}
+          onTogglePip={() => setIsPipMode(!isPipMode)}
+          onNavigateEpisode={(s: number, e: number) => handlePlay(s, e, selected)}
         />
       )}
 
