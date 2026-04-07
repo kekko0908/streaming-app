@@ -3,7 +3,6 @@ import { Routes, Route, useNavigate, Navigate, useLocation } from "react-router-
 import { AnimatePresence, motion } from "framer-motion";
 import "./css/global.css";
 import "./css/archive.css"; 
-import "./css/shuffle.css"; 
 import Ranking from "./components/Ranking";
 import Suggestions from "./components/Suggestions";
 import { TmdbItem, STATUS_SECTIONS, WatchStatus } from "./types/types";
@@ -36,8 +35,6 @@ import CastList from "./components/CastList";
 import Profile from "./components/Profile";
 import CommunityPulse from "./components/CommunityPulse"; 
 import SiteLock from "./components/SiteLock"; 
-import ShuffleModal from "./components/ShuffleModal"; 
-import ShuffleFilterModal from "./components/ShuffleFilterModal"; 
 import UpdatesModal, { UpdateItem } from "./components/UpdatesModal";
 
 function PageTransition({ children }: { children: React.ReactNode }) {
@@ -107,12 +104,6 @@ export default function App() {
   const [playerState, setPlayerState] = useState<{season: number, episode: number} | null>(null);
   const [unavailableItem, setUnavailableItem] = useState<TmdbItem | null>(null);
   const [showUpdates, setShowUpdates] = useState(false);
-
-  // --- STATI SHUFFLE ---
-  const [shuffleItem, setShuffleItem] = useState<TmdbItem | null>(null);
-  const [showShuffleFilter, setShowShuffleFilter] = useState(false);
-  const [shuffleLoading, setShuffleLoading] = useState(false);
-  const [activeShuffleGenre, setActiveShuffleGenre] = useState<number | null>(null);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => setSession(session));
@@ -257,11 +248,6 @@ export default function App() {
 
   // --- LOGICA SHUFFLE BLINDATA ---
   
-  const openShuffleMenu = () => {
-    setShowShuffleFilter(true);
-    setShuffleItem(null);
-    setActiveShuffleGenre(null);
-  };
 const runSmartShuffle = async (genreId: number | null) => {
     setShuffleLoading(true);
     setActiveShuffleGenre(genreId);
@@ -419,7 +405,7 @@ const runSmartShuffle = async (genreId: number | null) => {
       />
 
       {/* TASTO SHUFFLE */}
-      {location.pathname === '/' && !selected && (
+      {false && (
          <button className="shuffle-btn" onClick={openShuffleMenu} title="Cosa guardo?">🎲</button>
       )}
 
@@ -554,7 +540,7 @@ const runSmartShuffle = async (genreId: number | null) => {
         } />
 
       {/* MENU FILTRO */}
-      {showShuffleFilter && (
+      {false && (
          <ShuffleFilterModal 
             onSelectGenre={runSmartShuffle}
             onClose={() => setShowShuffleFilter(false)}
@@ -563,7 +549,7 @@ const runSmartShuffle = async (genreId: number | null) => {
       )}
 
       {/* MODALE RISULTATO */}
-      {shuffleItem && (
+      {false && (
          <ShuffleModal 
             item={shuffleItem} 
             onPlay={handleShufflePlay} 
