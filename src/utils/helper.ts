@@ -14,8 +14,9 @@ export function pickYear(date?: string) {
   return date && date.length >= 4 ? date.slice(0, 4) : "";
 }
 
-export function buildEmbedUrl(tmdbId: string, type: string, season: number, episode: number) {
+export function buildEmbedUrl(tmdbId: string, type: string, season: number, episode: number, startAt?: number) {
+  const timeParam = startAt ? `?startAt=${Math.floor(startAt)}` : "";
   return type === "tv"
-    ? `https://vixsrc.to/tv/${tmdbId}/${season}/${episode}`
-    : `https://vixsrc.to/movie/${tmdbId}`;
+    ? `https://vixsrc.to/tv/${tmdbId}/${season}/${episode}${timeParam}`
+    : `https://vixsrc.to/movie/${tmdbId}${timeParam}`;
 }

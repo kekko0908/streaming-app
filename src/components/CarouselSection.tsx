@@ -10,7 +10,7 @@ interface CarouselProps {
   onSelect: (item: TmdbItem) => void;
   isUpcoming?: boolean;
   formatDate?: (d?: string) => string;
-  getProgress?: (tmdbId: string) => { season: number; episode: number };
+  getProgress?: (tmdbId: string) => { season: number; episode: number; watchedEpisodes?: number; totalEpisodes?: number };
 }
 
 export default function CarouselSection({ title, icon, items, onSelect, isUpcoming, formatDate, getProgress }: CarouselProps) {

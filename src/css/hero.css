@@ -385,6 +385,24 @@
   color: #000;
 }
 
+.zen-mode-btn {
+  flex-shrink: 0;
+  width: 44px !important;
+  height: 44px !important;
+  min-width: 44px !important;
+  padding: 0;
+  border-color: rgba(74, 232, 255, 0.5) !important;
+  color: #4ae8ff !important;
+  border-radius: 50% !important;
+}
+
+.zen-mode-btn.active {
+  background: rgba(74, 232, 255, 0.2) !important;
+  border-color: #4ae8ff !important;
+  color: #4ae8ff !important;
+  box-shadow: 0 0 15px rgba(74, 232, 255, 0.4) !important;
+}
+
 /* --- TABS NAVIGATION (Netflix-style) --- */
 .hero-tabs-nav {
   display: flex;
@@ -847,6 +865,83 @@
     width: 100%; justify-content: space-between;
     padding: 10px 15px;
   }
+}
+
+/* --- TABLET / IPAD OPTIMIZATION --- */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .hero {
+    min-height: 65vh;
+    margin-bottom: 30px;
+  }
+
+  .hero-content {
+    padding: 30px;
+  }
+
+  .hero h1 {
+    font-size: 2.8rem;
+    line-height: 1.1;
+  }
+
+  .netflix-overview {
+    font-size: 1.1rem;
+    -webkit-line-clamp: 3;
+    line-clamp: 3;
+    max-width: 100%;
+  }
+
+  .hero-actions {
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .netflix-play {
+    padding: 10px 24px;
+    font-size: 1.05rem;
+  }
+
+  .hero-tabs-nav {
+    gap: 25px;
+    margin-bottom: 25px;
+  }
+
+  .hero-tab {
+    font-size: 1rem;
+    padding: 12px 0;
+  }
+
+  /* Volume accessibility on iPad */
+  .volume-control-wrapper {
+    right: 20px;
+    top: 20px;
+  }
+  
+  /* Tap to expand behavior on tablet */
+  .volume-control-wrapper:active,
+  .volume-control-wrapper:focus-within {
+    width: 180px;
+    background: rgba(0,0,0,0.8);
+    padding-right: 15px;
+  }
+  .volume-control-wrapper:active .volume-slider,
+  .volume-control-wrapper:focus-within .volume-slider {
+    opacity: 1;
+  }
+
+  .netflix-ep-card {
+    flex: 0 0 280px;
+  }
+
+  .netflix-ep-number {
+    font-size: 4.5rem;
+  }
+  
+  .ep-nav-btn {
+    width: 40px;
+    height: 40px;
+  }
+  .ep-nav-btn.left { left: -10px; }
+  .ep-nav-btn.right { right: -10px; }
 }
 
 

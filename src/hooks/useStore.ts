@@ -4,8 +4,11 @@ import { MediaType, SavedItem, WatchStatus, TmdbItem } from "../types/types";
 
 export function useStore() {
   const [myList, setMyList] = useState<SavedItem[]>([]);
-  const [watchProgress, setWatchProgress] = useState<Record<string, { season: number; episode: number }>>({});
+  const [watchProgress, setWatchProgress] = useState<Record<string, { season: number; episode: number; watchedEpisodes?: number; totalEpisodes?: number }>>({});
   const [loading, setLoading] = useState(false);
+  const [isUILocked, setIsUILocked] = useState(() => {
+    return localStorage.getItem("sfa_ui_locked") === "true";
+  });
 
   useEffect(() => {
     fetchLibrary();
@@ -23,15 +26,16 @@ export function useStore() {
     setLoading(true);
     const { data } = await supabase
       .from('user_library')
-      .select(`*, media_items ( title, media_type, runtime, poster_path, genres )`);
+      .select(`*, media_items ( title, media_type, runtime, poster_path, genres, total_episodes )`);
 
     if (data) {
       const formattedList: SavedItem[] = data.map((row: any) => {
+        const progressSeconds = Number(row.progress_seconds ?? row.current_time ?? 0) || 0;
         const progressMinutes = Number(
-          row.current_time ??
+          (row.progress_minutes ??
           row.current_minute ??
-          row.progress_minutes ??
           row.watched_minutes ??
+          (progressSeconds / 60)) ||
           0
         ) || 0;
         const hasTvProgress =
@@ -53,7 +57,8 @@ export function useStore() {
         runtime: row.media_items?.runtime ? `${row.media_items.runtime} min` : "",
         genres: row.media_items?.genres || [],
         year: "", overview: "", backdrop: "",
-        progressMinutes
+        progressMinutes,
+        progressSeconds
       });
       });
       
@@ -70,7 +75,12 @@ export function useStore() {
         const normalizedMediaType = mediaType === "movie" || mediaType === "tv" ? mediaType : undefined;
         const inferredType = normalizedMediaType ?? (hasTvProgress ? "tv" : "movie");
         if (inferredType === "tv" && hasTvProgress) {
-          progressMap[String(row.tmdb_id)] = { season: row.current_season || 1, episode: row.current_episode || 1 };
+          progressMap[String(row.tmdb_id)] = {
+            season: row.current_season || 1,
+            episode: row.current_episode || 1,
+            watchedEpisodes: row.total_watched_episodes || 0,
+            totalEpisodes: row.media_items?.total_episodes || 0
+          };
         }
       });
       setWatchProgress(progressMap);
@@ -108,13 +118,18 @@ export function useStore() {
     const runtimeVal = parseRuntime(item.runtime);
     
     // 1. Aggiorna Media (con durata corretta)
+    const totalEpisodesCount = (item.type === 'tv' && item.seasonsDetails && item.seasonsDetails.length > 0)
+        ? item.seasonsDetails.reduce((acc, s) => acc + s.episode_count, 0)
+        : undefined;
+
     await supabase.from('media_items').upsert({
         tmdb_id: parseInt(item.tmdbId),
         title: item.title,
         media_type: item.type,
         runtime: runtimeVal,
         poster_path: item.poster,
-        genres: item.genres || [] 
+        genres: item.genres || [],
+        ...(totalEpisodesCount !== undefined ? { total_episodes: totalEpisodesCount } : {})
     }, { onConflict: 'tmdb_id' });
 
     // 2. Prepara aggiornamento Utente
@@ -186,9 +201,22 @@ export function useStore() {
   };
 
   // --- UPDATE PROGRESS (Click sui quadratini) ---
-  const updateProgress = async (item: TmdbItem, season: number, episode: number) => {
+  const updateProgress = async (item: TmdbItem, season: number, episode: number, seconds?: number) => {
     const userId = (await supabase.auth.getUser()).data.user?.id;
     if (!userId) return;
+
+    // Se stiamo aggiornando solo i secondi (auto-save)
+    if (seconds !== undefined) {
+         setMyList(prev => prev.map(m => m.tmdbId === item.tmdbId ? { ...m, progressSeconds: seconds, progressMinutes: seconds / 60 } : m));
+         await supabase.from('user_library').upsert({
+             user_id: userId,
+             tmdb_id: parseInt(item.tmdbId),
+             progress_seconds: Math.floor(seconds),
+             current_time: Math.floor(seconds), // Backup per retrocompatibilità
+             last_watched_at: new Date().toISOString()
+         }, { onConflict: 'user_id, tmdb_id' });
+         return;
+    }
 
     if (item.type !== "tv") {
       await supabase.from('media_items').upsert({ 
@@ -217,13 +245,18 @@ export function useStore() {
     const totalEpisodes = calculateTotalEpisodes(item, season, episode);
 
     // Upsert media
+    const totalEpisodesForUpdate = (item.seasonsDetails && item.seasonsDetails.length > 0)
+        ? item.seasonsDetails.reduce((acc, s) => acc + s.episode_count, 0)
+        : undefined;
+
     await supabase.from('media_items').upsert({ 
         tmdb_id: parseInt(item.tmdbId), 
         title: item.title, 
         media_type: 'tv',
         runtime: parseRuntime(item.runtime),
         poster_path: item.poster,
-        genres: item.genres || []
+        genres: item.genres || [],
+        ...(totalEpisodesForUpdate !== undefined ? { total_episodes: totalEpisodesForUpdate } : {})
     }, { onConflict: 'tmdb_id' });
 
     // Determinare automaticamente lo stato
@@ -278,7 +311,7 @@ export function useStore() {
     fetchLibrary();
   };
 
-  const getProgress = (tmdbId: string) => watchProgress[tmdbId] || { season: 1, episode: 1 };
+  const getProgress = (tmdbId: string) => watchProgress[tmdbId] || { season: 1, episode: 1, watchedEpisodes: 0, totalEpisodes: 0 };
 
   const fetchStats = async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -291,5 +324,13 @@ export function useStore() {
     };
   };
 
-  return { myList, addToList, removeFromList, rateItem, updateProgress, updateMediaType, getProgress, fetchStats, loading };
+  const toggleUILock = () => {
+    setIsUILocked(prev => {
+      const newState = !prev;
+      localStorage.setItem("sfa_ui_locked", newState.toString());
+      return newState;
+    });
+  };
+
+  return { myList, addToList, removeFromList, rateItem, updateProgress, updateMediaType, getProgress, fetchStats, loading, isUILocked, toggleUILock };
 }

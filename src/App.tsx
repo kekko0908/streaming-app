@@ -76,7 +76,8 @@ export default function App() {
 
   const [session, setSession] = useState<Session | null>(null);
 
-  const { myList, addToList, removeFromList, updateProgress, updateMediaType, getProgress, rateItem, loading: listLoading } = useStore();
+  const { myList, addToList, removeFromList, updateProgress, updateMediaType, getProgress, rateItem, loading: listLoading, isUILocked, toggleUILock } = useStore();
+  (window as any).sfaStore = { isUILocked, toggleUILock };
   const isAdmin = session?.user?.id === "1181bb0e-d665-4b31-a71f-125028ea62f8";
 
   const [query, setQuery] = useState("");
@@ -101,7 +102,7 @@ export default function App() {
   const [actorCredits, setActorCredits] = useState<TmdbItem[]>([]);
   const [showPlayer, setShowPlayer] = useState(false);
   const [isPipMode, setIsPipMode] = useState(false);
-  const [playerState, setPlayerState] = useState<{season: number, episode: number} | null>(null);
+  const [playerState, setPlayerState] = useState<{season: number, episode: number, startAt?: number} | null>(null);
   const [unavailableItem, setUnavailableItem] = useState<TmdbItem | null>(null);
   const [showUpdates, setShowUpdates] = useState(false);
 
@@ -182,7 +183,8 @@ export default function App() {
         const fullItem = await fetchDetails(item.tmdbId, item.type);
         if (typeof item.progressMinutes === "number") fullItem.progressMinutes = item.progressMinutes;
         setSelected(fullItem);
-        setPlayerState({ season, episode });
+        const startAt = (fullItem.progressSeconds && fullItem.progressSeconds > 15) ? fullItem.progressSeconds : 0;
+        setPlayerState({ season, episode, startAt });
         setShowPlayer(true);
         
         // Se non abbiamo session, si può comunque vedere
@@ -246,76 +248,6 @@ export default function App() {
     try { const actors = await fetchCredits(item.tmdbId, item.type); setCast(actors); } catch(e) { setCast([]); }
   };
 
-  // --- LOGICA SHUFFLE BLINDATA ---
-  
-const runSmartShuffle = async (genreId: number | null) => {
-    setShuffleLoading(true);
-    setActiveShuffleGenre(genreId);
-
-    try {
-        let pool: TmdbItem[] = [];
-
-        if (genreId === null) {
-            // "SORPRENDIMI": Usa tutto quello che abbiamo in cache
-            pool = [
-                ...(homeLists.trending || []),
-                ...(homeLists.popular || []),
-                ...(homeLists.action || []),
-                ...(homeLists.newReleases || []),
-                ...(homeLists.animation || [])
-            ];
-        } else {
-            // GENERE SPECIFICO: Scarica una pagina random (1-5)
-            // Nota: fetchByGenre ora scarica film freschi
-            pool = await fetchByGenre(genreId, "movie"); 
-        }
-
-        // --- FILTRAGGIO INTELLIGENTE ---
-        
-        // 1. Pulizia base: Rimuovi film senza poster o rotti
-        let cleanPool = pool.filter(m => m && (m.poster));
-
-        // 2. Filtro "QUALITY CONTROL": Cerchiamo solo film con voto >= 7
-        const highQualityPool = cleanPool.filter(m => (m.rating || 0) >= 7);
-
-        // 3. Selezione del pool finale
-        // Se abbiamo trovato capolavori (voto >= 7), usiamo quelli.
-        // Altrimenti, per non dare errore, usiamo il pool pulito (i migliori disponibili).
-        let finalPool = highQualityPool.length > 0 ? highQualityPool : cleanPool;
-
-        if (finalPool.length > 0) {
-            // Pesca il vincitore
-            const randomIndex = Math.floor(Math.random() * finalPool.length);
-            const winner = finalPool[randomIndex];
-            
-            setShuffleItem(winner);
-            setShowShuffleFilter(false);
-        } else {
-            // Fallback estremo se proprio non c'è nulla
-            alert("Nessun film trovato! Riprova.");
-        }
-
-    } catch (error) {
-        console.error("Errore shuffle", error);
-        alert("Errore tecnico nel caricamento.");
-    } finally {
-        setShuffleLoading(false);
-    }
-  };
- 
-  const handleShufflePlay = () => {
-    if (shuffleItem) {
-        setShuffleItem(null); 
-        selectItem(shuffleItem); 
-    }
-  };
-
-  const handleRetryShuffle = () => {
-      runSmartShuffle(activeShuffleGenre);
-  };
-
-  // --- RESTO APP ---
-
   const handleAddToList = (status: any) => {
     if (!session) { alert("Devi accedere!"); navigate("/auth"); return; }
     if (selected) addToList(selected, status);
@@ -350,7 +282,8 @@ const runSmartShuffle = async (genreId: number | null) => {
       setUnavailableItem(target);
       return;
     }
-    setPlayerState({ season, episode });
+    const startAt = (target.progressSeconds && target.progressSeconds > 15) ? target.progressSeconds : 0;
+    setPlayerState({ season, episode, startAt });
     setShowPlayer(true);
     if (session) {
         updateProgress(target, season, episode);
@@ -406,7 +339,7 @@ const runSmartShuffle = async (genreId: number | null) => {
 
       {/* TASTO SHUFFLE */}
       {false && (
-         <button className="shuffle-btn" onClick={openShuffleMenu} title="Cosa guardo?">🎲</button>
+         <button className="shuffle-btn" title="Cosa guardo?">🎲</button>
       )}
 
       <AnimatePresence mode="wait">
@@ -414,48 +347,55 @@ const runSmartShuffle = async (genreId: number | null) => {
           <Route path="/auth" element={!session ? <PageTransition><AuthForm /></PageTransition> : <Navigate to="/" />} />
           <Route path="/profile" element={session ? <PageTransition><Profile /></PageTransition> : <Navigate to="/auth" />} />
 
-        <Route path="/" element={
-        <PageTransition>
-        <>
-          {selected ? (
-            <>
-                <Hero 
-                  item={selected} myList={myList} progress={getProgress(selected.tmdbId)}
-                  onPlay={(s, e) => handlePlay(s, e)} onAddToList={handleAddToList} onRate={handleRate}
-                  onRemoveFromList={() => removeFromList(selected.tmdbId)}
-                  onClose={() => setSelected(null)} onSelectCollectionItem={selectItem} 
-                />
-                <CastList cast={cast} onActorSelect={handleActorSelect} />
-                {selectedActor && (
-                    <div className="list-section" style={{ marginTop: '20px' }}>
-                         <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'20px'}}>
-                            <h2>Film con {selectedActor.name}</h2>
-                            <button className="pill ghost" onClick={() => { setSelectedActor(null); setActorCredits([]); }}>Chiudi</button>
-                         </div>
-                         {actorCredits.length > 0 ? (
-                           <motion.div layout className="grid">
-                             <AnimatePresence mode="popLayout">
-                                {actorCredits.map(item => (
-                                    <motion.div 
-                                      layout
-                                      initial={{ opacity: 0, scale: 0.8 }}
-                                      animate={{ opacity: 1, scale: 1 }}
-                                      exit={{ opacity: 0, scale: 0.8 }}
-                                      transition={{ duration: 0.3 }}
-                                      key={item.tmdbId}
-                                    >
-                                      <Card item={item} onClick={() => selectItem(item)} />
-                                    </motion.div>
-                                ))}
-                             </AnimatePresence>
-                           </motion.div>
-                         ) : (
-                           <p style={{ color: '#888' }}>Nessun film trovato.</p>
-                         )}
-                    </div>
-                )}
-                {related.length > 0 && (
-                    <div className="list-section" style={{ marginTop: '20px' }}>
+          <Route path="/" element={
+            <PageTransition>
+              <>
+                {selected ? (
+                  <>
+                    <Hero 
+                      item={selected} 
+                      myList={myList} 
+                      progress={getProgress(selected.tmdbId)}
+                      onPlay={(s, e) => handlePlay(s, e)} 
+                      onAddToList={handleAddToList} 
+                      onRate={handleRate}
+                      onRemoveFromList={() => removeFromList(selected.tmdbId)}
+                      onClose={() => setSelected(null)} 
+                      onSelectCollectionItem={selectItem} 
+                      isUILocked={isUILocked}
+                      toggleUILock={toggleUILock}
+                    />
+                    <CastList cast={cast} onActorSelect={handleActorSelect} />
+                    {selectedActor && (
+                      <div className="list-section" style={{ marginTop: '20px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                          <h2>Film con {selectedActor.name}</h2>
+                          <button className="pill ghost" onClick={() => { setSelectedActor(null); setActorCredits([]); }}>Chiudi</button>
+                        </div>
+                        {actorCredits.length > 0 ? (
+                          <motion.div layout className="grid">
+                            <AnimatePresence mode="popLayout">
+                              {actorCredits.map(item => (
+                                <motion.div 
+                                  layout
+                                  initial={{ opacity: 0, scale: 0.8 }}
+                                  animate={{ opacity: 1, scale: 1 }}
+                                  exit={{ opacity: 0, scale: 0.8 }}
+                                  transition={{ duration: 0.3 }}
+                                  key={item.tmdbId}
+                                >
+                                  <Card item={item} onClick={() => selectItem(item)} />
+                                </motion.div>
+                              ))}
+                            </AnimatePresence>
+                          </motion.div>
+                        ) : (
+                          <p style={{ color: '#888' }}>Nessun film trovato.</p>
+                        )}
+                      </div>
+                    )}
+                    {related.length > 0 && (
+                      <div className="list-section" style={{ marginTop: '20px' }}>
                          <div className="carousel-header" style={{ marginBottom: '20px', paddingLeft: '0' }}>
                             <span className="carousel-icon">💡</span>
                             <h3 className="carousel-title">Perchè hai scelto "{selected.title}"</h3>
@@ -476,151 +416,132 @@ const runSmartShuffle = async (genreId: number | null) => {
                               ))}
                            </AnimatePresence>
                          </motion.div>
-                    </div>
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    {results.length > 0 ? (
+                      <div className="list-section" style={{ marginTop: '20px' }}>
+                          <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'20px'}}>
+                              <h2>Risultati Ricerca "{query}"</h2>
+                              <button className="pill ghost" onClick={() => { setResults([]); setQuery(""); }}>Chiudi ricerca X</button>
+                          </div>
+                          <motion.div layout className="grid">
+                            <AnimatePresence mode="popLayout">
+                              {results.map(item => (
+                                  <motion.div 
+                                    layout
+                                    initial={{ opacity: 0, scale: 0.8 }}
+                                    animate={{ opacity: 1, scale: 1 }}
+                                    exit={{ opacity: 0, scale: 0.8 }}
+                                    transition={{ duration: 0.3 }}
+                                    key={item.tmdbId}
+                                  >
+                                    <Card item={item} onClick={() => selectItem(item)} />
+                                  </motion.div>
+                              ))}
+                            </AnimatePresence>
+                          </motion.div>
+                      </div>
+                    ) : (
+                      <div style={{ marginTop: '20px' }}>
+                        {session && <CommunityPulse onItemClick={selectItem} />}
+                        
+                        {session && myList.some(m => m.status === 'in-corso') && (
+                            <CarouselSection
+                              title="Continua a guardare"
+                              icon="✋"
+                              items={myList.filter(m => m.status === 'in-corso').map(m => m as TmdbItem)}
+                              onSelect={selectItem}
+                              getProgress={getProgress}
+                            />
+                        )}
+                        
+                        <CarouselSection title="Nuove Uscite al Cinema" icon="🆕" items={homeLists.newReleases} onSelect={selectItem} />
+                        <CarouselSection title="Popolari su TMDB" icon="🔥" items={homeLists.popular} onSelect={selectItem} />
+                        <CarouselSection title="Serie TV del momento" icon="📺" items={homeLists.tvPopular} onSelect={selectItem} />
+                        <CarouselSection title="Prossime Uscite" icon="📅" items={homeLists.upcoming} onSelect={selectItem} isUpcoming={true} formatDate={formatDate} />
+                        <CarouselSection title="Azione e Avventura" icon="💣" items={homeLists.action} onSelect={selectItem} />
+                        <CarouselSection title="Animazione" icon="✨" items={homeLists.animation} onSelect={selectItem} />
+                        
+                        <div className="list-section">
+                           <div className="carousel-header"><span className="carousel-icon">📈</span><h3 className="carousel-title">In Tendenza Oggi</h3></div>
+                           <div className="grid">
+                              {homeLists.trending.slice(0, 18).map(item => (<Card key={item.tmdbId} item={item} onClick={() => selectItem(item)} />))}
+                           </div>
+                        </div>
+                      </div>
+                    )}
+                  </>
                 )}
-            </>
-          ) : (
-            <>
-              {results.length > 0 ? (
-                <div className="list-section" style={{ marginTop: '20px' }}>
-                    <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'20px'}}>
-                        <h2>Risultati Ricerca "{query}"</h2>
-                        <button className="pill ghost" onClick={() => { setResults([]); setQuery(""); }}>Chiudi ricerca X</button>
-                    </div>
-                    <motion.div layout className="grid">
-                      <AnimatePresence mode="popLayout">
-                        {results.map(item => (
-                            <motion.div 
-                              layout
-                              initial={{ opacity: 0, scale: 0.8 }}
-                              animate={{ opacity: 1, scale: 1 }}
-                              exit={{ opacity: 0, scale: 0.8 }}
-                              transition={{ duration: 0.3 }}
-                              key={item.tmdbId}
-                            >
-                              <Card item={item} onClick={() => selectItem(item)} />
-                            </motion.div>
-                        ))}
-                      </AnimatePresence>
-                    </motion.div>
-                </div>
-              ) : (
-                <div style={{ marginTop: '20px' }}>
-                  {session && <CommunityPulse onItemClick={selectItem} />}
-                  
-                  {session && myList.some(m => m.status === 'in-corso') && (
-                      <CarouselSection
-                        title="Continua a guardare"
-                        icon="✋"
-                        items={myList.filter(m => m.status === 'in-corso').map(m => m as TmdbItem)}
-                        onSelect={selectItem}
-                        getProgress={getProgress}
-                      />
-                  )}
-                  
-                  <CarouselSection title="Nuove Uscite al Cinema" icon="🆕" items={homeLists.newReleases} onSelect={selectItem} />
-                  <CarouselSection title="Popolari su TMDB" icon="🔥" items={homeLists.popular} onSelect={selectItem} />
-                  <CarouselSection title="Serie TV del momento" icon="📺" items={homeLists.tvPopular} onSelect={selectItem} />
-                  <CarouselSection title="Prossime Uscite" icon="📅" items={homeLists.upcoming} onSelect={selectItem} isUpcoming={true} formatDate={formatDate} />
-                  <CarouselSection title="Azione e Avventura" icon="💣" items={homeLists.action} onSelect={selectItem} />
-                  <CarouselSection title="Animazione" icon="✨" items={homeLists.animation} onSelect={selectItem} />
-                  
-                  <div className="list-section">
-                     <div className="carousel-header"><span className="carousel-icon">📈</span><h3 className="carousel-title">In Tendenza Oggi</h3></div>
-                     <div className="grid">
-                        {homeLists.trending.slice(0, 18).map(item => (<Card key={item.tmdbId} item={item} onClick={() => selectItem(item)} />))}
-                     </div>
-                  </div>
-                </div>
-              )}
-            </>
-          )}
-        </>
-        </PageTransition>
-        } />
+              </>
+            </PageTransition>
+          } />
 
-      {/* MENU FILTRO */}
-      {false && (
-         <ShuffleFilterModal 
-            onSelectGenre={runSmartShuffle}
-            onClose={() => setShowShuffleFilter(false)}
-            loading={shuffleLoading}
-         />
-      )}
+          <Route path="/archive" element={<PageTransition><Archive onSelect={selectItem} /></PageTransition>} />
+          
+          <Route path="/list" element={
+            session ? (
+           <PageTransition><div style={{paddingTop: '20px'}}>
+               <div className="list-page-header">
+                  <h1>La mia lista</h1>
+                  <p style={{opacity:0.6}}>Gestisci i tuoi titoli salvati.</p>
+               </div>
+               <div className="filter-bar" style={{ marginBottom: '40px' }}>
+                  <div className="filter-group"><span className="filter-label">Cerca</span><input className="filter-select" placeholder="Titolo..." value={listSearch} onChange={e => setListSearch(e.target.value)} style={{ width:'200px', cursor:'text', backgroundImage:'none' }}/></div>
+                  <div className="filter-group"><span className="filter-label">Tipologia</span><select className="filter-select" value={listTypeFilter} onChange={e => setListTypeFilter(e.target.value as any)}><option value="all">Tutti</option><option value="movie">Film</option><option value="tv">Serie TV</option></select></div>
+                  <div className="filter-group"><span className="filter-label">Stato</span><select className="filter-select" value={listStatusFilter} onChange={e => setListStatusFilter(e.target.value as any)}><option value="all">Tutti gli stati</option>{STATUS_SECTIONS.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}</select></div>
+                  <div className="filter-group"><span className="filter-label">Ordina per</span><select className="filter-select" value={listSort} onChange={e => setListSort(e.target.value as any)}><option value="added">Data aggiunta</option><option value="rating">Voto Personale</option><option value="year">Anno Uscita</option></select></div>
+               </div>
+               {listLoading && (
+                   <div className="grid">
+                      {Array.from({ length: 12 }).map((_, i) => <SkeletonCard key={i} />)}
+                   </div>
+               )}
+               {STATUS_SECTIONS.map(sec => {
+                   if (listStatusFilter !== "all" && listStatusFilter !== sec.id) return null;
+                   const sectionItems = filteredMyList.filter(m => m.status === sec.id);
+                   if (sectionItems.length === 0) return null;
+                   const movies = sectionItems.filter(m => m.type === "movie");
+                   const tvShows = sectionItems.filter(m => m.type === "tv");
+                   return (
+                       <div key={sec.id} className="list-section" style={{ marginBottom: '60px' }}>
+                           <div className="list-section-header"><h2 className="list-section-title">{sec.label} <span style={{fontSize:'0.6em', opacity:0.5, marginLeft:'10px', verticalAlign:'middle'}}>({sectionItems.length})</span></h2></div>
+                           <div className="grid">
+                              {[...movies, ...tvShows].map(item => (
+                                <Card
+                                  key={item.tmdbId}
+                                  item={item}
+                                  onClick={() => selectItem(item)}
+                                  onRemove={() => removeFromList(item.tmdbId)}
+                                  showRating={true}
+                                  progress={getProgress(item.tmdbId)}
+                                  onTypeChange={isAdmin ? (nextType) => updateMediaType(item.tmdbId, nextType) : undefined}
+                                />
+                              ))}
+                           </div>
+                       </div>
+                   );
+               })}
+           </div>
+            </PageTransition>) : (
+              <PageTransition><div style={{textAlign:'center', padding:'50px'}}><h2>Accesso Negato</h2><button className="pill solid" onClick={() => navigate('/auth')}>Vai al Login</button></div></PageTransition>
+            )
+          } />
 
-      {/* MODALE RISULTATO */}
-      {false && (
-         <ShuffleModal 
-            item={shuffleItem} 
-            onPlay={handleShufflePlay} 
-            onRetry={handleRetryShuffle} 
-            onClose={() => setShuffleItem(null)} 
-         />
-      )}
+          {/* --- CLASSIFICA --- */}
+          <Route path="/ranking" element={
+            session ? <PageTransition><Ranking /></PageTransition> : (
+              <PageTransition><div style={{textAlign:'center', padding:'50px'}}>
+                <h2>Community Riservata</h2>
+                <p style={{marginBottom:'20px', color:'#aaa'}}>Accedi per visualizzare le classifiche, sfidare gli amici e vedere i "Critici Top".</p>
+                <button className="pill solid" onClick={() => navigate('/auth')}>Vai al Login</button>
+              </div></PageTransition>
+            )
+          } />
 
-        <Route path="/archive" element={<PageTransition><Archive onSelect={selectItem} /></PageTransition>} />
-        
-        <Route path="/list" element={
-          session ? (
-         <PageTransition><div style={{paddingTop: '20px'}}>
-             <div className="list-page-header">
-                <h1>La mia lista</h1>
-                <p style={{opacity:0.6}}>Gestisci i tuoi titoli salvati.</p>
-             </div>
-             <div className="filter-bar" style={{ marginBottom: '40px' }}>
-                <div className="filter-group"><span className="filter-label">Cerca</span><input className="filter-select" placeholder="Titolo..." value={listSearch} onChange={e => setListSearch(e.target.value)} style={{ width:'200px', cursor:'text', backgroundImage:'none' }}/></div>
-                <div className="filter-group"><span className="filter-label">Tipologia</span><select className="filter-select" value={listTypeFilter} onChange={e => setListTypeFilter(e.target.value as any)}><option value="all">Tutti</option><option value="movie">Film</option><option value="tv">Serie TV</option></select></div>
-                <div className="filter-group"><span className="filter-label">Stato</span><select className="filter-select" value={listStatusFilter} onChange={e => setListStatusFilter(e.target.value as any)}><option value="all">Tutti gli stati</option>{STATUS_SECTIONS.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}</select></div>
-                <div className="filter-group"><span className="filter-label">Ordina per</span><select className="filter-select" value={listSort} onChange={e => setListSort(e.target.value as any)}><option value="added">Data aggiunta</option><option value="rating">Voto Personale</option><option value="year">Anno Uscita</option></select></div>
-             </div>
-             {listLoading && (
-                 <div className="grid">
-                    {Array.from({ length: 12 }).map((_, i) => <SkeletonCard key={i} />)}
-                 </div>
-             )}
-             {STATUS_SECTIONS.map(sec => {
-                 if (listStatusFilter !== "all" && listStatusFilter !== sec.id) return null;
-                 const sectionItems = filteredMyList.filter(m => m.status === sec.id);
-                 if (sectionItems.length === 0) return null;
-                 const movies = sectionItems.filter(m => m.type === "movie");
-                 const tvShows = sectionItems.filter(m => m.type === "tv");
-                 return (
-                     <div key={sec.id} className="list-section" style={{ marginBottom: '60px' }}>
-                         <div className="list-section-header"><h2 className="list-section-title">{sec.label} <span style={{fontSize:'0.6em', opacity:0.5, marginLeft:'10px', verticalAlign:'middle'}}>({sectionItems.length})</span></h2></div>
-                         <div className="grid">
-                            {[...movies, ...tvShows].map(item => (
-                              <Card
-                                key={item.tmdbId}
-                                item={item}
-                                onClick={() => selectItem(item)}
-                                onRemove={() => removeFromList(item.tmdbId)}
-                                showRating={true}
-                                progress={getProgress(item.tmdbId)}
-                                onTypeChange={isAdmin ? (nextType) => updateMediaType(item.tmdbId, nextType) : undefined}
-                              />
-                            ))}
-                         </div>
-                     </div>
-                 );
-             })}
-         </div>
-          </PageTransition>) : (
-            <PageTransition><div style={{textAlign:'center', padding:'50px'}}><h2>Accesso Negato</h2><button className="pill solid" onClick={() => navigate('/auth')}>Vai al Login</button></div></PageTransition>
-          )
-        } />
-
-        {/* --- CLASSIFICA --- */}
-        <Route path="/ranking" element={
-          session ? <PageTransition><Ranking /></PageTransition> : (
-            <PageTransition><div style={{textAlign:'center', padding:'50px'}}>
-              <h2>Community Riservata</h2>
-              <p style={{marginBottom:'20px', color:'#aaa'}}>Accedi per visualizzare le classifiche, sfidare gli amici e vedere i "Critici Top".</p>
-              <button className="pill solid" onClick={() => navigate('/auth')}>Vai al Login</button>
-            </div></PageTransition>
-          )
-        } />
-
-        <Route path="/suggestions" element={<PageTransition><Suggestions onSelect={selectItem} session={session} /></PageTransition>} />
+          <Route path="/suggestions" element={<PageTransition><Suggestions onSelect={selectItem} session={session} /></PageTransition>} />
 
         </Routes>
       </AnimatePresence>

@@ -40,9 +40,13 @@ interface PlayerProps {
   isPipMode?: boolean;
   onTogglePip?: () => void;
   onNavigateEpisode?: (season: number, episode: number) => void;
+  onProgressUpdate?: (seconds: number) => void;
+  startAt?: number;
 }
 
-export default function PlayerDrawer({ item, season, episode, onClose, isPipMode, onTogglePip, onNavigateEpisode }: PlayerProps) {
+export default function PlayerDrawer({ 
+  item, season, episode, onClose, isPipMode, onTogglePip, onNavigateEpisode, onProgressUpdate, startAt 
+}: PlayerProps) {
   const [isPartyMode, setIsPartyMode] = useState(false);
   const [roomInput, setRoomInput] = useState(""); 
   const [activeRoom, setActiveRoom] = useState<string | null>(null);
@@ -61,6 +65,49 @@ export default function PlayerDrawer({ item, season, episode, onClose, isPipMode
   const audioContextRef = useRef<AudioContext | null>(null);
 
   const { messages, userStates, viewers, countdown, sendMessage, sendSyncSignal, sendUserState, sendWebRTCSignal, setOnSignal } = useWatchParty(activeRoom, myUsername);
+
+  const [currentProgress, setCurrentProgress] = useState(item.progressSeconds || 0);
+  const [showResumePrompt, setShowResumePrompt] = useState(!!(item.progressSeconds && item.progressSeconds > 15));
+  const lastSavedRef = useRef(0);
+
+  // --- TRACCIAMENTO AUTOMATICO ---
+  useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+      // Filtro sicurezza (opzionale se conosciamo l'origin esatto)
+      // if (!event.origin.includes('vixsrc.to')) return;
+
+      try {
+        const data = event.data;
+        
+        // Logica specifica per i messaggi del player
+        // Molti player mandano { event: 'timeupdate', currentTime: 123 }
+        // Altri mandano stringhe
+        let time = 0;
+        if (typeof data === 'object' && data.event === 'timeupdate') {
+          time = data.currentTime || data.time || 0;
+        } else if (typeof data === 'string' && data.startsWith('timeupdate:')) {
+           time = parseFloat(data.split(':')[1]);
+        }
+
+        if (time > 0) {
+          setCurrentProgress(time);
+          
+          // Salva su DB ogni 15 secondi per non sovraccaricare
+          if (Math.abs(time - lastSavedRef.current) > 15) {
+            lastSavedRef.current = time;
+            if (onProgressUpdate) onProgressUpdate(time);
+          }
+        }
+      } catch (e) { /* ignore */ }
+    };
+
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
+  }, [onProgressUpdate]);
+
+  const handleResume = () => {
+    setShowResumePrompt(false);
+  };
 
   // 2. CONTROLLO LOGIN: Aggiorniamo isLogged
   useEffect(() => {
@@ -233,11 +280,28 @@ export default function PlayerDrawer({ item, season, episode, onClose, isPipMode
             </div>
             
             <iframe 
-                src={buildEmbedUrl(item.tmdbId, item.type, season, episode)} 
+                key={`${season}-${episode}-${showResumePrompt}`}
+                src={buildEmbedUrl(item.tmdbId, item.type, season, episode, showResumePrompt ? 0 : (startAt || item.progressSeconds))} 
                 allowFullScreen 
                 title="Player" 
                 className="video-frame"
             />
+
+            {showResumePrompt && (
+                <div className="resume-overlay animate-fadeIn">
+                    <div className="resume-box">
+                        <div className="resume-icon">🕒</div>
+                        <div className="resume-content">
+                            <h4>Vuoi riprendere da dove avevi lasciato?</h4>
+                            <p>Ultima posizione: <strong>{Math.floor(item.progressSeconds! / 60)}m {Math.floor(item.progressSeconds! % 60)}s</strong></p>
+                            <div className="resume-actions">
+                                <button className="pill solid primary" onClick={handleResume}>Riprendi</button>
+                                <button className="pill ghost" onClick={() => setShowResumePrompt(false)}>Inizia da capo</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
             
             {/* 5. BINGE-WATCHING CONTROL BAR */}
             {item.type === 'tv' && !isPipMode && onNavigateEpisode && (

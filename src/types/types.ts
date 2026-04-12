@@ -46,6 +46,7 @@ export interface TmdbItem {
   popularity?: number;
   status?: WatchStatus;
   progressMinutes?: number;
+  progressSeconds?: number;
 
   collection?: {
     id: number;

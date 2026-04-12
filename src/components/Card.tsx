@@ -8,7 +8,7 @@ import YouTube from 'react-youtube';
 interface CardProps {
   item: TmdbItem;
   onClick: () => void;
-  progress?: { season: number; episode: number };
+  progress?: { season: number; episode: number; watchedEpisodes?: number; totalEpisodes?: number };
   onRemove?: () => void;
   isUpcoming?: boolean;
   showRating?: boolean;
@@ -100,6 +100,17 @@ export default function Card({ item, onClick, progress, onRemove, isUpcoming, sh
     ? Math.min(1, watchedMinutes / runtimeMinutes)
     : 0;
 
+  // Progresso Serie TV: episodi visti / episodi totali
+  const tvProgress =
+    item.type === 'tv' &&
+    progress?.watchedEpisodes && progress.watchedEpisodes > 0 &&
+    progress?.totalEpisodes && progress.totalEpisodes > 0
+      ? Math.min(1, progress.watchedEpisodes / progress.totalEpisodes)
+      : null;
+
+  // Valore finale per la barra
+  const effectiveProgress = item.type === 'movie' ? movieProgress : tvProgress;
+
   return (
     <div className="card-wrapper" onMouseEnter={handleMouseEnter} onMouseLeave={handleMouseLeave}>
         <article 
@@ -133,12 +144,12 @@ export default function Card({ item, onClick, progress, onRemove, isUpcoming, sh
              <div className="upcoming-date">{formatDate(item.releaseDateFull)}</div>
           )}
 
-          {movieProgress > 0 && (
-            <div className="movie-progress" aria-hidden="true">
-              <div className="movie-progress-bar">
+          {(effectiveProgress !== null && effectiveProgress !== undefined && (effectiveProgress > 0 || (item.type === 'tv' && progress))) && (
+            <div className="elegant-progress-container" aria-hidden="true">
+              <div className="elegant-progress-bar">
                 <span
-                  className="movie-progress-fill"
-                  style={{ width: `${Math.max(3, Math.round(movieProgress * 100))}%` }}
+                  className="elegant-progress-fill"
+                  style={{ width: `${Math.max(3, Math.round((effectiveProgress || 0.03) * 100))}%` }}
                 />
               </div>
             </div>
