@@ -7,6 +7,7 @@ import { TmdbItem, SavedItem, WatchStatus, STATUS_SECTIONS, Episode } from "../t
 import StarRating from "./StarRating";
 import TrailerModal from "./TrailerModal";
 import { fetchTrailer, fetchSeasonEpisodes } from "../utils/api";
+import { useExclusiveTrailerPlayback } from "../hooks/useExclusiveTrailerPlayback";
 
 interface HeroProps {
   item: TmdbItem;
@@ -122,6 +123,10 @@ export default function Hero({
   const [isIdle, setIsIdle] = useState(false);
   const [volume, setVolume] = useState(60);
   const ytPlayerRef = useRef<any>(null);
+  const isBgTrailerActive = useExclusiveTrailerPlayback(
+    `hero-${item.type}-${item.tmdbId}`,
+    showBgVideo && Boolean(trailerKey)
+  );
 
   // Ascolta inattività (Mouse & Touch)
   useEffect(() => {
@@ -233,9 +238,9 @@ export default function Hero({
   return (
     <section className="hero">
       <div className="hero-overlay" style={{ opacity: isIdle ? 0.3 : 1, transition: 'opacity 0.8s ease' }} />
-      <img src={item.backdrop} alt={item.title} className={`hero-bg ${showBgVideo ? 'fade-out' : ''}`} />
+      <img src={item.backdrop} alt={item.title} className={`hero-bg ${isBgTrailerActive ? 'fade-out' : ''}`} />
 
-      {showBgVideo && trailerKey && (
+      {isBgTrailerActive && trailerKey && (
         <div className="hero-bg-video">
           <YouTube
             videoId={trailerKey}
@@ -264,7 +269,7 @@ export default function Hero({
         </div>
       )}
 
-      {showBgVideo && trailerKey && (
+      {isBgTrailerActive && trailerKey && (
         <div
           className="volume-control-wrapper"
           style={{

@@ -4,6 +4,7 @@ import { MediaType, TmdbItem } from "../types/types";
 import { useState, useRef, useEffect } from "react";
 import { fetchTrailer } from "../utils/api";
 import YouTube from 'react-youtube';
+import { useExclusiveTrailerPlayback } from "../hooks/useExclusiveTrailerPlayback";
 
 interface CardProps {
   item: TmdbItem;
@@ -29,6 +30,11 @@ export default function Card({ item, onClick, progress, onRemove, isUpcoming, sh
   const [isExpanded, setIsExpanded] = useState(false);
   const [isMuted, setIsMuted] = useState(true);
   const hoverTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const trailerPlaybackIdRef = useRef(`card-${item.type}-${item.tmdbId}-${Math.random().toString(36).slice(2)}`);
+  const isTrailerActive = useExclusiveTrailerPlayback(
+    trailerPlaybackIdRef.current,
+    isExpanded && Boolean(trailerKey)
+  );
 
   const handleMouseEnter = () => {
     if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
@@ -166,7 +172,7 @@ export default function Card({ item, onClick, progress, onRemove, isUpcoming, sh
         {isExpanded && (
             <div className="card-expanded-modal">
                 <div className="expanded-video-container" onClick={handleDirectPlay}>
-                    {trailerKey ? (
+                    {trailerKey && isTrailerActive ? (
                         <YouTube
                             videoId={trailerKey}
                             opts={{
@@ -197,7 +203,7 @@ export default function Card({ item, onClick, progress, onRemove, isUpcoming, sh
                         />
                     )}
                     
-                    {trailerKey && (
+                    {trailerKey && isTrailerActive && (
                         <button 
                             className="expanded-mute-btn" 
                             onClick={(e) => { e.stopPropagation(); setIsMuted(!isMuted); }}

@@ -36,6 +36,7 @@ import Profile from "./components/Profile";
 import CommunityPulse from "./components/CommunityPulse"; 
 import SiteLock from "./components/SiteLock"; 
 import UpdatesModal, { UpdateItem } from "./components/UpdatesModal";
+import { setTrailerPlaybackBlocked } from "./utils/trailerPlayback";
 
 function PageTransition({ children }: { children: React.ReactNode }) {
   return (
@@ -146,6 +147,19 @@ export default function App() {
   }, [isSiteUnlocked, session?.user?.id]);
 
   useEffect(() => {
+    const syncTrailerPlaybackState = () => {
+      setTrailerPlaybackBlocked(showPlayer || document.hidden);
+    };
+
+    syncTrailerPlaybackState();
+    document.addEventListener("visibilitychange", syncTrailerPlaybackState);
+
+    return () => {
+      document.removeEventListener("visibilitychange", syncTrailerPlaybackState);
+    };
+  }, [showPlayer]);
+
+  useEffect(() => {
     async function loadData() {
       try {
         const [trending, rawUpcoming, popular, action, animation, tvPopular, newReleases] = await Promise.all([
@@ -184,6 +198,7 @@ export default function App() {
         if (typeof item.progressMinutes === "number") fullItem.progressMinutes = item.progressMinutes;
         setSelected(fullItem);
         const startAt = (fullItem.progressSeconds && fullItem.progressSeconds > 15) ? fullItem.progressSeconds : 0;
+        setTrailerPlaybackBlocked(true);
         setPlayerState({ season, episode, startAt });
         setShowPlayer(true);
         
@@ -283,6 +298,7 @@ export default function App() {
       return;
     }
     const startAt = (target.progressSeconds && target.progressSeconds > 15) ? target.progressSeconds : 0;
+    setTrailerPlaybackBlocked(true);
     setPlayerState({ season, episode, startAt });
     setShowPlayer(true);
     if (session) {
@@ -551,7 +567,7 @@ export default function App() {
           item={selected} 
           season={playerState.season} 
           episode={playerState.episode} 
-          onClose={() => { setShowPlayer(false); setIsPipMode(false); }}
+          onClose={() => { setTrailerPlaybackBlocked(false); setShowPlayer(false); setIsPipMode(false); }}
           isPipMode={isPipMode}
           onTogglePip={() => setIsPipMode(!isPipMode)}
           onNavigateEpisode={(s: number, e: number) => handlePlay(s, e, selected)}
