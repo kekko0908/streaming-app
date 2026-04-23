@@ -88,10 +88,28 @@ export function useStore() {
     setLoading(false);
   }
 
-  // Helper durata
-  const parseRuntime = (runtimeStr?: string) => {
-    if (!runtimeStr) return 0;
-    return parseInt(runtimeStr.split(" ")[0]) || 0;
+  const syncMediaItem = async (item: TmdbItem) => {
+    const { error } = await supabase.functions.invoke("sync-media-item", {
+      body: {
+        action: "sync",
+        tmdbId: parseInt(item.tmdbId, 10),
+        type: item.type,
+      },
+    });
+
+    if (error) throw error;
+  };
+
+  const syncMediaType = async (tmdbId: string, mediaType: MediaType) => {
+    const { error } = await supabase.functions.invoke("sync-media-item", {
+      body: {
+        action: "update_type",
+        tmdbId: parseInt(tmdbId, 10),
+        mediaType,
+      },
+    });
+
+    if (error) throw error;
   };
 
   // Funzione Helper per calcolare episodi totali visti fino a S:X E:Y
@@ -114,23 +132,7 @@ export function useStore() {
   const addToList = async (item: TmdbItem, status: WatchStatus) => {
     const userId = (await supabase.auth.getUser()).data.user?.id;
     if (!userId) return;
-
-    const runtimeVal = parseRuntime(item.runtime);
-    
-    // 1. Aggiorna Media (con durata corretta)
-    const totalEpisodesCount = (item.type === 'tv' && item.seasonsDetails && item.seasonsDetails.length > 0)
-        ? item.seasonsDetails.reduce((acc, s) => acc + s.episode_count, 0)
-        : undefined;
-
-    await supabase.from('media_items').upsert({
-        tmdb_id: parseInt(item.tmdbId),
-        title: item.title,
-        media_type: item.type,
-        runtime: runtimeVal,
-        poster_path: item.poster,
-        genres: item.genres || [],
-        ...(totalEpisodesCount !== undefined ? { total_episodes: totalEpisodesCount } : {})
-    }, { onConflict: 'tmdb_id' });
+    await syncMediaItem(item);
 
     // 2. Prepara aggiornamento Utente
     const updates: any = { 
@@ -187,15 +189,7 @@ export function useStore() {
     if (!userId) return;
     
     setMyList(prev => prev.map(m => m.tmdbId === item.tmdbId ? { ...m, rating } : m));
-    
-    await supabase.from('media_items').upsert({
-        tmdb_id: parseInt(item.tmdbId),
-        title: item.title,
-        media_type: item.type,
-        runtime: parseRuntime(item.runtime),
-        poster_path: item.poster,
-        genres: item.genres || []
-    }, { onConflict: 'tmdb_id' });
+    await syncMediaItem(item);
 
     await supabase.from('user_library').upsert({ user_id: userId, tmdb_id: parseInt(item.tmdbId), rating: rating }, { onConflict: 'user_id, tmdb_id' });
   };
@@ -219,14 +213,7 @@ export function useStore() {
     }
 
     if (item.type !== "tv") {
-      await supabase.from('media_items').upsert({ 
-          tmdb_id: parseInt(item.tmdbId), 
-          title: item.title, 
-          media_type: item.type,
-          runtime: parseRuntime(item.runtime),
-          poster_path: item.poster,
-          genres: item.genres || []
-      }, { onConflict: 'tmdb_id' });
+      await syncMediaItem(item);
 
       if (typeof item.progressMinutes === "number") {
         await supabase.from('user_library').upsert({
@@ -243,21 +230,7 @@ export function useStore() {
 
     // Calcolo preciso degli episodi totali visti fino a questo click
     const totalEpisodes = calculateTotalEpisodes(item, season, episode);
-
-    // Upsert media
-    const totalEpisodesForUpdate = (item.seasonsDetails && item.seasonsDetails.length > 0)
-        ? item.seasonsDetails.reduce((acc, s) => acc + s.episode_count, 0)
-        : undefined;
-
-    await supabase.from('media_items').upsert({ 
-        tmdb_id: parseInt(item.tmdbId), 
-        title: item.title, 
-        media_type: 'tv',
-        runtime: parseRuntime(item.runtime),
-        poster_path: item.poster,
-        genres: item.genres || [],
-        ...(totalEpisodesForUpdate !== undefined ? { total_episodes: totalEpisodesForUpdate } : {})
-    }, { onConflict: 'tmdb_id' });
+    await syncMediaItem(item);
 
     // Determinare automaticamente lo stato
     let newStatus = 'in-corso';
@@ -295,10 +268,7 @@ export function useStore() {
       });
     }
 
-    await supabase
-      .from('media_items')
-      .update({ media_type: mediaType })
-      .eq('tmdb_id', parseInt(tmdbId));
+    await syncMediaType(tmdbId, mediaType);
 
     if (mediaType === "movie") {
       await supabase

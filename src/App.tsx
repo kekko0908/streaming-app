@@ -1,10 +1,8 @@
-import { useEffect, useState } from "react";
+import { Suspense, lazy, useEffect, useState } from "react";
 import { Routes, Route, useNavigate, Navigate, useLocation } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import "./css/global.css";
 import "./css/archive.css"; 
-import Ranking from "./components/Ranking";
-import Suggestions from "./components/Suggestions";
 import { TmdbItem, STATUS_SECTIONS, WatchStatus } from "./types/types";
 import { 
   fetchCollection, 
@@ -27,16 +25,20 @@ import { Session } from "@supabase/supabase-js";
 import Navbar from "./components/Navbar";
 import Hero from "./components/Hero";
 import Card, { SkeletonCard } from "./components/Card";
-import PlayerDrawer from "./components/PlayerDrawer";
 import CarouselSection from "./components/CarouselSection"; 
-import Archive from "./components/Archive";
-import AuthForm from "./components/AuthForm";
 import CastList from "./components/CastList"; 
-import Profile from "./components/Profile";
 import CommunityPulse from "./components/CommunityPulse"; 
 import SiteLock from "./components/SiteLock"; 
-import UpdatesModal, { UpdateItem } from "./components/UpdatesModal";
+import type { UpdateItem } from "./components/UpdatesModal";
 import { setTrailerPlaybackBlocked } from "./utils/trailerPlayback";
+
+const AuthForm = lazy(() => import("./components/AuthForm"));
+const Profile = lazy(() => import("./components/Profile"));
+const Archive = lazy(() => import("./components/Archive"));
+const Ranking = lazy(() => import("./components/Ranking"));
+const Suggestions = lazy(() => import("./components/Suggestions"));
+const PlayerDrawer = lazy(() => import("./components/PlayerDrawer"));
+const UpdatesModal = lazy(() => import("./components/UpdatesModal"));
 
 function PageTransition({ children }: { children: React.ReactNode }) {
   return (
@@ -48,6 +50,22 @@ function PageTransition({ children }: { children: React.ReactNode }) {
     >
       {children}
     </motion.div>
+  );
+}
+
+function DeferredSection({ children }: { children: React.ReactNode }) {
+  return (
+    <Suspense fallback={<PageTransition><div style={{ padding: "50px", textAlign: "center", color: "#888" }}>Caricamento...</div></PageTransition>}>
+      {children}
+    </Suspense>
+  );
+}
+
+function DeferredOverlay({ children }: { children: React.ReactNode }) {
+  return (
+    <Suspense fallback={<div className="drawer-backdrop"><div className="drawer drawer-responsive" style={{ minHeight: "240px", display: "grid", placeItems: "center", color: "#888" }}>Caricamento player...</div></div>}>
+      {children}
+    </Suspense>
   );
 }
 
@@ -259,8 +277,12 @@ export default function App() {
     setSelected(fullItem);
     setSelectedActor(null);
     setActorCredits([]);
-    try { const recs = await fetchRecommendations(item.tmdbId, item.type); setRelated(recs); } catch(e) { setRelated([]); }
-    try { const actors = await fetchCredits(item.tmdbId, item.type); setCast(actors); } catch(e) { setCast([]); }
+    const [recsResult, actorsResult] = await Promise.allSettled([
+      fetchRecommendations(item.tmdbId, item.type),
+      fetchCredits(item.tmdbId, item.type)
+    ]);
+    setRelated(recsResult.status === "fulfilled" ? recsResult.value : []);
+    setCast(actorsResult.status === "fulfilled" ? actorsResult.value : []);
   };
 
   const handleAddToList = (status: any) => {
@@ -360,8 +382,8 @@ export default function App() {
 
       <AnimatePresence mode="wait">
         <Routes location={location} key={location.pathname}>
-          <Route path="/auth" element={!session ? <PageTransition><AuthForm /></PageTransition> : <Navigate to="/" />} />
-          <Route path="/profile" element={session ? <PageTransition><Profile /></PageTransition> : <Navigate to="/auth" />} />
+          <Route path="/auth" element={!session ? <DeferredSection><PageTransition><AuthForm /></PageTransition></DeferredSection> : <Navigate to="/" />} />
+          <Route path="/profile" element={session ? <DeferredSection><PageTransition><Profile /></PageTransition></DeferredSection> : <Navigate to="/auth" />} />
 
           <Route path="/" element={
             <PageTransition>
@@ -495,7 +517,7 @@ export default function App() {
             </PageTransition>
           } />
 
-          <Route path="/archive" element={<PageTransition><Archive onSelect={selectItem} /></PageTransition>} />
+          <Route path="/archive" element={<DeferredSection><PageTransition><Archive onSelect={selectItem} /></PageTransition></DeferredSection>} />
           
           <Route path="/list" element={
             session ? (
@@ -548,7 +570,7 @@ export default function App() {
 
           {/* --- CLASSIFICA --- */}
           <Route path="/ranking" element={
-            session ? <PageTransition><Ranking /></PageTransition> : (
+            session ? <DeferredSection><PageTransition><Ranking /></PageTransition></DeferredSection> : (
               <PageTransition><div style={{textAlign:'center', padding:'50px'}}>
                 <h2>Community Riservata</h2>
                 <p style={{marginBottom:'20px', color:'#aaa'}}>Accedi per visualizzare le classifiche, sfidare gli amici e vedere i "Critici Top".</p>
@@ -557,21 +579,23 @@ export default function App() {
             )
           } />
 
-          <Route path="/suggestions" element={<PageTransition><Suggestions onSelect={selectItem} session={session} /></PageTransition>} />
+          <Route path="/suggestions" element={<DeferredSection><PageTransition><Suggestions onSelect={selectItem} session={session} /></PageTransition></DeferredSection>} />
 
         </Routes>
       </AnimatePresence>
 
       {showPlayer && playerState && selected && (
-        <PlayerDrawer 
-          item={selected} 
-          season={playerState.season} 
-          episode={playerState.episode} 
-          onClose={() => { setTrailerPlaybackBlocked(false); setShowPlayer(false); setIsPipMode(false); }}
-          isPipMode={isPipMode}
-          onTogglePip={() => setIsPipMode(!isPipMode)}
-          onNavigateEpisode={(s: number, e: number) => handlePlay(s, e, selected)}
-        />
+        <DeferredOverlay>
+          <PlayerDrawer 
+            item={selected} 
+            season={playerState.season} 
+            episode={playerState.episode} 
+            onClose={() => { setTrailerPlaybackBlocked(false); setShowPlayer(false); setIsPipMode(false); }}
+            isPipMode={isPipMode}
+            onTogglePip={() => setIsPipMode(!isPipMode)}
+            onNavigateEpisode={(s: number, e: number) => handlePlay(s, e, selected)}
+          />
+        </DeferredOverlay>
       )}
 
       {unavailableItem && (
@@ -585,7 +609,9 @@ export default function App() {
       )}
 
       {showUpdates && (
-        <UpdatesModal items={updatesItems} version={UPDATES_VERSION} onClose={handleCloseUpdates} />
+        <DeferredSection>
+          <UpdatesModal items={updatesItems} version={UPDATES_VERSION} onClose={handleCloseUpdates} />
+        </DeferredSection>
       )}
     </div>
   );

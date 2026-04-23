@@ -102,7 +102,7 @@ export default function Profile() {
   const confirmResetStats = async () => {
     setActionLoading(true);
     if (user && user.id) {
-        await supabase.from('saved_items').delete().eq('user_id', user.id);
+        await supabase.from('user_library').delete().eq('user_id', user.id);
         setShowResetConfirmationModal(false);
         setShowSettingsModal(false);
         window.location.reload();

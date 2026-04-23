@@ -3,7 +3,7 @@ import { useState, useRef, useEffect } from "react";
 import { buildEmbedUrl } from "../utils/helper";
 import "../css/card.css"; 
 import "../css/watch_party.css";
-import { TmdbItem } from "../types/types";
+import { SeasonDetail, TmdbItem } from "../types/types";
 import { useWatchParty } from "../hooks/useWatchParty";
 import { supabase } from "../supabaseClient";
 
@@ -44,6 +44,85 @@ interface PlayerProps {
   startAt?: number;
 }
 
+type EpisodeTarget = {
+  season: number;
+  episode: number;
+};
+
+function resolveEpisodeNavigation(
+  seasonsDetails: SeasonDetail[] | undefined,
+  season: number,
+  episode: number
+): {
+  previousTarget: EpisodeTarget | null;
+  nextTarget: EpisodeTarget | null;
+  nextLabel: string;
+} {
+  if (!seasonsDetails || seasonsDetails.length === 0) {
+    return {
+      previousTarget: episode > 1 ? { season, episode: episode - 1 } : null,
+      nextTarget: { season, episode: episode + 1 },
+      nextLabel: "Prossimo",
+    };
+  }
+
+  const sortedSeasons = [...seasonsDetails]
+    .filter((entry) => entry.season_number > 0 && entry.episode_count > 0)
+    .sort((a, b) => a.season_number - b.season_number);
+
+  const currentSeasonIndex = sortedSeasons.findIndex(
+    (entry) => entry.season_number === season
+  );
+
+  if (currentSeasonIndex === -1) {
+    return {
+      previousTarget: episode > 1 ? { season, episode: episode - 1 } : null,
+      nextTarget: { season, episode: episode + 1 },
+      nextLabel: "Prossimo",
+    };
+  }
+
+  const currentSeason = sortedSeasons[currentSeasonIndex];
+  const previousSeason =
+    currentSeasonIndex > 0 ? sortedSeasons[currentSeasonIndex - 1] : null;
+  const nextSeason =
+    currentSeasonIndex < sortedSeasons.length - 1
+      ? sortedSeasons[currentSeasonIndex + 1]
+      : null;
+
+  const previousTarget =
+    episode > 1
+      ? { season, episode: episode - 1 }
+      : previousSeason
+        ? {
+            season: previousSeason.season_number,
+            episode: previousSeason.episode_count,
+          }
+        : null;
+
+  if (episode < currentSeason.episode_count) {
+    return {
+      previousTarget,
+      nextTarget: { season, episode: episode + 1 },
+      nextLabel: "Prossimo",
+    };
+  }
+
+  if (nextSeason) {
+    return {
+      previousTarget,
+      nextTarget: { season: nextSeason.season_number, episode: 1 },
+      nextLabel: "Prossima stagione",
+    };
+  }
+
+  return {
+    previousTarget,
+    nextTarget: null,
+    nextLabel: "Prossimo",
+  };
+}
+
 export default function PlayerDrawer({ 
   item, season, episode, onClose, isPipMode, onTogglePip, onNavigateEpisode, onProgressUpdate, startAt 
 }: PlayerProps) {
@@ -68,7 +147,13 @@ export default function PlayerDrawer({
 
   const [currentProgress, setCurrentProgress] = useState(item.progressSeconds || 0);
   const [showResumePrompt, setShowResumePrompt] = useState(!!(item.progressSeconds && item.progressSeconds > 15));
+  const [navigationMessage, setNavigationMessage] = useState("");
   const lastSavedRef = useRef(0);
+  const { previousTarget, nextTarget, nextLabel } = resolveEpisodeNavigation(
+    item.seasonsDetails,
+    season,
+    episode
+  );
 
   // --- TRACCIAMENTO AUTOMATICO ---
   useEffect(() => {
@@ -108,6 +193,10 @@ export default function PlayerDrawer({
   const handleResume = () => {
     setShowResumePrompt(false);
   };
+
+  useEffect(() => {
+    setNavigationMessage("");
+  }, [season, episode, item.tmdbId]);
 
   // 2. CONTROLLO LOGIN: Aggiorniamo isLogged
   useEffect(() => {
@@ -307,20 +396,36 @@ export default function PlayerDrawer({
             {item.type === 'tv' && !isPipMode && onNavigateEpisode && (
                <div className="binge-bar">
                    <button 
-                      className="pill ghost" 
-                      disabled={episode <= 1}
-                      onClick={() => onNavigateEpisode(season, episode - 1)}
+                      className="pill ghost"
+                      style={{ fontSize: 0 }}
+                      data-nav-label="Precedente"
+                      disabled={!previousTarget}
+                      onClick={() => {
+                        if (previousTarget) onNavigateEpisode(previousTarget.season, previousTarget.episode);
+                      }}
                    >◀ Precedente</button>
                    
                    <div className="binge-info">
                        Stagione <span style={{color: '#fff', fontWeight: 'bold'}}>{season}</span> • 
                        Episodio <span style={{color: '#fff', fontWeight: 'bold'}}>{episode}</span>
+                      {navigationMessage && (
+                        <div style={{ color: '#f5c26b', fontSize: '0.85rem', marginTop: 6 }}>
+                          {navigationMessage}
+                        </div>
+                      )}
                    </div>
                    
                    <button 
                       className="pill solid"
-                      style={{ background: '#e50914', color: '#fff', border: 'none' }}
-                      onClick={() => onNavigateEpisode(season, episode + 1)}
+                      style={{ background: '#e50914', color: '#fff', border: 'none', fontSize: 0 }}
+                      data-nav-label={nextLabel}
+                      onClick={() => {
+                        if (nextTarget) {
+                          onNavigateEpisode(nextTarget.season, nextTarget.episode);
+                          return;
+                        }
+                        setNavigationMessage("Hai finito la serie");
+                      }}
                    >Prossimo ▶</button>
                </div>
             )}

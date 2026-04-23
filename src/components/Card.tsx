@@ -29,12 +29,42 @@ export default function Card({ item, onClick, progress, onRemove, isUpcoming, sh
   const [trailerKey, setTrailerKey] = useState<string | null>(null);
   const [isExpanded, setIsExpanded] = useState(false);
   const [isMuted, setIsMuted] = useState(true);
+  const [expandedAlignment, setExpandedAlignment] = useState<"center" | "left" | "right">("center");
   const hoverTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const trailerPlaybackIdRef = useRef(`card-${item.type}-${item.tmdbId}-${Math.random().toString(36).slice(2)}`);
+  const cardWrapperRef = useRef<HTMLDivElement | null>(null);
+  const expandedModalRef = useRef<HTMLDivElement | null>(null);
   const isTrailerActive = useExclusiveTrailerPlayback(
     trailerPlaybackIdRef.current,
     isExpanded && Boolean(trailerKey)
   );
+
+  const updateExpandedAlignment = () => {
+    const wrapper = cardWrapperRef.current;
+    if (!wrapper) return;
+
+    const track = wrapper.closest(".carousel-track") as HTMLElement | null;
+    const wrapperRect = wrapper.getBoundingClientRect();
+    const modalWidth = expandedModalRef.current?.offsetWidth ?? (window.innerWidth <= 1024 ? 380 : 440);
+    const trackRect = track?.getBoundingClientRect();
+    const leftBoundary = trackRect?.left ?? 0;
+    const rightBoundary = trackRect?.right ?? window.innerWidth;
+    const centeredLeft = wrapperRect.left + (wrapperRect.width / 2) - (modalWidth / 2);
+    const centeredRight = centeredLeft + modalWidth;
+    const edgePadding = 8;
+
+    if (centeredLeft < leftBoundary + edgePadding) {
+      setExpandedAlignment("left");
+      return;
+    }
+
+    if (centeredRight > rightBoundary - edgePadding) {
+      setExpandedAlignment("right");
+      return;
+    }
+
+    setExpandedAlignment("center");
+  };
 
   const handleMouseEnter = () => {
     if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
@@ -55,6 +85,7 @@ export default function Card({ item, onClick, progress, onRemove, isUpcoming, sh
     setIsExpanded(false);
     setTrailerKey(null);
     setIsMuted(true);
+    setExpandedAlignment("center");
   };
 
   const handleDirectPlay = (e: React.MouseEvent) => {
@@ -73,6 +104,22 @@ export default function Card({ item, onClick, progress, onRemove, isUpcoming, sh
         if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
     };
   }, []);
+
+  useEffect(() => {
+    if (!isExpanded) return;
+
+    const frameId = window.requestAnimationFrame(updateExpandedAlignment);
+    const track = cardWrapperRef.current?.closest(".carousel-track") as HTMLElement | null;
+
+    window.addEventListener("resize", updateExpandedAlignment);
+    track?.addEventListener("scroll", updateExpandedAlignment, { passive: true });
+
+    return () => {
+      window.cancelAnimationFrame(frameId);
+      window.removeEventListener("resize", updateExpandedAlignment);
+      track?.removeEventListener("scroll", updateExpandedAlignment);
+    };
+  }, [isExpanded]);
 
   const hasValidRating = (item.rating || 0) > 0;
   const shouldDisplayRating = hasValidRating && (showRating || (item.rating || 0) > 0);
@@ -118,7 +165,12 @@ export default function Card({ item, onClick, progress, onRemove, isUpcoming, sh
   const effectiveProgress = item.type === 'movie' ? movieProgress : tvProgress;
 
   return (
-    <div className="card-wrapper" onMouseEnter={handleMouseEnter} onMouseLeave={handleMouseLeave}>
+    <div
+      className="card-wrapper"
+      ref={cardWrapperRef}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
+    >
         <article 
             className={`card ${isCompleted ? 'is-completed' : ''}`} 
             onClick={onClick}
@@ -170,20 +222,30 @@ export default function Card({ item, onClick, progress, onRemove, isUpcoming, sh
         </article>
 
         {isExpanded && (
-            <div className="card-expanded-modal">
+            <div
+              ref={expandedModalRef}
+              className={`card-expanded-modal card-expanded-modal--${expandedAlignment}`}
+            >
                 <div className="expanded-video-container" onClick={handleDirectPlay}>
                     {trailerKey && isTrailerActive ? (
                         <YouTube
                             videoId={trailerKey}
+                            className="card-expanded-player"
                             opts={{
                                 width: '100%',
                                 height: '100%',
+                                host: 'https://www.youtube-nocookie.com',
                                 playerVars: {
                                     autoplay: 1,
                                     controls: 0,
-                                    showinfo: 0,
                                     rel: 0,
                                     loop: 1,
+                                    modestbranding: 1,
+                                    iv_load_policy: 3,
+                                    cc_load_policy: 0,
+                                    disablekb: 1,
+                                    fs: 0,
+                                    playsinline: 1,
                                     mute: isMuted ? 1 : 0,
                                     playlist: trailerKey
                                 }
