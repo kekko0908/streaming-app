@@ -34,7 +34,7 @@ export function useExclusiveTrailerPlayback(playbackId: string, shouldPlay: bool
   }, [playbackState.blocked]);
 
   useEffect(() => {
-    return () => releaseTrailerPlayback(playbackId);
+    return () => { releaseTrailerPlayback(playbackId); };
   }, [playbackId]);
 
   return shouldPlay && !playbackState.blocked && playbackState.activeId === playbackId;

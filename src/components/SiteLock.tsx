@@ -1,39 +1,43 @@
 import { useState } from "react";
+import { supabase } from "../supabaseClient";
 import "../css/siteLock.css";
 import logo from "../assets/logo.png";
 
-// HASH SHA-256 DELLA PASSWORD "SFA2025"
-const TARGET_HASH = "90f45147fd552b88761a0b37d84fc493e8cb9074a17a13c6d68c23cbb7478f75";
-
 interface SiteLockProps {
-  onUnlock: () => void;
+  onLogin?: () => void;
 }
 
-export default function SiteLock({ onUnlock }: SiteLockProps) {
-  const [input, setInput] = useState("");
-  const [error, setError] = useState(false);
+export default function SiteLock({ onLogin }: SiteLockProps) {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  // Funzione per calcolare l'impronta digitale (Hash)
-  async function sha256(message: string) {
-    const msgBuffer = new TextEncoder().encode(message);
-    const hashBuffer = await crypto.subtle.digest("SHA-256", msgBuffer);
-    const hashArray = Array.from(new Uint8Array(hashBuffer));
-    return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
-  }
-
-  const checkPassword = async (e: React.FormEvent) => {
+  const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    const inputHash = await sha256(input);
+    setLoading(true);
+    setError(null);
 
-    if (inputHash === TARGET_HASH) {
-      sessionStorage.setItem("site_unlocked", "true");
-      onUnlock();
-    } else {
-      setError(true);
-      setInput("");
-      setTimeout(() => setError(false), 2000);
+    try {
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+      if (error) throw error;
+      // onLogin is optional, as App.tsx listens to supabase state changes.
+      if (onLogin) onLogin();
+    } catch (err: any) {
+      setError(err.message || "Errore di accesso");
+      // Small shake effect on error
+      const card = document.querySelector(".lock-card");
+      if (card) {
+        card.classList.remove("shake");
+        void (card as HTMLElement).offsetWidth; 
+        card.classList.add("shake");
+      }
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -44,40 +48,53 @@ export default function SiteLock({ onUnlock }: SiteLockProps) {
         <div className="glass-orb orb-2"></div>
         <div className="glass-orb orb-3"></div>
       </div>
-      
-      <div className={`lock-card ${error ? "shake" : ""}`}>
+
+      <div className="lock-card">
         <div className="lock-header">
           <img src={logo} alt="SFA Logo" className="lock-logo" />
           <h2 className="lock-title">Area Riservata</h2>
-          <p className="lock-desc">Inserisci il codice di accesso per entrare.</p>
+          <p className="lock-desc">
+            Inserisci le tue credenziali per entrare.
+          </p>
         </div>
-        
-        <form onSubmit={checkPassword} className="lock-form">
+
+        {error && <div className="lock-error">{error}</div>}
+
+        <form className="lock-form" onSubmit={handleAuth}>
           <div className="input-group">
-            <input 
-              type={showPassword ? "text" : "password"} 
-              placeholder="Codice Accesso" 
+            <input
+              type="email"
               className="lock-input"
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              autoFocus
+              placeholder="Email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
             />
-            <button 
-              type="button" 
-              className="toggle-password" 
+          </div>
+          
+          <div className="input-group">
+            <input
+              type={showPassword ? "text" : "password"}
+              className="lock-input"
+              placeholder="Password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+            />
+            <button
+              type="button"
+              className="toggle-password"
               onClick={() => setShowPassword(!showPassword)}
-              tabIndex={-1}
             >
-              {showPassword ? "👁️" : "👁️‍🗨️"}
+              {showPassword ? "👁️" : "🤫"}
             </button>
           </div>
-          <button type="submit" className="lock-btn">
-            <span>SBLOCCA</span>
+
+          <button type="submit" className="lock-btn" disabled={loading}>
+            <span>{loading ? "CARICAMENTO..." : "SBLOCCA"}</span>
           </button>
         </form>
-
-        {error && <div className="lock-error">Codice Errato. Riprova.</div>}
       </div>
     </div>
   );
-}
+}

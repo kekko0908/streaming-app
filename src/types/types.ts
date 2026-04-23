@@ -1,5 +1,6 @@
 export type MediaType = "movie" | "tv";
 export type WatchStatus = "da-guardare" | "in-corso" | "pianificato" | "gia-guardato";
+export type CommunitySortMode = "watched" | "loved";
 
 export type ViewType = "home" | "list" | "archive" | "auth" | "profile" | "ranking" | "suggestions";
 
@@ -47,6 +48,13 @@ export interface TmdbItem {
   status?: WatchStatus;
   progressMinutes?: number;
   progressSeconds?: number;
+  communityListed?: number;
+  communityWatched?: number;
+  communityCompleted?: number;
+  communityRatingsCount?: number;
+  communityRating?: number;
+  communityScore?: number;
+  communitySortMode?: CommunitySortMode;
 
   collection?: {
     id: number;

@@ -64,12 +64,12 @@
 
 /* Main Card */
 .lock-card {
-  background: rgba(19, 21, 28, 0.6);
-  backdrop-filter: blur(30px) saturate(200%);
-  -webkit-backdrop-filter: blur(30px) saturate(200%);
+  background: rgba(15, 17, 24, 0.35);
+  backdrop-filter: blur(50px) saturate(200%);
+  -webkit-backdrop-filter: blur(50px) saturate(200%);
   padding: 50px 40px;
   border-radius: 32px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.05);
   text-align: center;
   box-shadow: 
     0 30px 60px -12px rgba(0, 0, 0, 0.7),
@@ -110,7 +110,8 @@
 }
 
 /* Form Styles */
-.lock-form {
+.lock-form,
+.lock-actions {
   display: flex;
   flex-direction: column;
   gap: 24px;
@@ -238,6 +239,13 @@
   box-shadow: 0 5px 15px rgba(0, 230, 255, 0.4);
 }
 
+.lock-footnote {
+  margin: 0;
+  color: #94a3b8;
+  font-size: 0.92rem;
+  line-height: 1.6;
+}
+
 /* Error State */
 .lock-error {
   color: #ff4d4d;
@@ -276,4 +284,4 @@
   .lock-title {
     font-size: 1.8rem;
   }
-}
+}

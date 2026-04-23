@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../supabaseClient";
 import { useStore } from "../hooks/useStore";
+import { motion, Variants } from "framer-motion";
 import "../css/profile.css";
 
 // Avatar predefiniti
@@ -18,7 +19,12 @@ const AVATAR_OPTIONS = [
   "https://api.dicebear.com/9.x/avataaars/svg?seed=Oliver"
 ];
 
-const COLORS = ['#4ae8ff', '#ff1744', '#ffd700', '#00e676', '#d500f9']; 
+const COLORS = [
+  '#4ae8ff', '#ff1744', '#ffd700', '#00e676', '#d500f9',
+  '#ff3d00', '#00b0ff', '#1de9b6', '#f50057', '#76ff03',
+  '#651fff', '#ffea00', '#00e5ff', '#ff9100', '#18ffff',
+  '#b388ff', '#c6ff00', '#ff8a80', '#84ffff', '#ea80fc'
+];
 
 export default function Profile() {
   const { fetchStats } = useStore();
@@ -41,12 +47,29 @@ export default function Profile() {
   useEffect(() => {
     async function load() {
       try {
-        const [statsData, userData] = await Promise.all([
+        const [statsResult, sessionResult, userResult] = await Promise.allSettled([
            fetchStats(),
+           supabase.auth.getSession(),
            supabase.auth.getUser()
         ]);
+
+        const statsData =
+          statsResult.status === "fulfilled" && statsResult.value
+            ? statsResult.value
+            : { movie_minutes: 0, tv_minutes: 0, genres: {} };
+
+        const sessionUser =
+          sessionResult.status === "fulfilled"
+            ? sessionResult.value.data.session?.user ?? null
+            : null;
+
+        const fetchedUser =
+          userResult.status === "fulfilled"
+            ? userResult.value.data.user ?? null
+            : null;
+
         setStats(statsData);
-        setUser(userData.data.user);
+        setUser(sessionUser || fetchedUser);
       } catch (e) {
         console.error("Errore profilo", e);
       } finally {
@@ -110,7 +133,14 @@ export default function Profile() {
   };
 
   // --- RENDER CONDIZIONALE (Loading/Error) ---
-  if (loading) return <div style={{padding:50, textAlign:'center'}}>Caricamento...</div>;
+  if (loading) {
+      return (
+          <div className="profile-loading">
+              <div className="loader"></div>
+              <p>Caricamento profilo...</p>
+          </div>
+      );
+  }
   if (!stats || !user) return <div style={{padding:50, textAlign:'center'}}>Errore caricamento dati.</div>;
 
   // --- CALCOLI STATISTICHE ---
@@ -145,69 +175,123 @@ export default function Profile() {
 
   const avatarUrl = user.user_metadata?.avatar_url || "https://api.dicebear.com/7.x/adventurer/svg?seed=Default";
 
+  // Framer Motion Variants
+  const containerVariants: Variants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: { staggerChildren: 0.15, delayChildren: 0.1 }
+    }
+  };
+
+  const itemVariants: Variants = {
+    hidden: { y: 20, opacity: 0 },
+    visible: {
+      y: 0,
+      opacity: 1,
+      transition: { type: "spring", stiffness: 300, damping: 24 }
+    }
+  };
+
   return (
-    <div className="profile-container">
+    <motion.div 
+        className="profile-container"
+        variants={containerVariants}
+        initial="hidden"
+        animate="visible"
+    >
       
-      {/* HEADER */}
-      <header className="profile-header">
-        <button className="settings-btn" onClick={() => setShowSettingsModal(true)}>
-          ⚙️ Impostazioni
-        </button>
+      {/* HEADER COVER SECTION */}
+      <motion.div className="profile-cover-section" variants={itemVariants}>
+        <div className="profile-cover-bg"></div>
+        <header className="profile-header">
+          <button className="settings-btn glass-btn" onClick={() => setShowSettingsModal(true)}>
+            ⚙️ Impostazioni
+          </button>
 
-        <div className="avatar-wrapper" onClick={() => setShowAvatarModal(true)}>
-           <img src={avatarUrl} alt="Avatar" className="profile-avatar" />
-           <div className="avatar-edit-icon">✏️</div>
-        </div>
+          <div className="avatar-wrapper" onClick={() => setShowAvatarModal(true)}>
+             <img src={avatarUrl} alt="Avatar" className="profile-avatar" />
+             <div className="avatar-edit-icon">✏️</div>
+          </div>
 
-        <h1>Il tuo Profilo</h1>
-        <div className="member-since">
-            MEMBRO DA {new Date(user.created_at).toLocaleDateString('it-IT', { month: 'long', year: 'numeric' })}
-        </div>
-      </header>
+          <h1>Il tuo Profilo</h1>
+          <div className="member-since">
+              MEMBRO DA {new Date(user.created_at).toLocaleDateString('it-IT', { month: 'long', year: 'numeric' }).toUpperCase()}
+          </div>
+        </header>
+      </motion.div>
 
-      {/* RANK CARD */}
-      <div className="rank-card">
-         <span className="rank-pill">{getRank(totalHours)}</span>
-         <p style={{marginTop: 15, color: '#ccc'}}>Hai guardato un totale di <b>{totalHours} ore</b> di contenuti.</p>
-      </div>
+      <div className="profile-dashboard">
+        {/* RANK CARD */}
+        <motion.div className="rank-card glass-panel" variants={itemVariants}>
+           <div className="rank-glow-bg"></div>
+           <span className="rank-pill">{getRank(totalHours)}</span>
+           <p className="rank-desc">Hai esplorato mondi per un totale di <b>{totalHours} ore</b>.</p>
+        </motion.div>
 
-      {/* STATS GRID */}
-      <div className="stats-row">
-         <div className="stat-card">
-            <span className="stat-number">{totalHours}</span>
-            <span className="stat-label">ORE TOTALI</span>
-         </div>
-         <div className="stat-card">
-            <span className="stat-number">{movieHours}</span>
-            <span className="stat-label">ORE FILM</span>
-         </div>
-         <div className="stat-card">
-            <span className="stat-number">{tvHours}</span>
-            <span className="stat-label">ORE SERIE TV</span>
-         </div>
-      </div>
+        {/* STATS GRID */}
+        <motion.div className="stats-row" variants={itemVariants}>
+           <div className="stat-card glass-panel stat-hover">
+              <div className="stat-icon">🕒</div>
+              <div className="stat-content">
+                <span className="stat-number">{totalHours}</span>
+                <span className="stat-label">ORE TOTALI</span>
+              </div>
+           </div>
+           <div className="stat-card glass-panel stat-hover">
+              <div className="stat-icon">🎬</div>
+              <div className="stat-content">
+                <span className="stat-number">{movieHours}</span>
+                <span className="stat-label">ORE FILM</span>
+              </div>
+           </div>
+           <div className="stat-card glass-panel stat-hover">
+              <div className="stat-icon">📺</div>
+              <div className="stat-content">
+                <span className="stat-number">{tvHours}</span>
+                <span className="stat-label">ORE SERIE TV</span>
+              </div>
+           </div>
+        </motion.div>
 
-      {/* CHART CARD */}
-      <div className="chart-card">
-         <div className="doughnut-chart" style={{ background: gradientString }}>
-            <div className="doughnut-hole"></div>
-         </div>
-         <div className="chart-legend">
-            <span className="legend-title">GENERI PREFERITI</span>
-            {gradientParts.map((p, i) => (
-               <div key={i} className="legend-item">
-                  <span className="dot" style={{background: p.color}} />
-                  <span>{p.genre} ({p.percent}%)</span>
-               </div>
-            ))}
-            {gradientParts.length === 0 && <span style={{color:'#666'}}>Nessun dato disponibile.</span>}
-         </div>
+        {/* CHART CARD */}
+        <motion.div className="chart-card glass-panel" variants={itemVariants}>
+           <div className="chart-visual">
+             <div className="doughnut-chart" style={{ background: gradientString }}>
+                <div className="doughnut-hole"></div>
+             </div>
+             <div className="chart-center-icon">✨</div>
+           </div>
+           <div className="chart-legend">
+              <span className="legend-title">I TUOI GENERI PREFERITI</span>
+              <div className="legend-grid">
+                  {gradientParts.map((p, i) => (
+                     <div key={i} className="legend-item">
+                        <span className="dot" style={{background: p.color, boxShadow: `0 0 10px ${p.color}`}} />
+                        <span className="legend-name">{p.genre}</span>
+                        <span className="legend-percent" style={{color: p.color}}>{p.percent}%</span>
+                     </div>
+                  ))}
+                  {gradientParts.length === 0 && <span style={{color:'#666'}}>Nessun dato disponibile.</span>}
+              </div>
+           </div>
+        </motion.div>
       </div>
 
       {/* --- MODALE AVATAR --- */}
       {showAvatarModal && (
-        <div className="modal-overlay" onClick={() => setShowAvatarModal(false)}>
-          <div className="modal-content" onClick={e => e.stopPropagation()}>
+        <motion.div 
+            className="modal-overlay" 
+            onClick={() => setShowAvatarModal(false)}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+        >
+          <motion.div 
+            className="modal-content glass-modal" 
+            onClick={e => e.stopPropagation()}
+            initial={{ y: 50, opacity: 0, scale: 0.95 }}
+            animate={{ y: 0, opacity: 1, scale: 1 }}
+          >
             <div className="modal-header">
                <h3>Scegli Avatar</h3>
                <button className="close-btn" onClick={() => setShowAvatarModal(false)}>×</button>
@@ -217,14 +301,24 @@ export default function Profile() {
                   <img key={i} src={url} className="avatar-option" onClick={() => handleUpdateAvatar(url)} alt="Avatar Option" />
                ))}
             </div>
-          </div>
-        </div>
+          </motion.div>
+        </motion.div>
       )}
 
       {/* --- MODALE IMPOSTAZIONI --- */}
       {showSettingsModal && (
-        <div className="modal-overlay" onClick={() => setShowSettingsModal(false)}>
-          <div className="modal-content" onClick={e => e.stopPropagation()}>
+        <motion.div 
+            className="modal-overlay" 
+            onClick={() => setShowSettingsModal(false)}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+        >
+          <motion.div 
+            className="modal-content glass-modal" 
+            onClick={e => e.stopPropagation()}
+            initial={{ y: 50, opacity: 0, scale: 0.95 }}
+            animate={{ y: 0, opacity: 1, scale: 1 }}
+          >
             <div className="modal-header">
                <h3>Impostazioni Account</h3>
                <button className="close-btn" onClick={() => setShowSettingsModal(false)}>×</button>
@@ -237,10 +331,10 @@ export default function Profile() {
                  placeholder="Nuova password..." 
                  value={newPassword} 
                  onChange={e => setNewPassword(e.target.value)} 
-                 className="form-input" 
+                 className="form-input glass-input" 
                />
                <button 
-                 className="action-btn btn-primary" 
+                 className="action-btn btn-primary glass-btn-primary" 
                  onClick={handleUpdatePassword} 
                  disabled={!newPassword || actionLoading}
                >
@@ -254,35 +348,45 @@ export default function Profile() {
                 <p className="warning-text">
                     Questa azione è irreversibile. Cancellerà tutta la tua lista personale, i voti e azzererà le tue ore di visione.
                 </p>
-                <button className="action-btn btn-danger" onClick={handleResetClick}>
+                <button className="action-btn btn-danger glass-btn-danger" onClick={handleResetClick}>
                    RESETTA TUTTE LE STATISTICHE
                 </button>
             </div>
-          </div>
-        </div>
+          </motion.div>
+        </motion.div>
       )}
 
       {/* --- MODALE CONFERMA RESET (2° LIVELLO) --- */}
       {showResetConfirmationModal && (
-        <div className="modal-overlay" style={{zIndex: 10000}}>
-            <div className="modal-content reset-confirmation-modal" onClick={e => e.stopPropagation()}>
+        <motion.div 
+            className="modal-overlay" 
+            style={{zIndex: 10000}}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+        >
+            <motion.div 
+                className="modal-content reset-confirmation-modal glass-modal" 
+                onClick={e => e.stopPropagation()}
+                initial={{ scale: 0.9 }}
+                animate={{ scale: 1 }}
+            >
                 <h3>Sei assolutamente sicuro?</h3>
                 <p>
                     Stai per cancellare <b>definitivamente</b> tutti i tuoi progressi, la tua lista "Da Vedere" e il tuo rango attuale ({getRank(totalHours)}).<br/><br/>
                     Non potrai tornare indietro.
                 </p>
                 <div className="modal-actions">
-                    <button className="action-btn btn-secondary" onClick={() => setShowResetConfirmationModal(false)}>
+                    <button className="action-btn btn-secondary glass-btn-secondary" onClick={() => setShowResetConfirmationModal(false)}>
                         Annulla
                     </button>
-                    <button className="action-btn btn-danger" onClick={confirmResetStats} disabled={actionLoading}>
+                    <button className="action-btn btn-danger glass-btn-danger" onClick={confirmResetStats} disabled={actionLoading}>
                         {actionLoading ? "Cancellazione..." : "Sì, cancella tutto"}
                     </button>
                 </div>
-            </div>
-        </div>
+            </motion.div>
+        </motion.div>
       )}
 
-    </div>
+    </motion.div>
   );
 }

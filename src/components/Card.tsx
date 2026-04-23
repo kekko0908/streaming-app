@@ -24,6 +24,12 @@ function getRatingColor(rating: number) {
   return "#ff1744";
 }
 
+function resolvePosterSrc(poster?: string) {
+  if (!poster) return "https://via.placeholder.com/500x750";
+  if (poster.startsWith("http://") || poster.startsWith("https://")) return poster;
+  return `https://image.tmdb.org/t/p/w500${poster}`;
+}
+
 export default function Card({ item, onClick, progress, onRemove, isUpcoming, showRating, formatDate, onTypeChange }: CardProps) {
   
   const [trailerKey, setTrailerKey] = useState<string | null>(null);
@@ -145,6 +151,16 @@ export default function Card({ item, onClick, progress, onRemove, isUpcoming, sh
   const currentRating = item.rating || 0;
   const ratingStyle = getRatingColor(currentRating);
   const isMasterpiece = currentRating === 10;
+  const hasCommunityStats = typeof item.communityWatched === "number" || typeof item.communityRating === "number";
+  const communityBadge =
+    item.communitySortMode === "loved" && (item.communityRating || 0) > 0
+      ? `Voto ${item.communityRating?.toFixed(1)}`
+      : `${item.communityWatched || 0} visti`;
+  const communityChips = [
+    item.communityListed ? `${item.communityListed} lista` : null,
+    item.communityCompleted ? `${item.communityCompleted} complet.` : null,
+    item.communityRating && item.communityRating > 0 ? `${item.communityRating.toFixed(1)} voto` : null,
+  ].filter(Boolean) as string[];
 
   const isMovieInProgress = item.type === "movie" && item.status === "in-corso";
   const runtimeMinutes = isMovieInProgress && item.runtime ? parseInt(item.runtime, 10) || 0 : 0;
@@ -176,10 +192,16 @@ export default function Card({ item, onClick, progress, onRemove, isUpcoming, sh
             onClick={onClick}
         >
           <img 
-            src={item.poster ? `https://image.tmdb.org/t/p/w500${item.poster}` : (item.poster || "https://via.placeholder.com/500x750")} 
+            src={resolvePosterSrc(item.poster)} 
             alt={item.title} 
             loading="lazy" 
           />
+
+          {hasCommunityStats && (
+            <div className={`community-badge ${item.communitySortMode === "loved" ? "is-loved" : ""}`}>
+              {communityBadge}
+            </div>
+          )}
           
           {isCompleted && <div className="center-status-overlay"><span className="status-label-completed">COMPLETATA</span></div>}
           {hasNewEpisodes && <div className="center-status-overlay"><span className="status-label-new">NUOVI EPISODI</span></div>}
@@ -258,7 +280,7 @@ export default function Card({ item, onClick, progress, onRemove, isUpcoming, sh
                         />
                     ) : (
                         <img 
-                            src={item.poster ? `https://image.tmdb.org/t/p/w500${item.poster}` : (item.poster || "https://via.placeholder.com/500x750")} 
+                            src={resolvePosterSrc(item.poster)} 
                             alt={item.title} 
                             loading="lazy"
                             className="expanded-fallback-img"
@@ -289,12 +311,26 @@ export default function Card({ item, onClick, progress, onRemove, isUpcoming, sh
                     </div>
                     
                     <div className="expanded-meta-row">
-                        <span className="match-score">Match {(item.rating * 10).toFixed(0)}%</span>
-                        <span>{item.year || (item.releaseDateFull ? item.releaseDateFull.substring(0,4) : 'N/D')}</span>
+                        <span className="match-score">
+                          {hasCommunityStats
+                            ? `Community ${(item.communityScore || 0).toFixed(1)}`
+                            : `Match ${(item.rating * 10).toFixed(0)}%`}
+                        </span>
+                        {(item.year || item.releaseDateFull) && (
+                          <span>{item.year || item.releaseDateFull?.substring(0,4)}</span>
+                        )}
                         {item.type === 'movie' && item.runtime && <span>{parseInt(item.runtime, 10)} min</span>}
                         {item.type === 'tv' && item.seasons && <span>{item.seasons} Stagioni</span>}
                         <span className="hd-badge">HD</span>
                     </div>
+
+                    {communityChips.length > 0 && (
+                      <div className="community-chip-row">
+                        {communityChips.map((chip) => (
+                          <span key={chip} className="community-chip">{chip}</span>
+                        ))}
+                      </div>
+                    )}
 
                     {item.genres && item.genres.length > 0 && (
                         <div className="expanded-genres-row">

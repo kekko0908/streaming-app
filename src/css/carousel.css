@@ -83,7 +83,7 @@
 .carousel-btn {
   position: absolute;
   top: 50%; /* Perfettamente centrati */
-  z-index: 20;
+  z-index: 1400;
   
   background: rgba(20, 20, 20, 0.7); /* Scuro semitrasparente */
   color: #fff;
@@ -115,11 +115,11 @@
 }
 
 .carousel-btn.left {
-  left: 10px; /* Leggermente interno */
+  left: -12px; /* Fuori dalla zona hover della prima card */
 }
 
 .carousel-btn.right {
-  right: 10px; /* Leggermente interno */
+  right: -12px; /* Fuori dalla zona hover dell'ultima card */
 }
 
 /* Disabilita selezione */

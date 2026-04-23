@@ -227,22 +227,10 @@
     margin-bottom: 5px;
   }
   
-  /* I link (Home, Archivio) scorrono orizzontalmente */
+  /* Nascondiamo i nav-links su mobile perché sono nel menu hamburger */
   .nav-links {
-    width: 100%;
-    order: 2;
-    display: flex;
-    overflow-x: auto; /* Scroll se non ci stanno */
-    overflow-y: visible;
-    white-space: nowrap;
-    padding-bottom: 5px;
-    justify-content: flex-start;
-    gap: 10px;
-    /* Nasconde la scrollbar brutta */
-    -ms-overflow-style: none;  
-    scrollbar-width: none;  
+    display: none;
   }
-  .nav-links::-webkit-scrollbar { display: none; }
 
   .nav-search-container {
     width: 100%;

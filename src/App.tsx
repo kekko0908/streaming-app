@@ -28,6 +28,7 @@ import Card, { SkeletonCard } from "./components/Card";
 import CarouselSection from "./components/CarouselSection"; 
 import CastList from "./components/CastList"; 
 import CommunityPulse from "./components/CommunityPulse"; 
+import CommunityShelf from "./components/CommunityShelf";
 import SiteLock from "./components/SiteLock"; 
 import type { UpdateItem } from "./components/UpdatesModal";
 import { setTrailerPlaybackBlocked } from "./utils/trailerPlayback";
@@ -69,6 +70,10 @@ function DeferredOverlay({ children }: { children: React.ReactNode }) {
   );
 }
 
+function RequireAuth({ session, children }: { session: Session | null; children: React.ReactNode }) {
+  return session ? <>{children}</> : <Navigate to="/auth" replace />;
+}
+
 export default function App() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -89,10 +94,6 @@ export default function App() {
       text: "Ogni card mostra la data di uscita senza occupare troppo spazio."
     }
   ];
-  const [isSiteUnlocked, setIsSiteUnlocked] = useState(() => {
-    return sessionStorage.getItem("site_unlocked") === "true";
-  });
-
   const [session, setSession] = useState<Session | null>(null);
 
   const { myList, addToList, removeFromList, updateProgress, updateMediaType, getProgress, rateItem, loading: listLoading, isUILocked, toggleUILock } = useStore();
@@ -130,7 +131,6 @@ export default function App() {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
       if (window.location.pathname === '/auth' && session) navigate('/');
-      if (!session && (window.location.pathname === '/list' || window.location.pathname === '/profile')) navigate('/');
     });
     return () => subscription.unsubscribe();
   }, [navigate]);
@@ -138,31 +138,30 @@ export default function App() {
   useEffect(() => {
     let isActive = true;
     const loadUpdatesSeen = async () => {
-      if (!isSiteUnlocked) return;
-      if (session?.user) {
-        const { data, error } = await supabase
-          .from("profiles")
-          .select("updates_seen_version")
-          .eq("id", session.user.id)
-          .maybeSingle();
-        if (!isActive) return;
-        if (error) {
-          console.error("Errore lettura novita profilo:", error);
-          setShowUpdates(true);
-          return;
-        }
-        const seenVersion = data?.updates_seen_version;
-        if (seenVersion !== UPDATES_VERSION) setShowUpdates(true);
+      if (!session?.user) {
+        setShowUpdates(false);
         return;
       }
-      const seenVersion = localStorage.getItem(UPDATES_STORAGE_KEY);
+
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("updates_seen_version")
+        .eq("id", session.user.id)
+        .maybeSingle();
+      if (!isActive) return;
+      if (error) {
+        console.error("Errore lettura novita profilo:", error);
+        setShowUpdates(true);
+        return;
+      }
+      const seenVersion = data?.updates_seen_version;
       if (seenVersion !== UPDATES_VERSION) setShowUpdates(true);
     };
     loadUpdatesSeen();
     return () => {
       isActive = false;
     };
-  }, [isSiteUnlocked, session?.user?.id]);
+  }, [session?.user?.id]);
 
   useEffect(() => {
     const syncTrailerPlaybackState = () => {
@@ -212,6 +211,11 @@ export default function App() {
       const { item, season, episode } = customEvent.detail;
       
       try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) {
+          navigate("/auth");
+          return;
+        }
         const fullItem = await fetchDetails(item.tmdbId, item.type);
         if (typeof item.progressMinutes === "number") fullItem.progressMinutes = item.progressMinutes;
         setSelected(fullItem);
@@ -221,11 +225,7 @@ export default function App() {
         setShowPlayer(true);
         
         // Se non abbiamo session, si può comunque vedere
-        supabase.auth.getSession().then(({ data: { session } }) => {
-          if (session) {
-             updateProgress(fullItem, season, episode);
-          }
-        });
+        updateProgress(fullItem, season, episode);
 
       } catch (error) { console.error("Errore Play Diretto", error); }
     };
@@ -251,9 +251,10 @@ export default function App() {
     const { error } = await supabase.auth.signOut({ scope: "local" });
     if (error) console.error("Errore logout:", error);
     clearSupabaseAuthStorage();
-    localStorage.setItem(UPDATES_STORAGE_KEY, UPDATES_VERSION);
     setSession(null);
-    navigate("/");
+    setShowPlayer(false);
+    setShowUpdates(false);
+    navigate("/auth");
   };
 
   const runSearch = async () => {
@@ -313,6 +314,11 @@ export default function App() {
     return releaseDate > today;
   };
   const handlePlay = (season: number, episode: number, item?: TmdbItem) => {
+    if (!session) {
+      alert("Devi accedere!");
+      navigate("/auth");
+      return;
+    }
     const target = item || selected;
     if (!target) return;
     if (isUpcomingMovie(target)) {
@@ -323,10 +329,8 @@ export default function App() {
     setTrailerPlaybackBlocked(true);
     setPlayerState({ season, episode, startAt });
     setShowPlayer(true);
-    if (session) {
-        updateProgress(target, season, episode);
-        if (!myList.find(m => m.tmdbId === target.tmdbId)) addToList(target, "in-corso");
-    }
+    updateProgress(target, season, episode);
+    if (!myList.find(m => m.tmdbId === target.tmdbId)) addToList(target, "in-corso");
   };
 
   const handleCloseUpdates = async () => {
@@ -365,15 +369,19 @@ export default function App() {
   };
   const filteredMyList = getFilteredList();
 
-  if (!isSiteUnlocked) return <SiteLock onUnlock={() => setIsSiteUnlocked(true)} />;
+  const isAuthRoute = location.pathname === "/auth";
+
+  if (!session && !isAuthRoute) return <SiteLock onLogin={() => navigate("/auth")} />;
 
   return (
     <div className="app">
-      <Navbar 
-        resetSelection={() => setSelected(null)} 
-        query={query} setQuery={setQuery} onSearch={runSearch}
-        session={session} onLogout={handleLogout} onShowUpdates={handleOpenUpdates}
-      />
+      {session && (
+        <Navbar 
+          resetSelection={() => setSelected(null)} 
+          query={query} setQuery={setQuery} onSearch={runSearch}
+          session={session} onLogout={handleLogout} onShowUpdates={handleOpenUpdates}
+        />
+      )}
 
       {/* TASTO SHUFFLE */}
       {false && (
@@ -383,10 +391,10 @@ export default function App() {
       <AnimatePresence mode="wait">
         <Routes location={location} key={location.pathname}>
           <Route path="/auth" element={!session ? <DeferredSection><PageTransition><AuthForm /></PageTransition></DeferredSection> : <Navigate to="/" />} />
-          <Route path="/profile" element={session ? <DeferredSection><PageTransition><Profile /></PageTransition></DeferredSection> : <Navigate to="/auth" />} />
+          <Route path="/profile" element={<RequireAuth session={session}><DeferredSection><PageTransition><Profile /></PageTransition></DeferredSection></RequireAuth>} />
 
           <Route path="/" element={
-            <PageTransition>
+            <RequireAuth session={session}><PageTransition>
               <>
                 {selected ? (
                   <>
@@ -495,6 +503,8 @@ export default function App() {
                               getProgress={getProgress}
                             />
                         )}
+
+                        {session && <CommunityShelf onSelect={selectItem} />}
                         
                         <CarouselSection title="Nuove Uscite al Cinema" icon="🆕" items={homeLists.newReleases} onSelect={selectItem} />
                         <CarouselSection title="Popolari su TMDB" icon="🔥" items={homeLists.popular} onSelect={selectItem} />
@@ -514,77 +524,68 @@ export default function App() {
                   </>
                 )}
               </>
-            </PageTransition>
+            </PageTransition></RequireAuth>
           } />
 
-          <Route path="/archive" element={<DeferredSection><PageTransition><Archive onSelect={selectItem} /></PageTransition></DeferredSection>} />
+          <Route path="/archive" element={<RequireAuth session={session}><DeferredSection><PageTransition><Archive onSelect={selectItem} /></PageTransition></DeferredSection></RequireAuth>} />
           
           <Route path="/list" element={
-            session ? (
-           <PageTransition><div style={{paddingTop: '20px'}}>
-               <div className="list-page-header">
-                  <h1>La mia lista</h1>
-                  <p style={{opacity:0.6}}>Gestisci i tuoi titoli salvati.</p>
-               </div>
-               <div className="filter-bar" style={{ marginBottom: '40px' }}>
-                  <div className="filter-group"><span className="filter-label">Cerca</span><input className="filter-select" placeholder="Titolo..." value={listSearch} onChange={e => setListSearch(e.target.value)} style={{ width:'200px', cursor:'text', backgroundImage:'none' }}/></div>
-                  <div className="filter-group"><span className="filter-label">Tipologia</span><select className="filter-select" value={listTypeFilter} onChange={e => setListTypeFilter(e.target.value as any)}><option value="all">Tutti</option><option value="movie">Film</option><option value="tv">Serie TV</option></select></div>
-                  <div className="filter-group"><span className="filter-label">Stato</span><select className="filter-select" value={listStatusFilter} onChange={e => setListStatusFilter(e.target.value as any)}><option value="all">Tutti gli stati</option>{STATUS_SECTIONS.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}</select></div>
-                  <div className="filter-group"><span className="filter-label">Ordina per</span><select className="filter-select" value={listSort} onChange={e => setListSort(e.target.value as any)}><option value="added">Data aggiunta</option><option value="rating">Voto Personale</option><option value="year">Anno Uscita</option></select></div>
-               </div>
-               {listLoading && (
-                   <div className="grid">
-                      {Array.from({ length: 12 }).map((_, i) => <SkeletonCard key={i} />)}
-                   </div>
-               )}
-               {STATUS_SECTIONS.map(sec => {
-                   if (listStatusFilter !== "all" && listStatusFilter !== sec.id) return null;
-                   const sectionItems = filteredMyList.filter(m => m.status === sec.id);
-                   if (sectionItems.length === 0) return null;
-                   const movies = sectionItems.filter(m => m.type === "movie");
-                   const tvShows = sectionItems.filter(m => m.type === "tv");
-                   return (
-                       <div key={sec.id} className="list-section" style={{ marginBottom: '60px' }}>
-                           <div className="list-section-header"><h2 className="list-section-title">{sec.label} <span style={{fontSize:'0.6em', opacity:0.5, marginLeft:'10px', verticalAlign:'middle'}}>({sectionItems.length})</span></h2></div>
-                           <div className="grid">
-                              {[...movies, ...tvShows].map(item => (
-                                <Card
-                                  key={item.tmdbId}
-                                  item={item}
-                                  onClick={() => selectItem(item)}
-                                  onRemove={() => removeFromList(item.tmdbId)}
-                                  showRating={true}
-                                  progress={getProgress(item.tmdbId)}
-                                  onTypeChange={isAdmin ? (nextType) => updateMediaType(item.tmdbId, nextType) : undefined}
-                                />
-                              ))}
-                           </div>
-                       </div>
-                   );
-               })}
-           </div>
-            </PageTransition>) : (
-              <PageTransition><div style={{textAlign:'center', padding:'50px'}}><h2>Accesso Negato</h2><button className="pill solid" onClick={() => navigate('/auth')}>Vai al Login</button></div></PageTransition>
-            )
+            <RequireAuth session={session}>
+              <PageTransition><div style={{paddingTop: '20px'}}>
+                  <div className="list-page-header">
+                     <h1>La mia lista</h1>
+                     <p style={{opacity:0.6}}>Gestisci i tuoi titoli salvati.</p>
+                  </div>
+                  <div className="filter-bar" style={{ marginBottom: '40px' }}>
+                     <div className="filter-group"><span className="filter-label">Cerca</span><input className="filter-select" placeholder="Titolo..." value={listSearch} onChange={e => setListSearch(e.target.value)} style={{ width:'200px', cursor:'text', backgroundImage:'none' }}/></div>
+                     <div className="filter-group"><span className="filter-label">Tipologia</span><select className="filter-select" value={listTypeFilter} onChange={e => setListTypeFilter(e.target.value as any)}><option value="all">Tutti</option><option value="movie">Film</option><option value="tv">Serie TV</option></select></div>
+                     <div className="filter-group"><span className="filter-label">Stato</span><select className="filter-select" value={listStatusFilter} onChange={e => setListStatusFilter(e.target.value as any)}><option value="all">Tutti gli stati</option>{STATUS_SECTIONS.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}</select></div>
+                     <div className="filter-group"><span className="filter-label">Ordina per</span><select className="filter-select" value={listSort} onChange={e => setListSort(e.target.value as any)}><option value="added">Data aggiunta</option><option value="rating">Voto Personale</option><option value="year">Anno Uscita</option></select></div>
+                  </div>
+                  {listLoading && (
+                      <div className="grid">
+                         {Array.from({ length: 12 }).map((_, i) => <SkeletonCard key={i} />)}
+                      </div>
+                  )}
+                  {STATUS_SECTIONS.map(sec => {
+                      if (listStatusFilter !== "all" && listStatusFilter !== sec.id) return null;
+                      const sectionItems = filteredMyList.filter(m => m.status === sec.id);
+                      if (sectionItems.length === 0) return null;
+                      const movies = sectionItems.filter(m => m.type === "movie");
+                      const tvShows = sectionItems.filter(m => m.type === "tv");
+                      return (
+                          <div key={sec.id} className="list-section" style={{ marginBottom: '60px' }}>
+                              <div className="list-section-header"><h2 className="list-section-title">{sec.label} <span style={{fontSize:'0.6em', opacity:0.5, marginLeft:'10px', verticalAlign:'middle'}}>({sectionItems.length})</span></h2></div>
+                              <div className="grid">
+                                 {[...movies, ...tvShows].map(item => (
+                                   <Card
+                                     key={item.tmdbId}
+                                     item={item}
+                                     onClick={() => selectItem(item)}
+                                     onRemove={() => removeFromList(item.tmdbId)}
+                                     showRating={true}
+                                     progress={getProgress(item.tmdbId)}
+                                     onTypeChange={isAdmin ? (nextType) => updateMediaType(item.tmdbId, nextType) : undefined}
+                                   />
+                                 ))}
+                              </div>
+                          </div>
+                      );
+                  })}
+              </div>
+              </PageTransition>
+            </RequireAuth>
           } />
 
           {/* --- CLASSIFICA --- */}
-          <Route path="/ranking" element={
-            session ? <DeferredSection><PageTransition><Ranking /></PageTransition></DeferredSection> : (
-              <PageTransition><div style={{textAlign:'center', padding:'50px'}}>
-                <h2>Community Riservata</h2>
-                <p style={{marginBottom:'20px', color:'#aaa'}}>Accedi per visualizzare le classifiche, sfidare gli amici e vedere i "Critici Top".</p>
-                <button className="pill solid" onClick={() => navigate('/auth')}>Vai al Login</button>
-              </div></PageTransition>
-            )
-          } />
+          <Route path="/ranking" element={<RequireAuth session={session}><DeferredSection><PageTransition><Ranking /></PageTransition></DeferredSection></RequireAuth>} />
 
-          <Route path="/suggestions" element={<DeferredSection><PageTransition><Suggestions onSelect={selectItem} session={session} /></PageTransition></DeferredSection>} />
+          <Route path="/suggestions" element={<RequireAuth session={session}><DeferredSection><PageTransition><Suggestions onSelect={selectItem} session={session} /></PageTransition></DeferredSection></RequireAuth>} />
 
         </Routes>
       </AnimatePresence>
 
-      {showPlayer && playerState && selected && (
+      {session && showPlayer && playerState && selected && (
         <DeferredOverlay>
           <PlayerDrawer 
             item={selected} 

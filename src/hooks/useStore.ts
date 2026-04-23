@@ -286,8 +286,29 @@ export function useStore() {
   const fetchStats = async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return null;
-    const { data, error } = await supabase.rpc('get_profile_stats', { target_user_id: user.id });
-    if (error) { console.error(error); return null; }
+
+    let data: any = null;
+    let error: any = null;
+
+    const primaryResult = await supabase.rpc('get_profile_stats');
+    data = primaryResult.data;
+    error = primaryResult.error;
+
+    if (error) {
+      const fallbackResult = await supabase.rpc('get_profile_stats', { target_user_id: user.id });
+      data = fallbackResult.data;
+      error = fallbackResult.error;
+    }
+
+    if (error) {
+      console.error(error);
+      return {
+        movie_minutes: 0,
+        tv_minutes: 0,
+        genres: {},
+        joinDate: new Date(user.created_at).toLocaleDateString('it-IT', { month: 'long', year: 'numeric' })
+      };
+    }
     return {
         ...data,
         joinDate: new Date(user.created_at).toLocaleDateString('it-IT', { month: 'long', year: 'numeric' })

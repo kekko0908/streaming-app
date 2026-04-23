@@ -133,62 +133,46 @@ export default function Navbar({
           />
         </div>
 
-        {session && (
-          <div className="user-menu mobile-only" ref={menuRefMobile}>
-            <button
-              type="button"
-              className={`user-menu-button ${isMenuOpen ? "open" : ""} ${(view === "profile" || view === "list") ? "active" : ""}`}
-              onClick={() => setIsMenuOpen((prev) => !prev)}
-              aria-haspopup="menu"
-              aria-expanded={isMenuOpen}
-              aria-label="Menu utente"
-            >
-              {avatarUrl ? (
-                <img src={avatarUrl} alt="Avatar utente" />
-              ) : (
-                <span className="user-avatar-fallback">U</span>
-              )}
-            </button>
-
-            {isMenuOpen && (
-              <div className="user-menu-dropdown" role="menu">
-                <button
-                  type="button"
-                  className="user-menu-item"
-                  role="menuitem"
-                  onClick={() => handleMenuNavigate("/profile")}
-                >
-                  Profilo
-                </button>
-                <button
-                  type="button"
-                  className="user-menu-item"
-                  role="menuitem"
-                  onClick={() => handleMenuNavigate("/list")}
-                >
-                  La mia Lista
-                </button>
-                <button
-                  type="button"
-                  className="user-menu-item"
-                  role="menuitem"
-                  onClick={() => { setIsMenuOpen(false); onShowUpdates(); }}
-                >
-                  Novità
-                </button>
-                <div className="user-menu-divider" role="separator" />
-                <button
-                  type="button"
-                  className="user-menu-item danger"
-                  role="menuitem"
-                  onClick={handleLogoutClick}
-                >
-                  Esci
-                </button>
-              </div>
+        {/* MENU MOBILE COMPLETO (Sempre visibile su mobile) */}
+        <div className="user-menu mobile-only" ref={menuRefMobile}>
+          <button
+            type="button"
+            className={`user-menu-button ${isMenuOpen ? "open" : ""} ${(view === "profile" || view === "list") ? "active" : ""}`}
+            onClick={() => setIsMenuOpen((prev) => !prev)}
+            aria-haspopup="menu"
+            aria-expanded={isMenuOpen}
+            aria-label="Menu"
+          >
+            {session && avatarUrl ? (
+              <img src={avatarUrl} alt="Avatar utente" />
+            ) : (
+              <span className="user-avatar-fallback">☰</span>
             )}
-          </div>
-        )}
+          </button>
+
+          {isMenuOpen && (
+            <div className="user-menu-dropdown" role="menu">
+              <button className="user-menu-item" onClick={() => handleMenuNavigate("/")}>Home</button>
+              <button className="user-menu-item" onClick={() => handleMenuNavigate("/suggestions")}>Suggerimenti 💡</button>
+              <button className="user-menu-item" onClick={() => handleMenuNavigate("/archive")}>Archivio</button>
+              <button className="user-menu-item" onClick={() => handleMenuNavigate("/ranking")}>Classifica 🏆</button>
+              
+              <div className="user-menu-divider" role="separator" />
+              
+              {session ? (
+                <>
+                  <button className="user-menu-item" onClick={() => handleMenuNavigate("/profile")}>Profilo</button>
+                  <button className="user-menu-item" onClick={() => handleMenuNavigate("/list")}>La mia Lista</button>
+                  <button className="user-menu-item" onClick={() => { setIsMenuOpen(false); onShowUpdates(); }}>Novità</button>
+                  <div className="user-menu-divider" role="separator" />
+                  <button className="user-menu-item danger" onClick={handleLogoutClick}>Esci</button>
+                </>
+              ) : (
+                <button className="user-menu-item" onClick={() => handleMenuNavigate("/auth")}>Accedi</button>
+              )}
+            </div>
+          )}
+        </div>
       </div>
 
       <div className="nav-links">
@@ -199,12 +183,11 @@ export default function Navbar({
           Home
         </button>
         <button 
-  className={`pill ${view === 'suggestions' ? "solid" : "ghost"}`} 
-  onClick={() => navigate('/suggestions')}
->
-  Suggerimenti💡
-</button>
-        
+          className={`pill ${view === 'suggestions' ? "solid" : "ghost"}`} 
+          onClick={() => navigate('/suggestions')}
+        >
+          Suggerimenti💡
+        </button>
         <button 
           className={`pill ${view === "archive" ? "solid" : "ghost"}`} 
           onClick={() => { navigate("/archive"); resetSelection(); }}
@@ -212,11 +195,11 @@ export default function Navbar({
           Archivio
         </button>
         <button 
-  className={`pill ${view === "ranking" ? "solid" : "ghost"}`} 
-  onClick={() => { navigate("/ranking"); resetSelection(); }}
->
-  Classifica 🏆
-</button>
+          className={`pill ${view === "ranking" ? "solid" : "ghost"}`} 
+          onClick={() => { navigate("/ranking"); resetSelection(); }}
+        >
+          Classifica 🏆
+        </button>
 
         {session && (
           <div className="user-menu desktop-only" ref={menuRefDesktop}>
@@ -281,7 +264,7 @@ export default function Navbar({
             style={{ background: '#fff', color: '#000' }}
             onClick={() => { navigate("/auth"); resetSelection(); }}
           >
-            Accedi / Registrati
+            Accedi
           </button>
         )}
       </div>
