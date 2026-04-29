@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "../supabaseClient";
 import { useStore } from "../hooks/useStore";
 import { motion, Variants } from "framer-motion";
+import { ProfileStats } from "../types/profileStats";
 import "../css/profile.css";
 
 // Avatar predefiniti
@@ -30,7 +31,7 @@ export default function Profile() {
   const { fetchStats } = useStore();
   
   // STATI DATI
-  const [stats, setStats] = useState<any>(null);
+  const [stats, setStats] = useState<ProfileStats | null>(null);
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   
@@ -56,7 +57,45 @@ export default function Profile() {
         const statsData =
           statsResult.status === "fulfilled" && statsResult.value
             ? statsResult.value
-            : { movie_minutes: 0, tv_minutes: 0, genres: {} };
+            : {
+                movie_minutes: 0,
+                tv_minutes: 0,
+                total_minutes: 0,
+                genres: {},
+                advanced_stats: {
+                  episodes_total: 0,
+                  completed_series: 0,
+                  active_series: 0,
+                  watched_movies: 0,
+                  library_total: 0,
+                  watchlist_total: 0,
+                  rated_titles: 0,
+                  avg_rating: 0,
+                  movie_share_percent: 0,
+                  tv_share_percent: 0,
+                  longest_series_title: "",
+                  longest_series_poster: "",
+                  longest_series_episodes: 0,
+                  heaviest_title: "",
+                  heaviest_poster: "",
+                  heaviest_media_type: "",
+                  heaviest_minutes: 0,
+                  longest_movie_title: "",
+                  longest_movie_poster: "",
+                  longest_movie_minutes: 0,
+                },
+                personal_records: {
+                  max_episodes_day: 0,
+                  max_episodes_day_date: "",
+                  max_same_series_day: 0,
+                  max_same_series_title: "",
+                  max_minutes_day: 0,
+                  max_minutes_day_date: "",
+                  top_binge_series_title: "",
+                  top_binge_series_episodes: 0,
+                  watch_streak_days: 0,
+                },
+              };
 
         const sessionUser =
           sessionResult.status === "fulfilled"
@@ -125,6 +164,7 @@ export default function Profile() {
   const confirmResetStats = async () => {
     setActionLoading(true);
     if (user && user.id) {
+        await supabase.from('watch_events').delete().eq('user_id', user.id);
         await supabase.from('user_library').delete().eq('user_id', user.id);
         setShowResetConfirmationModal(false);
         setShowSettingsModal(false);
@@ -148,6 +188,29 @@ export default function Profile() {
   const totalHours = Math.floor(totalMinutes / 60);
   const movieHours = Math.floor((stats.movie_minutes || 0) / 60);
   const tvHours = Math.floor((stats.tv_minutes || 0) / 60);
+  const advanced = stats.advanced_stats;
+  const records = stats.personal_records;
+
+  const formatMinutes = (minutes: number) => {
+    if (!minutes) return "0h";
+    const hours = Math.floor(minutes / 60);
+    const rest = minutes % 60;
+    if (hours <= 0) return `${rest}m`;
+    return rest > 0 ? `${hours}h ${rest}m` : `${hours}h`;
+  };
+
+  const formatRecordDate = (value: string) => {
+    if (!value) return "Nessun dato";
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return "Nessun dato";
+    return date.toLocaleDateString("it-IT", { day: "2-digit", month: "short", year: "numeric" });
+  };
+
+  const resolvePosterSrc = (poster?: string) => {
+    if (!poster) return "";
+    if (poster.startsWith("http://") || poster.startsWith("https://")) return poster;
+    return `https://image.tmdb.org/t/p/w342${poster}`;
+  };
 
   const getRank = (h: number) => {
     if (h > 500) return "DIVINITÀ DEL DIVANO";
@@ -253,6 +316,126 @@ export default function Profile() {
               </div>
            </div>
         </motion.div>
+
+        <motion.section className="advanced-stats-section" variants={itemVariants}>
+          <div className="profile-section-heading">
+            <span className="section-kicker">Statistiche avanzate</span>
+            <h2>La tua visione in numeri</h2>
+          </div>
+
+          <div className="advanced-stats-grid">
+            <div className="advanced-stat-card">
+              <span className="advanced-stat-label">Episodi visti</span>
+              <strong>{advanced.episodes_total}</strong>
+              <small>Totale serie TV tracciate</small>
+            </div>
+            <div className="advanced-stat-card">
+              <span className="advanced-stat-label">Serie completate</span>
+              <strong>{advanced.completed_series}</strong>
+              <small>{advanced.active_series} ancora in corso</small>
+            </div>
+            <div className="advanced-stat-card">
+              <span className="advanced-stat-label">Film visti</span>
+              <strong>{advanced.watched_movies}</strong>
+              <small>{advanced.library_total} titoli in libreria</small>
+            </div>
+            <div className="advanced-stat-card">
+              <span className="advanced-stat-label">Da vedere</span>
+              <strong>{advanced.watchlist_total}</strong>
+              <small>Pianificati o in lista</small>
+            </div>
+            <div className="advanced-stat-card">
+              <span className="advanced-stat-label">Voto medio</span>
+              <strong>{Number(advanced.avg_rating || 0).toFixed(1)}</strong>
+              <small>{advanced.rated_titles} titoli votati</small>
+            </div>
+            <div className="advanced-stat-card">
+              <span className="advanced-stat-label">Rapporto visione</span>
+              <strong>{advanced.movie_share_percent}% / {advanced.tv_share_percent}%</strong>
+              <small>Film / Serie</small>
+            </div>
+          </div>
+
+          <div className="highlight-stats-row">
+            <div className="highlight-stat">
+              {advanced.longest_series_poster && (
+                <img
+                  src={resolvePosterSrc(advanced.longest_series_poster)}
+                  alt={advanced.longest_series_title}
+                  className="highlight-poster"
+                />
+              )}
+              <div className="highlight-copy">
+                <span>Serie piu lunga seguita</span>
+                <strong>{advanced.longest_series_title || "Nessun dato"}</strong>
+                <small>{advanced.longest_series_episodes} episodi</small>
+              </div>
+            </div>
+            <div className="highlight-stat">
+              {advanced.heaviest_poster && (
+                <img
+                  src={resolvePosterSrc(advanced.heaviest_poster)}
+                  alt={advanced.heaviest_title}
+                  className="highlight-poster"
+                />
+              )}
+              <div className="highlight-copy">
+                <span>Titolo piu impegnativo</span>
+                <strong>{advanced.heaviest_title || "Nessun dato"}</strong>
+                <small>{formatMinutes(advanced.heaviest_minutes)}</small>
+              </div>
+            </div>
+            <div className="highlight-stat">
+              {advanced.longest_movie_poster && (
+                <img
+                  src={resolvePosterSrc(advanced.longest_movie_poster)}
+                  alt={advanced.longest_movie_title}
+                  className="highlight-poster"
+                />
+              )}
+              <div className="highlight-copy">
+                <span>Film piu lungo visto</span>
+                <strong>{advanced.longest_movie_title || "Nessun dato"}</strong>
+                <small>{formatMinutes(advanced.longest_movie_minutes)}</small>
+              </div>
+            </div>
+          </div>
+        </motion.section>
+
+        <motion.section className="records-section" variants={itemVariants}>
+          <div className="profile-section-heading">
+            <span className="section-kicker">Record personali</span>
+            <h2>Binge watch e giornate intense</h2>
+          </div>
+
+          <div className="records-grid">
+            <div className="record-card primary-record">
+              <span className="record-label">Piu episodi in un giorno</span>
+              <strong>{records.max_episodes_day}</strong>
+              <small>{formatRecordDate(records.max_episodes_day_date)}</small>
+            </div>
+            <div className="record-card">
+              <span className="record-label">Stessa serie in un giorno</span>
+              <strong>{records.max_same_series_day}</strong>
+              <small>{records.max_same_series_title || "Nessun dato"}</small>
+            </div>
+            <div className="record-card">
+              <span className="record-label">Giorno piu intenso</span>
+              <strong>{formatMinutes(records.max_minutes_day)}</strong>
+              <small>{formatRecordDate(records.max_minutes_day_date)}</small>
+            </div>
+            <div className="record-card">
+              <span className="record-label">Serie piu bingewatchata</span>
+              <strong>{records.top_binge_series_episodes}</strong>
+              <small>{records.top_binge_series_title || "Nessun dato"}</small>
+            </div>
+            <div className="record-card">
+              <span className="record-label">Streak visione</span>
+              <strong>{records.watch_streak_days}</strong>
+              <small>giorni consecutivi</small>
+            </div>
+          </div>
+        </motion.section>
 
         {/* CHART CARD */}
         <motion.div className="chart-card glass-panel" variants={itemVariants}>

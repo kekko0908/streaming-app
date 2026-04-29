@@ -4,7 +4,7 @@ import { supabase } from "../supabaseClient";
 import "../css/ranking.css";
 
 // Tipi di classifica
-type RankingType = 'time' | 'avg_rating' | 'planned';
+type RankingType = 'time' | 'avg_rating' | 'planned' | 'daily_episodes' | 'same_series_episodes' | 'daily_minutes' | 'completed_series';
 type TimeRange = 'week' | 'month' | 'all';
 
 interface RankingUser {
@@ -12,6 +12,8 @@ interface RankingUser {
   avatar_url: string;
   score: number; // Può essere minuti, voto medio o numero items
   rank: number;
+  title?: string;
+  media_type?: string;
 }
 
 // Configurazione delle categorie
@@ -39,6 +41,38 @@ const CATEGORIES = {
     desc: "L'Hype Rank! Chi ha la lista d'attesa più lunga? Questi utenti hanno pianificato o messo in 'Da Guardare' una montagna di titoli.",
     unitLabel: "in lista",
     format: (val: number) => `${val}` // Numero intero
+  },
+  daily_episodes: {
+    id: 'daily_episodes' as RankingType,
+    label: "Re del Binge",
+    icon: "Play",
+    desc: "Il record pubblico di episodi visti in una singola giornata. Mostriamo il titolo principale del record, senza orari o cronologia dettagliata.",
+    unitLabel: "episodi/giorno",
+    format: (val: number) => `${Math.floor(val)}`
+  },
+  same_series_episodes: {
+    id: 'same_series_episodes' as RankingType,
+    label: "Seriale Supremo",
+    icon: "TV",
+    desc: "Chi ha visto piu episodi della stessa serie in una singola giornata? La classifica mostra anche la serie del record.",
+    unitLabel: "stessa serie",
+    format: (val: number) => `${Math.floor(val)}`
+  },
+  daily_minutes: {
+    id: 'daily_minutes' as RankingType,
+    label: "Maratoneta",
+    icon: "Time",
+    desc: "La giornata piu intensa per minuti stimati tra film completati ed episodi avanzati.",
+    unitLabel: "minuti/giorno",
+    format: (val: number) => `${Math.floor(val / 60)}h`
+  },
+  completed_series: {
+    id: 'completed_series' as RankingType,
+    label: "Completista",
+    icon: "OK",
+    desc: "La classifica di chi ha completato piu serie TV nel periodo selezionato.",
+    unitLabel: "serie complete",
+    format: (val: number) => `${Math.floor(val)}`
   }
 };
 
@@ -65,6 +99,18 @@ export default function Ranking() {
         case 'planned':
             rpcName = 'get_ranking_planned'; 
             break;
+        case 'daily_episodes':
+            rpcName = 'get_ranking_daily_episodes';
+            break;
+        case 'same_series_episodes':
+            rpcName = 'get_ranking_same_series_episodes';
+            break;
+        case 'daily_minutes':
+            rpcName = 'get_ranking_daily_minutes';
+            break;
+        case 'completed_series':
+            rpcName = 'get_ranking_completed_series';
+            break;
         case 'time':
         default:
             rpcName = 'get_ranking'; // La funzione originale per il tempo
@@ -83,8 +129,10 @@ export default function Ranking() {
                 username: u.username,
                 avatar_url: u.avatar_url,
                 // Il campo del valore può chiamarsi diversamente nelle varie RPC
-                score: u.total_minutes ?? u.avg_score ?? u.item_count ?? 0,
-                rank: u.rank
+                score: u.total_minutes ?? u.avg_score ?? u.item_count ?? u.score ?? 0,
+                rank: u.rank,
+                title: u.title,
+                media_type: u.media_type
             }));
             setUsers(mappedData);
         }
@@ -121,7 +169,32 @@ export default function Ranking() {
         if (score > 50) return "📝 Organizzato";
         return "curioso";
     }
+    if (currentType === 'daily_episodes') {
+        if (score >= 10) return "Maratona estrema";
+        if (score >= 5) return "Binge solido";
+        return "Sprint seriale";
+    }
+    if (currentType === 'same_series_episodes') {
+        if (score >= 8) return "Focus totale";
+        if (score >= 4) return "Immersione";
+        return "Continuity";
+    }
+    if (currentType === 'daily_minutes') {
+        if (score >= 480) return "Giornata epica";
+        if (score >= 240) return "Sessione lunga";
+        return "Visione intensa";
+    }
+    if (currentType === 'completed_series') {
+        if (score >= 10) return "Archivio chiuso";
+        if (score >= 3) return "Finali conquistati";
+        return "Completista";
+    }
     return "";
+  };
+
+  const showRecordTitle = (user: RankingUser) => {
+    if (!user.title || currentType === 'time' || currentType === 'avg_rating' || currentType === 'planned') return null;
+    return <div className="record-title">Record: {user.title}</div>;
   };
 
   const activeConfig = CATEGORIES[currentType];
@@ -178,6 +251,7 @@ export default function Ranking() {
                   <div className="podium-score">
                       {activeConfig.format(second.score)} {currentType === 'planned' ? 'titoli' : ''}
                   </div>
+                  {showRecordTitle(second)}
                 </div>
               )}
 
@@ -193,6 +267,7 @@ export default function Ranking() {
                   <div className="podium-score">
                     {activeConfig.format(first.score)} {currentType === 'planned' ? 'titoli' : ''}
                   </div>
+                  {showRecordTitle(first)}
                 </div>
               )}
 
@@ -207,6 +282,7 @@ export default function Ranking() {
                   <div className="podium-score">
                       {activeConfig.format(third.score)} {currentType === 'planned' ? 'titoli' : ''}
                   </div>
+                  {showRecordTitle(third)}
                 </div>
               )}
             </div>
@@ -231,6 +307,7 @@ export default function Ranking() {
                 <div className="list-info">
                   <div className="list-name">{formatUserName(u.username)}</div>
                   <div className="list-desc">{getLevelLabel(u.score)}</div>
+                  {showRecordTitle(u)}
                 </div>
                 <div className="list-stats">
                   <div className="score-big">{activeConfig.format(u.score)}</div>

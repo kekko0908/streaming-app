@@ -172,6 +172,15 @@
 .podium-score { font-size: 0.85rem; padding: 4px 10px; border-radius: 12px; backdrop-filter: blur(5px); background: rgba(0,0,0,0.4); color: #ddd; }
 .first .podium-score { background: #ffd700; color: #000; font-weight: 800; }
 
+.record-title {
+  margin-top: 7px;
+  max-width: 170px;
+  color: #9ea8b5;
+  font-size: 0.72rem;
+  line-height: 1.25;
+  text-align: center;
+}
+
 /* LISTA */
 .ranking-list {
   background: #13151c; border-radius: 16px; padding: 10px;
@@ -188,6 +197,12 @@
 .list-info { flex: 1; }
 .list-name { font-weight: 600; color: #fff; font-size: 0.95rem; }
 .list-desc { font-size: 0.75rem; color: #888; text-transform: uppercase; letter-spacing: 0.5px; }
+.list-info .record-title {
+  max-width: none;
+  margin-top: 4px;
+  text-align: left;
+  color: #bac5d1;
+}
 .list-stats { text-align: right; }
 .score-big { font-weight: 800; font-size: 1.1rem; color: var(--primary); }
 .score-label { font-size: 0.75rem; color: #888; }

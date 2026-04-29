@@ -292,6 +292,176 @@
   font-weight: 600;
 }
 
+.advanced-stats-section,
+.records-section {
+  position: relative;
+  width: 100%;
+}
+
+.profile-section-heading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 26px;
+  text-align: center;
+}
+
+.section-kicker {
+  color: #4ae8ff;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  text-shadow: 0 0 16px rgba(74, 232, 255, 0.45);
+}
+
+.profile-section-heading h2 {
+  margin: 0;
+  color: #fff;
+  font-size: 1.65rem;
+  font-weight: 900;
+  letter-spacing: 0;
+}
+
+.advanced-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.advanced-stat-card,
+.record-card,
+.highlight-stat {
+  position: relative;
+  overflow: hidden;
+  min-height: 128px;
+  padding: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.025)),
+    rgba(12, 14, 18, 0.82);
+  box-shadow: 0 18px 45px rgba(0, 0, 0, 0.24);
+}
+
+.advanced-stat-card::before,
+.record-card::before,
+.highlight-stat::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, rgba(74, 232, 255, 0.14), transparent 42%);
+  opacity: 0;
+  transition: opacity 0.25s ease;
+  pointer-events: none;
+}
+
+.advanced-stat-card:hover::before,
+.record-card:hover::before,
+.highlight-stat:hover::before {
+  opacity: 1;
+}
+
+.advanced-stat-label,
+.record-label,
+.highlight-stat span {
+  display: block;
+  position: relative;
+  z-index: 1;
+  color: #8e9aa8;
+  font-size: 0.74rem;
+  font-weight: 800;
+  letter-spacing: 1.6px;
+  text-transform: uppercase;
+  margin-bottom: 12px;
+}
+
+.advanced-stat-card strong,
+.record-card strong,
+.highlight-stat strong {
+  display: block;
+  position: relative;
+  z-index: 1;
+  color: #fff;
+  font-size: 2rem;
+  line-height: 1.08;
+  font-weight: 900;
+  letter-spacing: 0;
+  text-shadow: 0 0 22px rgba(74, 232, 255, 0.22);
+}
+
+.advanced-stat-card small,
+.record-card small,
+.highlight-stat small {
+  display: block;
+  position: relative;
+  z-index: 1;
+  margin-top: 10px;
+  color: #8f98a3;
+  font-size: 0.88rem;
+  line-height: 1.35;
+}
+
+.highlight-stats-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.highlight-stat {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  min-height: 154px;
+}
+
+.highlight-poster {
+  position: relative;
+  z-index: 1;
+  flex: 0 0 76px;
+  width: 76px;
+  height: 114px;
+  object-fit: cover;
+  border-radius: 6px;
+  box-shadow: 0 14px 28px rgba(0, 0, 0, 0.42);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.highlight-copy {
+  position: relative;
+  z-index: 1;
+  min-width: 0;
+}
+
+.highlight-stat strong {
+  display: -webkit-box;
+  overflow: hidden;
+  font-size: 1.3rem;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.records-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.record-card {
+  min-height: 142px;
+}
+
+.record-card strong {
+  color: #ffd980;
+  text-shadow: 0 0 22px rgba(255, 217, 128, 0.26);
+}
+
+.primary-record {
+  border-color: rgba(255, 217, 128, 0.22);
+}
+
 /* CHART AREA DIFFUSA */
 .chart-card {
   position: relative;
@@ -567,6 +737,9 @@
   .chart-card { flex-direction: column; gap: 40px; text-align: center; }
   .legend-grid { justify-content: center; }
   .chart-legend { align-items: center; }
+  .advanced-stats-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .highlight-stats-row { grid-template-columns: 1fr; }
+  .records-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
 @media (max-width: 768px) {
@@ -576,4 +749,28 @@
   .stat-icon { font-size: 1.5rem; }
   .stat-label { font-size: 0.65rem; }
   .legend-grid { grid-template-columns: 1fr; }
+  .advanced-stats-grid,
+  .records-grid {
+    grid-template-columns: 1fr;
+  }
+  .advanced-stat-card,
+  .record-card,
+  .highlight-stat {
+    min-height: 112px;
+  }
+  .advanced-stat-card strong,
+  .record-card strong {
+    font-size: 1.75rem;
+  }
+  .highlight-stat {
+    align-items: flex-start;
+  }
+  .highlight-poster {
+    flex-basis: 68px;
+    width: 68px;
+    height: 102px;
+  }
+  .highlight-stat strong {
+    font-size: 1.2rem;
+  }
 }

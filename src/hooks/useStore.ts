@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "../supabaseClient";
 import { MediaType, SavedItem, WatchStatus, TmdbItem } from "../types/types";
+import { ProfileStats } from "../types/profileStats";
 
 export function useStore() {
   const [myList, setMyList] = useState<SavedItem[]>([]);
@@ -112,6 +113,52 @@ export function useStore() {
     if (error) throw error;
   };
 
+  const parseRuntimeMinutes = (runtime?: string | number, fallback = 0) => {
+    if (typeof runtime === "number") return Number.isFinite(runtime) ? runtime : fallback;
+    if (!runtime) return fallback;
+    const parsed = parseInt(runtime, 10);
+    return Number.isFinite(parsed) ? parsed : fallback;
+  };
+
+  const getTotalEpisodesFromItem = (item: TmdbItem) => {
+    if (!item.seasonsDetails) return 0;
+    return item.seasonsDetails.reduce((total, season) => total + (season.episode_count || 0), 0);
+  };
+
+  const recordWatchEvent = async ({
+    userId,
+    item,
+    season,
+    episode,
+    episodesCount,
+    minutesCount,
+    eventType,
+  }: {
+    userId: string;
+    item: TmdbItem;
+    season?: number | null;
+    episode?: number | null;
+    episodesCount: number;
+    minutesCount: number;
+    eventType: "tv_progress" | "movie_completed";
+  }) => {
+    if (episodesCount <= 0 && minutesCount <= 0) return;
+
+    const { error } = await supabase.from("watch_events").insert({
+      user_id: userId,
+      tmdb_id: parseInt(item.tmdbId, 10),
+      media_type: item.type,
+      season_number: season ?? null,
+      episode_number: episode ?? null,
+      episodes_count: Math.max(0, Math.floor(episodesCount)),
+      minutes_count: Math.max(0, Math.floor(minutesCount)),
+      event_type: eventType,
+      watched_at: new Date().toISOString(),
+    });
+
+    if (error) console.error("Errore salvataggio evento visione:", error);
+  };
+
   // Funzione Helper per calcolare episodi totali visti fino a S:X E:Y
   const calculateTotalEpisodes = (item: TmdbItem, currentSeason: number, currentEpisode: number) => {
       if (!item.seasonsDetails) return currentEpisode; // Fallback
@@ -133,6 +180,14 @@ export function useStore() {
     const userId = (await supabase.auth.getUser()).data.user?.id;
     if (!userId) return;
     await syncMediaItem(item);
+    const existingItem = myList.find((saved) => saved.tmdbId === item.tmdbId);
+    let pendingWatchEvent: null | {
+      season?: number | null;
+      episode?: number | null;
+      episodesCount: number;
+      minutesCount: number;
+      eventType: "tv_progress" | "movie_completed";
+    } = null;
 
     // 2. Prepara aggiornamento Utente
     const updates: any = { 
@@ -171,12 +226,49 @@ export function useStore() {
         updates.current_episode = episode;
         updates.total_watched_episodes = totalWatched; // <--- ORA SALVIAMO SEMPRE IL TOTALE
 
+        const previousWatched = watchProgress[item.tmdbId]?.watchedEpisodes || 0;
+        const deltaEpisodes = status === "gia-guardato" ? Math.max(0, totalWatched - previousWatched) : 0;
+        if (deltaEpisodes > 0) {
+          const runtimeMinutes = parseRuntimeMinutes(item.runtime, 45);
+          pendingWatchEvent = {
+            season,
+            episode,
+            episodesCount: deltaEpisodes,
+            minutesCount: deltaEpisodes * runtimeMinutes,
+            eventType: "tv_progress",
+          };
+        }
+
         // Aggiorna UI locale
-        setWatchProgress(prev => ({ ...prev, [item.tmdbId]: { season, episode } }));
+        setWatchProgress(prev => ({
+          ...prev,
+          [item.tmdbId]: {
+            season,
+            episode,
+            watchedEpisodes: totalWatched,
+            totalEpisodes: getTotalEpisodesFromItem(item) || prev[item.tmdbId]?.totalEpisodes || 0
+          }
+        }));
+    } else if (item.type === "movie" && status === "gia-guardato" && existingItem?.status !== "gia-guardato") {
+        const runtimeMinutes = parseRuntimeMinutes(item.runtime, 0);
+        if (runtimeMinutes > 0) {
+          pendingWatchEvent = {
+            season: null,
+            episode: null,
+            episodesCount: 0,
+            minutesCount: runtimeMinutes,
+            eventType: "movie_completed",
+          };
+        }
     }
 
     const { error } = await supabase.from('user_library').upsert(updates, { onConflict: 'user_id, tmdb_id' });
-    if (!error) fetchLibrary();
+    if (!error) {
+      if (pendingWatchEvent) {
+        await recordWatchEvent({ userId, item, ...pendingWatchEvent });
+      }
+      fetchLibrary();
+    }
   };
 
   const removeFromList = async (tmdbId: string) => {
@@ -226,10 +318,23 @@ export function useStore() {
       return;
     }
 
-    setWatchProgress((prev: any) => ({ ...prev, [item.tmdbId]: { season, episode } }));
+    const currentProgress = watchProgress[item.tmdbId];
 
     // Calcolo preciso degli episodi totali visti fino a questo click
     const totalEpisodes = calculateTotalEpisodes(item, season, episode);
+    const previousWatched = currentProgress?.watchedEpisodes || 0;
+    const deltaEpisodes = Math.max(0, totalEpisodes - previousWatched);
+    const totalKnownEpisodes = getTotalEpisodesFromItem(item) || currentProgress?.totalEpisodes || 0;
+
+    setWatchProgress((prev: any) => ({
+      ...prev,
+      [item.tmdbId]: {
+        season,
+        episode,
+        watchedEpisodes: totalEpisodes,
+        totalEpisodes: totalKnownEpisodes
+      }
+    }));
     await syncMediaItem(item);
 
     // Determinare automaticamente lo stato
@@ -243,7 +348,7 @@ export function useStore() {
     }
 
     // Upsert Library
-    await supabase.from('user_library').upsert({
+    const { error } = await supabase.from('user_library').upsert({
         user_id: userId,
         tmdb_id: parseInt(item.tmdbId),
         current_season: season,
@@ -251,6 +356,19 @@ export function useStore() {
         total_watched_episodes: totalEpisodes, // <--- SALVIAMO IL TOTALE ANCHE QUI
         status: newStatus
     }, { onConflict: 'user_id, tmdb_id' });
+
+    if (!error && deltaEpisodes > 0) {
+      const runtimeMinutes = parseRuntimeMinutes(item.runtime, 45);
+      await recordWatchEvent({
+        userId,
+        item,
+        season,
+        episode,
+        episodesCount: deltaEpisodes,
+        minutesCount: deltaEpisodes * runtimeMinutes,
+        eventType: "tv_progress",
+      });
+    }
   };
 
   const updateMediaType = async (tmdbId: string, mediaType: MediaType) => {
@@ -283,7 +401,7 @@ export function useStore() {
 
   const getProgress = (tmdbId: string) => watchProgress[tmdbId] || { season: 1, episode: 1, watchedEpisodes: 0, totalEpisodes: 0 };
 
-  const fetchStats = async () => {
+  const fetchStats = async (): Promise<ProfileStats | null> => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return null;
 
@@ -305,12 +423,81 @@ export function useStore() {
       return {
         movie_minutes: 0,
         tv_minutes: 0,
+        total_minutes: 0,
         genres: {},
+        advanced_stats: {
+          episodes_total: 0,
+          completed_series: 0,
+          active_series: 0,
+          watched_movies: 0,
+          library_total: 0,
+          watchlist_total: 0,
+          rated_titles: 0,
+          avg_rating: 0,
+          movie_share_percent: 0,
+          tv_share_percent: 0,
+          longest_series_title: "",
+          longest_series_poster: "",
+          longest_series_episodes: 0,
+          heaviest_title: "",
+          heaviest_poster: "",
+          heaviest_media_type: "",
+          heaviest_minutes: 0,
+          longest_movie_title: "",
+          longest_movie_poster: "",
+          longest_movie_minutes: 0,
+        },
+        personal_records: {
+          max_episodes_day: 0,
+          max_episodes_day_date: "",
+          max_same_series_day: 0,
+          max_same_series_title: "",
+          max_minutes_day: 0,
+          max_minutes_day_date: "",
+          top_binge_series_title: "",
+          top_binge_series_episodes: 0,
+          watch_streak_days: 0,
+        },
         joinDate: new Date(user.created_at).toLocaleDateString('it-IT', { month: 'long', year: 'numeric' })
       };
     }
     return {
         ...data,
+        advanced_stats: {
+          episodes_total: 0,
+          completed_series: 0,
+          active_series: 0,
+          watched_movies: 0,
+          library_total: 0,
+          watchlist_total: 0,
+          rated_titles: 0,
+          avg_rating: 0,
+          movie_share_percent: 0,
+          tv_share_percent: 0,
+          longest_series_title: "",
+          longest_series_poster: "",
+          longest_series_episodes: 0,
+          heaviest_title: "",
+          heaviest_poster: "",
+          heaviest_media_type: "",
+          heaviest_minutes: 0,
+          longest_movie_title: "",
+          longest_movie_poster: "",
+          longest_movie_minutes: 0,
+          ...(data?.advanced_stats || {}),
+        },
+        personal_records: {
+          max_episodes_day: 0,
+          max_episodes_day_date: "",
+          max_same_series_day: 0,
+          max_same_series_title: "",
+          max_minutes_day: 0,
+          max_minutes_day_date: "",
+          top_binge_series_title: "",
+          top_binge_series_episodes: 0,
+          watch_streak_days: 0,
+          ...(data?.personal_records || {}),
+        },
         joinDate: new Date(user.created_at).toLocaleDateString('it-IT', { month: 'long', year: 'numeric' })
     };
   };
