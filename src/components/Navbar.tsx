@@ -13,12 +13,13 @@ interface NavbarProps {
   session: Session | null;
   onLogout: () => void;
   onShowUpdates: () => void;
+  isAdmin: boolean;
 }
 
 const DEFAULT_AVATAR = "https://api.dicebear.com/7.x/adventurer/svg?seed=Default";
 
 export default function Navbar({ 
-  resetSelection, query, setQuery, onSearch, session, onLogout, onShowUpdates
+  resetSelection, query, setQuery, onSearch, session, onLogout, onShowUpdates, isAdmin
 }: NavbarProps) {
   const navigate = useNavigate();
   const location = useLocation();
@@ -137,7 +138,7 @@ export default function Navbar({
         <div className="user-menu mobile-only" ref={menuRefMobile}>
           <button
             type="button"
-            className={`user-menu-button ${isMenuOpen ? "open" : ""} ${(view === "profile" || view === "list") ? "active" : ""}`}
+            className={`user-menu-button ${isMenuOpen ? "open" : ""} ${(view === "profile" || view === "list" || view === "admin") ? "active" : ""}`}
             onClick={() => setIsMenuOpen((prev) => !prev)}
             aria-haspopup="menu"
             aria-expanded={isMenuOpen}
@@ -157,6 +158,7 @@ export default function Navbar({
               <button className="user-menu-item" onClick={() => handleMenuNavigate("/archive")}>Archivio</button>
               <button className="user-menu-item" onClick={() => handleMenuNavigate("/ranking")}>Classifica 🏆</button>
               
+              {isAdmin && <button className="user-menu-item" onClick={() => handleMenuNavigate("/admin")}>Admin Dashboard</button>}
               <div className="user-menu-divider" role="separator" />
               
               {session ? (
@@ -201,11 +203,19 @@ export default function Navbar({
           Classifica 🏆
         </button>
 
+        {isAdmin && (
+          <button
+            className={`pill ${view === "admin" ? "solid" : "ghost"}`}
+            onClick={() => { navigate("/admin"); resetSelection(); }}
+          >
+            Admin
+          </button>
+        )}
         {session && (
           <div className="user-menu desktop-only" ref={menuRefDesktop}>
             <button
               type="button"
-              className={`user-menu-button ${isMenuOpen ? "open" : ""} ${(view === "profile" || view === "list") ? "active" : ""}`}
+            className={`user-menu-button ${isMenuOpen ? "open" : ""} ${(view === "profile" || view === "list" || view === "admin") ? "active" : ""}`}
               onClick={() => setIsMenuOpen((prev) => !prev)}
               aria-haspopup="menu"
               aria-expanded={isMenuOpen}
@@ -236,6 +246,16 @@ export default function Navbar({
                 >
                   La mia Lista
                 </button>
+                {isAdmin && (
+                  <button
+                    type="button"
+                    className="user-menu-item"
+                    role="menuitem"
+                    onClick={() => handleMenuNavigate("/admin")}
+                  >
+                    Admin Dashboard
+                  </button>
+                )}
                 <button
                   type="button"
                   className="user-menu-item"

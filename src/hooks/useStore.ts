@@ -144,12 +144,41 @@ export function useStore() {
   }) => {
     if (episodesCount <= 0 && minutesCount <= 0) return;
 
+    const tmdbId = parseInt(item.tmdbId, 10);
+    const normalizedSeason = season ?? null;
+    const normalizedEpisode = episode ?? null;
+
+    let duplicateCheck = supabase
+      .from("watch_events")
+      .select("id")
+      .eq("user_id", userId)
+      .eq("tmdb_id", tmdbId)
+      .eq("media_type", item.type)
+      .eq("event_type", eventType)
+      .limit(1);
+
+    if (eventType === "tv_progress") {
+      duplicateCheck = duplicateCheck
+        .eq("season_number", normalizedSeason)
+        .eq("episode_number", normalizedEpisode);
+    } else {
+      duplicateCheck = duplicateCheck
+        .is("season_number", null)
+        .is("episode_number", null);
+    }
+
+    const { data: existingEvents, error: duplicateError } = await duplicateCheck;
+    if (duplicateError) {
+      console.error("Errore controllo evento visione duplicato:", duplicateError);
+    }
+    if (existingEvents && existingEvents.length > 0) return;
+
     const { error } = await supabase.from("watch_events").insert({
       user_id: userId,
-      tmdb_id: parseInt(item.tmdbId, 10),
+      tmdb_id: tmdbId,
       media_type: item.type,
-      season_number: season ?? null,
-      episode_number: episode ?? null,
+      season_number: normalizedSeason,
+      episode_number: normalizedEpisode,
       episodes_count: Math.max(0, Math.floor(episodesCount)),
       minutes_count: Math.max(0, Math.floor(minutesCount)),
       event_type: eventType,

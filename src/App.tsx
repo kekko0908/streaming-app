@@ -38,6 +38,7 @@ const Profile = lazy(() => import("./components/Profile"));
 const Archive = lazy(() => import("./components/Archive"));
 const Ranking = lazy(() => import("./components/Ranking"));
 const Suggestions = lazy(() => import("./components/Suggestions"));
+const AdminDashboard = lazy(() => import("./components/AdminDashboard"));
 const PlayerDrawer = lazy(() => import("./components/PlayerDrawer"));
 const UpdatesModal = lazy(() => import("./components/UpdatesModal"));
 
@@ -74,31 +75,54 @@ function RequireAuth({ session, children }: { session: Session | null; children:
   return session ? <>{children}</> : <Navigate to="/auth" replace />;
 }
 
+function RequireAdmin({
+  session,
+  isAdmin,
+  adminReady,
+  children,
+}: {
+  session: Session | null;
+  isAdmin: boolean;
+  adminReady: boolean;
+  children: React.ReactNode;
+}) {
+  if (!session) return <Navigate to="/auth" replace />;
+  if (!adminReady) {
+    return (
+      <PageTransition>
+        <div style={{ padding: "50px", textAlign: "center", color: "#888" }}>Controllo permessi admin...</div>
+      </PageTransition>
+    );
+  }
+  return isAdmin ? <>{children}</> : <Navigate to="/" replace />;
+}
+
 export default function App() {
   const location = useLocation();
   const navigate = useNavigate();
 
   const UPDATES_STORAGE_KEY = "sfa_updates_seen";
-  const UPDATES_VERSION = "1.4.1";
+  const UPDATES_VERSION = "1.5.0";
   const updatesItems: UpdateItem[] = [
     {
-      title: "Film correlati dagli attori",
-      text: "Clicca su un attore per vedere subito i film collegati al suo profilo."
+      title: "Dashboard Admin",
+      text: "Gli amministratori possono controllare utenti, KPI, suggerimenti recenti e ruoli da una nuova area dedicata."
     },
     {
-      title: "Filtro Servizio in Archivio",
-      text: "Ora puoi filtrare per piattaforma di streaming direttamente nei risultati."
+      title: "Statistiche piu affidabili",
+      text: "Il tracciamento evita doppi conteggi dello stesso episodio e mantiene piu puliti eventi e progressi."
     },
     {
-      title: "Prossime uscite piu chiare",
-      text: "Ogni card mostra la data di uscita senza occupare troppo spazio."
+      title: "Catalogo piu preciso",
+      text: "La sincronizzazione dei titoli salva meglio tipo, durata, poster, generi ed episodi totali per ranking e profili."
     }
   ];
   const [session, setSession] = useState<Session | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [adminReady, setAdminReady] = useState(false);
 
   const { myList, addToList, removeFromList, updateProgress, updateMediaType, getProgress, rateItem, loading: listLoading, isUILocked, toggleUILock } = useStore();
   (window as any).sfaStore = { isUILocked, toggleUILock };
-  const isAdmin = session?.user?.id === "1181bb0e-d665-4b31-a71f-125028ea62f8";
 
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<TmdbItem[]>([]);
@@ -130,10 +154,51 @@ export default function App() {
     supabase.auth.getSession().then(({ data: { session } }) => setSession(session));
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
+      if (!session) {
+        setIsAdmin(false);
+        setAdminReady(false);
+      }
       if (window.location.pathname === '/auth' && session) navigate('/');
     });
     return () => subscription.unsubscribe();
   }, [navigate]);
+
+  useEffect(() => {
+    let isActive = true;
+
+    const loadAdminState = async () => {
+      if (!session?.user?.id) {
+        setIsAdmin(false);
+        setAdminReady(true);
+        return;
+      }
+
+      setAdminReady(false);
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("is_admin")
+        .eq("id", session.user.id)
+        .maybeSingle();
+
+      if (!isActive) return;
+
+      if (error) {
+        console.error("Errore lettura ruolo admin:", error);
+        setIsAdmin(false);
+        setAdminReady(true);
+        return;
+      }
+
+      setIsAdmin(Boolean(data?.is_admin));
+      setAdminReady(true);
+    };
+
+    loadAdminState();
+
+    return () => {
+      isActive = false;
+    };
+  }, [session?.user?.id]);
 
   useEffect(() => {
     let isActive = true;
@@ -252,6 +317,8 @@ export default function App() {
     if (error) console.error("Errore logout:", error);
     clearSupabaseAuthStorage();
     setSession(null);
+    setIsAdmin(false);
+    setAdminReady(false);
     setShowPlayer(false);
     setShowUpdates(false);
     navigate("/auth");
@@ -379,7 +446,7 @@ export default function App() {
         <Navbar 
           resetSelection={() => setSelected(null)} 
           query={query} setQuery={setQuery} onSearch={runSearch}
-          session={session} onLogout={handleLogout} onShowUpdates={handleOpenUpdates}
+          session={session} onLogout={handleLogout} onShowUpdates={handleOpenUpdates} isAdmin={isAdmin}
         />
       )}
 
@@ -392,6 +459,18 @@ export default function App() {
         <Routes location={location} key={location.pathname}>
           <Route path="/auth" element={!session ? <DeferredSection><PageTransition><AuthForm /></PageTransition></DeferredSection> : <Navigate to="/" />} />
           <Route path="/profile" element={<RequireAuth session={session}><DeferredSection><PageTransition><Profile /></PageTransition></DeferredSection></RequireAuth>} />
+          <Route
+            path="/admin"
+            element={
+              <RequireAdmin session={session} isAdmin={isAdmin} adminReady={adminReady}>
+                <DeferredSection>
+                  <PageTransition>
+                    <AdminDashboard currentUserId={session?.user?.id || ""} onAdminStateChange={setIsAdmin} />
+                  </PageTransition>
+                </DeferredSection>
+              </RequireAdmin>
+            }
+          />
 
           <Route path="/" element={
             <RequireAuth session={session}><PageTransition>

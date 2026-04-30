@@ -22,7 +22,6 @@ const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 const TMDB_API_KEY = Deno.env.get("TMDB_API_KEY") ?? "";
-const SFA_ADMIN_USER_ID = Deno.env.get("SFA_ADMIN_USER_ID") ?? "";
 
 function jsonResponse(status: number, body: unknown) {
   return new Response(JSON.stringify(body), {
@@ -171,7 +170,17 @@ Deno.serve(async (req) => {
   }
 
   if (payload.action === "update_type") {
-    if (user.id !== SFA_ADMIN_USER_ID) {
+    const { data: profile, error: profileError } = await adminClient
+      .from("profiles")
+      .select("is_admin")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    if (profileError) {
+      return jsonResponse(500, { error: profileError.message });
+    }
+
+    if (!profile?.is_admin) {
       return jsonResponse(403, { error: "Forbidden" });
     }
 
