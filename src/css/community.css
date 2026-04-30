@@ -63,7 +63,7 @@
   gap: 15px;
   width: max-content;
   padding-left: 20px;
-  animation: scroll 220s linear infinite;
+  animation: scroll 100s linear infinite;
 }
 
 .activity-track:hover {

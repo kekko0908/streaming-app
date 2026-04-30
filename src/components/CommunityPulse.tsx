@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../supabaseClient";
 import "../css/community.css";
-import { MediaType, TmdbItem } from "../types/types";
+import { TmdbItem } from "../types/types";
 
 interface Activity {
   user_name: string;
@@ -21,15 +21,6 @@ interface CommunityPulseProps {
   onItemClick?: (item: TmdbItem) => void;
 }
 
-interface CommunityTitleRow {
-  tmdb_id: number;
-  title: string;
-  media_type: MediaType;
-  poster_path: string;
-  watched_count: number;
-  community_rating: number;
-}
-
 export default function CommunityPulse({ onItemClick }: CommunityPulseProps) {
   const [activities, setActivities] = useState<Activity[]>([]);
   const [loading, setLoading] = useState(true);
@@ -43,23 +34,7 @@ export default function CommunityPulse({ onItemClick }: CommunityPulseProps) {
         return;
       }
 
-      const fallback = await supabase.rpc("get_community_titles", { sort_mode: "watched" });
-      if (!fallback.error && Array.isArray(fallback.data)) {
-        const fallbackActivities = (fallback.data as CommunityTitleRow[]).slice(0, 12).map((item) => ({
-          user_name: "Community SFA",
-          user_avatar: "https://api.dicebear.com/7.x/adventurer/svg?seed=SFA",
-          action_type: "watching",
-          media_title: item.title,
-          media_poster: item.poster_path || "",
-          media_type: item.media_type,
-          tmdb_id: String(item.tmdb_id),
-          rating: Number(item.community_rating || 0),
-          created_at: new Date().toISOString(),
-        }));
-        setActivities(fallbackActivities);
-      } else {
-        setActivities([]);
-      }
+      setActivities([]);
       setLoading(false);
     }
     load();
@@ -80,9 +55,22 @@ export default function CommunityPulse({ onItemClick }: CommunityPulseProps) {
         return { icon: '🏆', color: '#4ae8ff', text: mediaType === 'tv' ? 'ha completato la serie' : 'ha completato' };
       case 'plan':
         return { icon: '📌', color: '#ff0050', text: 'vuole vedere' };
+      case 'suggested':
+        return { icon: 'idea', color: '#f5c26b', text: 'ha consigliato' };
       default:
         return { icon: 'nw', color: '#ccc', text: 'ha aggiunto' };
     }
+  };
+
+  const resolvePosterSrc = (poster?: string) => {
+    if (!poster) return "https://via.placeholder.com/90x135";
+    if (poster.startsWith("http://") || poster.startsWith("https://")) return poster;
+    return `https://image.tmdb.org/t/p/w200${poster}`;
+  };
+
+  const resolveAvatarSrc = (avatar?: string) => {
+    if (!avatar) return "https://api.dicebear.com/7.x/adventurer/svg?seed=Default";
+    return avatar;
   };
 
   return (
@@ -100,7 +88,7 @@ export default function CommunityPulse({ onItemClick }: CommunityPulseProps) {
       ) : (
         <div className="activity-track">
           {loopActivities.map((act, i) => {
-          const inferredType = act.media_type === 'tv' && (act.season || act.episode) ? 'tv' : 'movie';
+          const inferredType = act.media_type === 'tv' ? 'tv' : 'movie';
           const config = getActionConfig(act, inferredType);
           const maskedName = act.user_name.includes("@") 
             ? act.user_name.split("@")[0].substring(0, 3) + "***" 
@@ -125,14 +113,14 @@ export default function CommunityPulse({ onItemClick }: CommunityPulseProps) {
               })}
             >
               <img 
-                src={act.media_poster ? `https://image.tmdb.org/t/p/w200${act.media_poster}` : ""} 
+                src={resolvePosterSrc(act.media_poster)} 
                 alt="poster" 
                 className="activity-poster" 
               />
               
               <div className="activity-content">
                 <div className="user-row">
-                   <img src={act.user_avatar} alt="user" className="user-avatar-small" />
+                   <img src={resolveAvatarSrc(act.user_avatar)} alt="user" className="user-avatar-small" />
                    <span className="user-name">{maskedName}</span>
                 </div>
 
