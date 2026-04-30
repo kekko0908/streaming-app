@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../supabaseClient";
 import "../css/community.css";
-import { TmdbItem } from "../types/types";
+import { MediaType, TmdbItem } from "../types/types";
 
 interface Activity {
   user_name: string;
@@ -21,20 +21,51 @@ interface CommunityPulseProps {
   onItemClick?: (item: TmdbItem) => void;
 }
 
+interface CommunityTitleRow {
+  tmdb_id: number;
+  title: string;
+  media_type: MediaType;
+  poster_path: string;
+  watched_count: number;
+  community_rating: number;
+}
+
 export default function CommunityPulse({ onItemClick }: CommunityPulseProps) {
   const [activities, setActivities] = useState<Activity[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function load() {
       const { data, error } = await supabase.rpc('get_community_activity');
-      if (!error && data) setActivities(data);
+      if (!error && Array.isArray(data) && data.length > 0) {
+        setActivities(data);
+        setLoading(false);
+        return;
+      }
+
+      const fallback = await supabase.rpc("get_community_titles", { sort_mode: "watched" });
+      if (!fallback.error && Array.isArray(fallback.data)) {
+        const fallbackActivities = (fallback.data as CommunityTitleRow[]).slice(0, 12).map((item) => ({
+          user_name: "Community SFA",
+          user_avatar: "https://api.dicebear.com/7.x/adventurer/svg?seed=SFA",
+          action_type: "watching",
+          media_title: item.title,
+          media_poster: item.poster_path || "",
+          media_type: item.media_type,
+          tmdb_id: String(item.tmdb_id),
+          rating: Number(item.community_rating || 0),
+          created_at: new Date().toISOString(),
+        }));
+        setActivities(fallbackActivities);
+      } else {
+        setActivities([]);
+      }
+      setLoading(false);
     }
     load();
     const interval = setInterval(load, 15000);
     return () => clearInterval(interval);
   }, []);
-
-  if (activities.length === 0) return null;
 
   const loopActivities = [...activities, ...activities];
 
@@ -62,8 +93,13 @@ export default function CommunityPulse({ onItemClick }: CommunityPulseProps) {
         <span className="live-badge">LIVE</span>
       </div>
       
-      <div className="activity-track">
-        {loopActivities.map((act, i) => {
+      {loading ? (
+        <div className="community-pulse-empty">Caricamento diretta community...</div>
+      ) : activities.length === 0 ? (
+        <div className="community-pulse-empty">Nessuna attivita live disponibile in questo momento.</div>
+      ) : (
+        <div className="activity-track">
+          {loopActivities.map((act, i) => {
           const inferredType = act.media_type === 'tv' && (act.season || act.episode) ? 'tv' : 'movie';
           const config = getActionConfig(act, inferredType);
           const maskedName = act.user_name.includes("@") 
@@ -122,8 +158,9 @@ export default function CommunityPulse({ onItemClick }: CommunityPulseProps) {
               </div>
             </div>
           );
-        })}
-      </div>
+          })}
+        </div>
+      )}
     </div>
   );
 }
