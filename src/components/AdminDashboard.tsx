@@ -12,7 +12,6 @@ import {
   fetchAdminUsers,
   setAdminRole,
 } from "../utils/adminApi";
-import CommunityPulse from "./CommunityPulse";
 import "../css/admin.css";
 
 interface AdminDashboardProps {
@@ -328,8 +327,6 @@ export default function AdminDashboard({ currentUserId, onAdminStateChange }: Ad
         title="Stato della piattaforma"
         subtitle="KPI operativi costruiti sui dati reali gia presenti in Supabase."
       />
-
-      <CommunityPulse />
 
       {overviewLoading ? (
         <div className="admin-loading">Caricamento overview admin...</div>
