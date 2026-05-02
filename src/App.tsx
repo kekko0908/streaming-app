@@ -9,7 +9,8 @@ import {
   searchTmdb, 
   fetchDetails, 
   fetchByGenre, 
-  fetchPopularTV,
+  fetchPopularMovies,
+  fetchUpcoming,
   fetchNowPlaying,
   fetchRecommendations,
   fetchPersonCredits,
@@ -24,6 +25,7 @@ import { Session } from "@supabase/supabase-js";
 // Components
 import Navbar from "./components/Navbar";
 import Hero from "./components/Hero";
+import HomeSpotlight from "./components/HomeSpotlight";
 import Card, { SkeletonCard } from "./components/Card";
 import CarouselSection from "./components/CarouselSection"; 
 import CastList from "./components/CastList"; 
@@ -133,10 +135,10 @@ export default function App() {
 
   const [homeLists, setHomeLists] = useState<{ 
     trending: TmdbItem[], upcoming: TmdbItem[], popular: TmdbItem[],
-    action: TmdbItem[], animation: TmdbItem[], tvPopular: TmdbItem[],
+    drama: TmdbItem[], action: TmdbItem[], animation: TmdbItem[], horror: TmdbItem[],
     newReleases: TmdbItem[]
   }>({ 
-    trending: [], upcoming: [], popular: [], action: [], animation: [], tvPopular: [], newReleases: []
+    trending: [], upcoming: [], popular: [], drama: [], action: [], animation: [], horror: [], newReleases: []
   });
 
   const [selected, setSelected] = useState<TmdbItem | null>(null);
@@ -242,34 +244,49 @@ export default function App() {
   }, [showPlayer]);
 
   useEffect(() => {
+    if (!session) return;
+
+    let isActive = true;
+
     async function loadData() {
       try {
-        const [trending, rawUpcoming, popular, action, animation, tvPopular, newReleases] = await Promise.all([
+        const [trending, rawUpcoming, popular, newReleases, drama, action, animation, horror] = await Promise.all([
           fetchCollection("trending/all/day"),
-          fetchCollection("movie/upcoming"),
-          fetchCollection("movie/popular"),
+          fetchUpcoming("IT"),
+          fetchPopularMovies("IT"),
+          fetchNowPlaying("IT"),
+          fetchByGenre(18, "movie"),
           fetchByGenre(28, "movie"),
           fetchByGenre(16, "movie"),
-          fetchPopularTV(),
-          fetchNowPlaying("IT") 
+          fetchByGenre(27, "movie")
         ]);
         
         const today = new Date().toISOString().split('T')[0];
         const realUpcoming = rawUpcoming.filter(item => item.releaseDateFull && item.releaseDateFull > today);
+
+        if (!isActive) return;
         
         setHomeLists({ 
             trending: trending || [], 
             upcoming: realUpcoming || [], 
             popular: popular || [], 
+            drama: drama || [],
             action: action || [], 
             animation: animation || [], 
-            tvPopular: tvPopular || [], 
+            horror: horror || [],
             newReleases: newReleases || [] 
         });
       } catch (error) { console.error(error); }
     }
+
     loadData();
 
+    return () => {
+      isActive = false;
+    };
+  }, [session]);
+
+  useEffect(() => {
     // Listener globale per Play Diretto dalle Card
     const handlePlayDirect = async (e: Event) => {
       const customEvent = e as CustomEvent;
@@ -299,7 +316,7 @@ export default function App() {
     return () => {
       window.removeEventListener("play_direct", handlePlayDirect);
     };
-  }, []);
+  }, [navigate, updateProgress]);
 
   const clearSupabaseAuthStorage = () => {
     try {
@@ -437,6 +454,7 @@ export default function App() {
   const filteredMyList = getFilteredList();
 
   const isAuthRoute = location.pathname === "/auth";
+  const spotlightItem = homeLists.popular[0] || homeLists.trending[0];
 
   if (!session && !isAuthRoute) return <SiteLock onLogin={() => navigate("/auth")} />;
 
@@ -571,32 +589,35 @@ export default function App() {
                       </div>
                     ) : (
                       <div style={{ marginTop: '20px' }}>
-                        {session && <CommunityPulse onItemClick={selectItem} />}
-                        
-                        {session && myList.some(m => m.status === 'in-corso') && (
-                            <CarouselSection
-                              title="Continua a guardare"
-                              icon="✋"
-                              items={myList.filter(m => m.status === 'in-corso').map(m => m as TmdbItem)}
-                              onSelect={selectItem}
-                              getProgress={getProgress}
-                            />
-                        )}
+                        <HomeSpotlight
+                          item={spotlightItem}
+                          onSelect={selectItem}
+                          onPlay={(item) => handlePlay(1, 1, item)}
+                        />
 
-                        {session && <CommunityShelf onSelect={selectItem} />}
-                        
-                        <CarouselSection title="Nuove Uscite al Cinema" icon="🆕" items={homeLists.newReleases} onSelect={selectItem} />
-                        <CarouselSection title="Popolari su TMDB" icon="🔥" items={homeLists.popular} onSelect={selectItem} />
-                        <CarouselSection title="Serie TV del momento" icon="📺" items={homeLists.tvPopular} onSelect={selectItem} />
-                        <CarouselSection title="Prossime Uscite" icon="📅" items={homeLists.upcoming} onSelect={selectItem} isUpcoming={true} formatDate={formatDate} />
-                        <CarouselSection title="Azione e Avventura" icon="💣" items={homeLists.action} onSelect={selectItem} />
-                        <CarouselSection title="Animazione" icon="✨" items={homeLists.animation} onSelect={selectItem} />
-                        
-                        <div className="list-section">
-                           <div className="carousel-header"><span className="carousel-icon">📈</span><h3 className="carousel-title">In Tendenza Oggi</h3></div>
-                           <div className="grid">
-                              {homeLists.trending.slice(0, 18).map(item => (<Card key={item.tmdbId} item={item} onClick={() => selectItem(item)} />))}
-                           </div>
+                        <div className="home-content-overlap" style={{ position: 'relative', zIndex: 10, marginTop: '-12vh', paddingBottom: '20px' }}>
+                          {session && <CommunityPulse onItemClick={selectItem} />}
+
+                          {session && myList.some(m => m.status === 'in-corso') && (
+                              <CarouselSection
+                                title="Continua a guardare"
+                                icon="✋"
+                                items={myList.filter(m => m.status === 'in-corso').map(m => m as TmdbItem)}
+                                onSelect={selectItem}
+                                getProgress={getProgress}
+                              />
+                          )}
+
+                          {session && <CommunityShelf onSelect={selectItem} />}
+                          
+                          <CarouselSection title="I titoli del momento" icon="🔥" items={homeLists.popular} onSelect={selectItem} />
+                          <CarouselSection title="Aggiunti di recente" icon="🆕" items={homeLists.newReleases} onSelect={selectItem} />
+                          <CarouselSection title="Top 10 titoli di oggi" icon="📈" items={homeLists.trending.slice(0, 10)} onSelect={selectItem} />
+                          <CarouselSection title="In arrivo" icon="📅" items={homeLists.upcoming} onSelect={selectItem} isUpcoming={true} formatDate={formatDate} />
+                          <CarouselSection title="Dramma" icon="🎭" items={homeLists.drama} onSelect={selectItem} />
+                          <CarouselSection title="Azione e Avventura" icon="💣" items={homeLists.action} onSelect={selectItem} />
+                          <CarouselSection title="Animazione" icon="✨" items={homeLists.animation} onSelect={selectItem} />
+                          <CarouselSection title="Horror" icon="🕯️" items={homeLists.horror} onSelect={selectItem} />
                         </div>
                       </div>
                     )}

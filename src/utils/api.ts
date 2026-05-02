@@ -44,8 +44,20 @@ export async function fetchByGenre(genreId: number, type: MediaType = "movie"): 
   );
 }
 
+export async function fetchPopularMovies(region: string = "IT"): Promise<TmdbItem[]> {
+  return getCached(`popular-movies:${region}`, () =>
+    invokeTmdb<TmdbItem[]>({ action: "popular_movies", region })
+  );
+}
+
 export async function fetchPopularTV(): Promise<TmdbItem[]> {
   return getCached("popular-tv", () => invokeTmdb<TmdbItem[]>({ action: "popular_tv" }));
+}
+
+export async function fetchUpcoming(region: string = "IT"): Promise<TmdbItem[]> {
+  return getCached(`upcoming:${region}`, () =>
+    invokeTmdb<TmdbItem[]>({ action: "upcoming", region })
+  );
 }
 
 export async function fetchNowPlaying(region: string = "IT"): Promise<TmdbItem[]> {

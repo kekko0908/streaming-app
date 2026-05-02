@@ -8,7 +8,9 @@ type SearchPayload = { action: "search"; query: string; type: MediaType };
 type DetailsPayload = { action: "details"; tmdbId: string; type: MediaType };
 type CollectionPayload = { action: "collection"; endpoint: string };
 type GenrePayload = { action: "genre"; genreId: number; type?: MediaType };
+type PopularMoviesPayload = { action: "popular_movies"; region?: string };
 type PopularTVPayload = { action: "popular_tv" };
+type UpcomingPayload = { action: "upcoming"; region?: string };
 type NowPlayingPayload = { action: "now_playing"; region?: string };
 type RecommendationsPayload = { action: "recommendations"; tmdbId: string; type: MediaType };
 type DiscoverPayload = {
@@ -33,7 +35,9 @@ type RequestPayload =
   | DetailsPayload
   | CollectionPayload
   | GenrePayload
+  | PopularMoviesPayload
   | PopularTVPayload
+  | UpcomingPayload
   | NowPlayingPayload
   | RecommendationsPayload
   | DiscoverPayload
@@ -158,6 +162,77 @@ async function fetchMultiplePages(path: string, type: MediaType, maxPages = 1, p
   const allItems = results.flatMap((data: any) => data.results || []);
   const uniqueItems = Array.from(new Map(allItems.map((item: any) => [item.id, item])).values());
   return uniqueItems.map((item: any) => mapSearchItem(item, type));
+}
+
+function toIsoDate(date: Date) {
+  return date.toISOString().slice(0, 10);
+}
+
+function addMonths(date: Date, months: number) {
+  const nextDate = new Date(date);
+  nextDate.setMonth(nextDate.getMonth() + months);
+  return nextDate;
+}
+
+function sortAndLimitUpcoming(items: TmdbItem[], limit = 60) {
+  const today = toIsoDate(new Date());
+  const uniqueItems = Array.from(new Map(items.map((item) => [item.tmdbId, item])).values());
+
+  return uniqueItems
+    .filter((item) => item.releaseDateFull && item.releaseDateFull > today)
+    .sort((a, b) => {
+      const dateCompare = String(a.releaseDateFull).localeCompare(String(b.releaseDateFull));
+      if (dateCompare !== 0) return dateCompare;
+      return (b.popularity ?? 0) - (a.popularity ?? 0);
+    })
+    .slice(0, limit);
+}
+
+async function fetchUpcoming(region = "IT") {
+  const today = toIsoDate(new Date());
+  const maxDate = toIsoDate(addMonths(new Date(), 12));
+
+  const [officialUpcoming, discoveredUpcoming] = await Promise.all([
+    fetchMultiplePages(
+      "movie/upcoming",
+      "movie",
+      3,
+      new URLSearchParams({ language: "it-IT", region })
+    ),
+    fetchMultiplePages(
+      "discover/movie",
+      "movie",
+      3,
+      new URLSearchParams({
+        language: "it-IT",
+        region,
+        include_adult: "false",
+        include_video: "false",
+        sort_by: "primary_release_date.asc",
+        "release_date.gte": today,
+        "release_date.lte": maxDate,
+        with_release_type: "2|3",
+      })
+    ),
+  ]);
+
+  return sortAndLimitUpcoming([...officialUpcoming, ...discoveredUpcoming]);
+}
+
+async function fetchPopularMovies(region = "IT") {
+  return fetchMultiplePages(
+    "discover/movie",
+    "movie",
+    3,
+    new URLSearchParams({
+      language: "it-IT",
+      region,
+      sort_by: "popularity.desc",
+      include_adult: "false",
+      include_video: "false",
+      "vote_count.gte": "100",
+    })
+  );
 }
 
 async function fetchDetails(tmdbId: string, type: MediaType): Promise<TmdbItem> {
@@ -309,8 +384,12 @@ Deno.serve(async (req) => {
             with_genres: String(payload.genreId),
           })
         ));
+      case "popular_movies":
+        return jsonResponse(200, await fetchPopularMovies(payload.region ?? "IT"));
       case "popular_tv":
         return jsonResponse(200, await fetchMultiplePages("tv/popular", "tv", 1, new URLSearchParams({ language: "it-IT" })));
+      case "upcoming":
+        return jsonResponse(200, await fetchUpcoming(payload.region ?? "IT"));
       case "now_playing":
         return jsonResponse(200, await fetchMultiplePages(
           "movie/now_playing",

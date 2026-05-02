@@ -108,6 +108,11 @@ export default function Hero({
   const savedItem = myList.find(s => s.tmdbId === item.tmdbId);
   const userRating = savedItem?.rating || 0;
   const currentListStatus = savedItem?.status as WatchStatus | undefined;
+  const runtimeLabel = item.runtime
+    ? item.runtime.toLowerCase().includes("min")
+      ? item.runtime
+      : `${item.runtime} min`
+    : "";
 
   const [uiSelectedSeason, setUiSelectedSeason] = useState<number>(progress.season || 1);
   const [episodesList, setEpisodesList] = useState<Episode[]>([]);
@@ -331,7 +336,7 @@ export default function Hero({
         <div className="netflix-meta">
           <span>{item.year || "N/D"}</span>
           <span className="separator">•</span>
-          {item.type === 'movie' && item.runtime && <span>{item.runtime} min</span>}
+          {item.type === 'movie' && runtimeLabel && <span>{runtimeLabel}</span>}
           {item.type === 'tv' && item.seasons && <span>{item.seasons} stagioni</span>}
           <span className="separator">•</span>
           <span>{item.type === "movie" ? "Film" : "Serie TV"}</span>
