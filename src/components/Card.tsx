@@ -30,12 +30,15 @@ function resolvePosterSrc(poster?: string) {
   return `https://image.tmdb.org/t/p/w500${poster}`;
 }
 
+const NAV_HOVER_GUARD_PX = 12;
+
 export default function Card({ item, onClick, progress, onRemove, isUpcoming, showRating, formatDate, onTypeChange }: CardProps) {
   
   const [trailerKey, setTrailerKey] = useState<string | null>(null);
   const [isExpanded, setIsExpanded] = useState(false);
   const [isMuted, setIsMuted] = useState(true);
   const [expandedAlignment, setExpandedAlignment] = useState<"center" | "left" | "right">("center");
+  const [isHoverBlocked, setIsHoverBlocked] = useState(false);
   const hoverTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const trailerPlaybackIdRef = useRef(`card-${item.type}-${item.tmdbId}-${Math.random().toString(36).slice(2)}`);
   const cardWrapperRef = useRef<HTMLDivElement | null>(null);
@@ -72,9 +75,47 @@ export default function Card({ item, onClick, progress, onRemove, isUpcoming, sh
     setExpandedAlignment("center");
   };
 
+  const isCoveredByNav = () => {
+    const wrapper = cardWrapperRef.current;
+    const nav = document.querySelector<HTMLElement>(".nav");
+    if (!wrapper || !nav) return false;
+
+    const wrapperRect = wrapper.getBoundingClientRect();
+    const navRect = nav.getBoundingClientRect();
+    const navBottom = Math.max(0, navRect.bottom);
+
+    if (navBottom <= 0 || navRect.top >= window.innerHeight) return false;
+
+    return wrapperRect.top < navBottom + NAV_HOVER_GUARD_PX && wrapperRect.bottom > navRect.top;
+  };
+
+  const resetHoverState = () => {
+    if (hoverTimeoutRef.current) {
+        clearTimeout(hoverTimeoutRef.current);
+        hoverTimeoutRef.current = null;
+    }
+    setIsExpanded(false);
+    setTrailerKey(null);
+    setIsMuted(true);
+    setExpandedAlignment("center");
+  };
+
   const handleMouseEnter = () => {
     if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
+    if (isCoveredByNav()) {
+      setIsHoverBlocked(true);
+      resetHoverState();
+      return;
+    }
+
+    setIsHoverBlocked(false);
     hoverTimeoutRef.current = setTimeout(async () => {
+      if (isCoveredByNav()) {
+        setIsHoverBlocked(true);
+        resetHoverState();
+        return;
+      }
+
       setIsExpanded(true);
       try {
         const key = await fetchTrailer(item.tmdbId, item.type);
@@ -84,14 +125,8 @@ export default function Card({ item, onClick, progress, onRemove, isUpcoming, sh
   };
 
   const handleMouseLeave = () => {
-    if (hoverTimeoutRef.current) {
-        clearTimeout(hoverTimeoutRef.current);
-        hoverTimeoutRef.current = null;
-    }
-    setIsExpanded(false);
-    setTrailerKey(null);
-    setIsMuted(true);
-    setExpandedAlignment("center");
+    setIsHoverBlocked(false);
+    resetHoverState();
   };
 
   const handleDirectPlay = (e: React.MouseEvent) => {
@@ -114,16 +149,28 @@ export default function Card({ item, onClick, progress, onRemove, isUpcoming, sh
   useEffect(() => {
     if (!isExpanded) return;
 
-    const frameId = window.requestAnimationFrame(updateExpandedAlignment);
+    const closeIfCoveredByNav = () => {
+      if (isCoveredByNav()) {
+        setIsHoverBlocked(true);
+        resetHoverState();
+        return;
+      }
+
+      updateExpandedAlignment();
+    };
+
+    const frameId = window.requestAnimationFrame(closeIfCoveredByNav);
     const track = cardWrapperRef.current?.closest(".carousel-track") as HTMLElement | null;
 
-    window.addEventListener("resize", updateExpandedAlignment);
-    track?.addEventListener("scroll", updateExpandedAlignment, { passive: true });
+    window.addEventListener("resize", closeIfCoveredByNav);
+    window.addEventListener("scroll", closeIfCoveredByNav, { passive: true });
+    track?.addEventListener("scroll", closeIfCoveredByNav, { passive: true });
 
     return () => {
       window.cancelAnimationFrame(frameId);
-      window.removeEventListener("resize", updateExpandedAlignment);
-      track?.removeEventListener("scroll", updateExpandedAlignment);
+      window.removeEventListener("resize", closeIfCoveredByNav);
+      window.removeEventListener("scroll", closeIfCoveredByNav);
+      track?.removeEventListener("scroll", closeIfCoveredByNav);
     };
   }, [isExpanded]);
 
@@ -182,7 +229,7 @@ export default function Card({ item, onClick, progress, onRemove, isUpcoming, sh
 
   return (
     <div
-      className="card-wrapper"
+      className={`card-wrapper ${isHoverBlocked ? 'is-hover-blocked' : ''}`}
       ref={cardWrapperRef}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}

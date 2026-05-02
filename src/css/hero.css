@@ -7,7 +7,8 @@
   min-height: 85vh;
   display: flex;
   align-items: flex-end;
-  margin: -16px -18px 40px -18px; /* Offset completo del padding per Full Screen */
+  margin: -95px -18px 40px -18px;
+  /* Offset completo del padding e Navbar per Full Screen */
   width: calc(100% + 36px);
   background: #000;
   box-shadow: 0 30px 60px rgba(0, 0, 0, 0.6);
@@ -22,7 +23,8 @@
   height: 100%;
   object-fit: cover;
   z-index: 0;
-  transition: opacity 1.5s ease-out; /* Animazione morbida Fade-Out */
+  transition: opacity 1.5s ease-out;
+  /* Animazione morbida Fade-Out */
 }
 
 /* CONTROLLI VOLUME HERO */
@@ -35,7 +37,8 @@
   background: transparent;
   border-radius: 25px;
   padding: 0;
-  width: 44px; /* same as circle-btn roughly + padding */
+  width: 44px;
+  /* same as circle-btn roughly + padding */
   height: 44px;
   overflow: hidden;
   z-index: 10;
@@ -43,8 +46,8 @@
 
 .volume-control-wrapper:hover {
   width: 180px;
-  background: rgba(0,0,0,0.7);
-  box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+  background: rgba(0, 0, 0, 0.7);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
   padding-right: 15px;
 }
 
@@ -75,6 +78,7 @@
   -webkit-appearance: none;
   background: transparent;
 }
+
 .volume-slider[type=range]::-webkit-slider-runnable-track {
   width: 100%;
   height: 4px;
@@ -82,6 +86,7 @@
   background: #555;
   border-radius: 2px;
 }
+
 .volume-slider[type=range]::-webkit-slider-thumb {
   height: 12px;
   width: 12px;
@@ -91,6 +96,7 @@
   -webkit-appearance: none;
   margin-top: -4px;
 }
+
 .volume-slider[type=range]:focus {
   outline: none;
 }
@@ -130,7 +136,8 @@
 
 .hero-content-right {
   flex: 1.2;
-  min-width: 0; /* Previene overflow di Flexbox figlie con scroll */
+  min-width: 0;
+  /* Previene overflow di Flexbox figlie con scroll */
   display: flex;
   flex-direction: column;
   justify-content: flex-end;
@@ -139,7 +146,7 @@
 .hero h1 {
   font-size: 3.5rem;
   margin: 0 0 10px;
-  text-shadow: 0 2px 10px rgba(0,0,0,0.5);
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
   color: #fff;
 }
 
@@ -149,7 +156,7 @@
   margin-bottom: 20px;
   font-size: 1.1rem;
   color: #e0e0e0;
-  text-shadow: 0 2px 4px rgba(0,0,0,0.8);
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8);
 }
 
 .hero-rating {
@@ -176,7 +183,7 @@
   letter-spacing: 0.03em;
   backdrop-filter: blur(10px);
   border: 1px solid transparent;
-  box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
 }
 
 .meta-badge.tmdb {
@@ -307,10 +314,25 @@
 }
 
 @keyframes popUp {
-  0% { transform: translateX(-50%) scale(0) rotate(-45deg); opacity: 0; }
-  50% { transform: translateX(-50%) scale(1.5) rotate(0deg); opacity: 1; }
-  80% { transform: translateX(-50%) scale(1.2) rotate(10deg); opacity: 1; }
-  100% { transform: translateX(-50%) translateY(-100px) scale(0); opacity: 0; }
+  0% {
+    transform: translateX(-50%) scale(0) rotate(-45deg);
+    opacity: 0;
+  }
+
+  50% {
+    transform: translateX(-50%) scale(1.5) rotate(0deg);
+    opacity: 1;
+  }
+
+  80% {
+    transform: translateX(-50%) scale(1.2) rotate(10deg);
+    opacity: 1;
+  }
+
+  100% {
+    transform: translateX(-50%) translateY(-100px) scale(0);
+    opacity: 0;
+  }
 }
 
 .crown-glow {
@@ -320,13 +342,20 @@
   transform: translate(-50%, -50%);
   width: 100px;
   height: 100px;
-  background: radial-gradient(circle, rgba(255,215,0,0.8) 0%, rgba(255,215,0,0) 70%);
+  background: radial-gradient(circle, rgba(255, 215, 0, 0.8) 0%, rgba(255, 215, 0, 0) 70%);
   animation: flash 0.5s ease-out forwards;
 }
 
 @keyframes flash {
-  from { opacity: 1; transform: translate(-50%, -50%) scale(0); }
-  to { opacity: 0; transform: translate(-50%, -50%) scale(2); }
+  from {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(0);
+  }
+
+  to {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(2);
+  }
 }
 
 /* --- ACTIONS E BOTTONI --- */
@@ -350,11 +379,14 @@
   cursor: pointer;
   transition: background 0.2s;
 }
-.netflix-play:hover { background: rgba(255,255,255,0.75); }
+
+.netflix-play:hover {
+  background: rgba(255, 255, 255, 0.75);
+}
 
 .circle-btn {
   background: rgba(42, 42, 42, 0.6);
-  border: 1px solid rgba(255,255,255,0.4);
+  border: 1px solid rgba(255, 255, 255, 0.4);
   color: #fff;
   width: 44px;
   height: 44px;
@@ -368,18 +400,23 @@
   transition: all 0.2s;
   backdrop-filter: blur(5px);
 }
+
 .circle-btn:hover {
-  background: rgba(255,255,255,0.1);
+  background: rgba(255, 255, 255, 0.1);
   border-color: #fff;
   transform: scale(1.05);
 }
+
 .circle-btn.rating {
-  border-color: #46d369; /* Verde Netflix per score */
+  border-color: #46d369;
+  /* Verde Netflix per score */
   color: #46d369;
   font-size: 0.95rem;
   font-weight: 800;
 }
-.circle-btn.active { /* Sostituisce la colorazione primary del dropdown */
+
+.circle-btn.active {
+  /* Sostituisce la colorazione primary del dropdown */
   background: var(--primary);
   border-color: var(--primary);
   color: #000;
@@ -407,7 +444,7 @@
 .hero-tabs-nav {
   display: flex;
   gap: 30px;
-  border-bottom: 2px solid rgba(255,255,255,0.1);
+  border-bottom: 2px solid rgba(255, 255, 255, 0.1);
   margin-bottom: 20px;
 }
 
@@ -423,16 +460,25 @@
   text-transform: uppercase;
   transition: color 0.2s;
 }
-.hero-tab:hover { color: #fff; }
-.hero-tab.active { color: #fff; }
+
+.hero-tab:hover {
+  color: #fff;
+}
+
+.hero-tab.active {
+  color: #fff;
+}
+
 .hero-tab.active::after {
   content: '';
   position: absolute;
-  bottom: -2px; /* Allineato al border del parent */
+  bottom: -2px;
+  /* Allineato al border del parent */
   left: 0;
   width: 100%;
   height: 4px;
-  background: #E50914; /* Rosso Netflix / O colore primario base */
+  background: #E50914;
+  /* Rosso Netflix / O colore primario base */
 }
 
 /* --- TAB PANORAMICA --- */
@@ -447,14 +493,17 @@
   line-clamp: 4;
   -webkit-box-orient: vertical;
   overflow: hidden;
-  text-shadow: 1px 1px 4px rgba(0,0,0,0.8);
+  text-shadow: 1px 1px 4px rgba(0, 0, 0, 0.8);
 }
 
 .hero-extra-info {
   font-size: 0.9rem;
   color: #ddd;
 }
-.info-label { color: #888; }
+
+.info-label {
+  color: #888;
+}
 
 /* --- TAB EPISODI --- */
 .episodes-header {
@@ -463,15 +512,20 @@
   align-items: center;
   margin-bottom: 15px;
 }
-.episodes-header h3 { margin: 0; font-size: 1.5rem; }
+
+.episodes-header h3 {
+  margin: 0;
+  font-size: 1.5rem;
+}
 
 .netflix-season-select-wrapper {
   position: relative;
-  background: rgba(0,0,0,0.6);
-  border: 1px solid rgba(255,255,255,0.3);
+  background: rgba(0, 0, 0, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.3);
   padding: 8px 12px;
   border-radius: 4px;
 }
+
 .netflix-season-select {
   background: transparent;
   color: #fff;
@@ -481,7 +535,11 @@
   outline: none;
   cursor: pointer;
 }
-.netflix-season-select option { background: #111; color: #fff; }
+
+.netflix-season-select option {
+  background: #111;
+  color: #fff;
+}
 
 /* --- CUSTOM DROPDOWN --- */
 .custom-dropdown-container {
@@ -490,14 +548,15 @@
 
 .custom-dropdown-menu {
   position: absolute;
-  bottom: 110%; /* Apre verso l'alto sopra al bottone */
+  bottom: 110%;
+  /* Apre verso l'alto sopra al bottone */
   left: 0;
   background: rgba(10, 12, 18, 0.95);
   border: 1px solid rgba(255, 255, 255, 0.15);
   border-radius: 12px;
   padding: 8px 0;
   min-width: 220px;
-  box-shadow: 0 -10px 30px rgba(0,0,0,0.8);
+  box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.8);
   backdrop-filter: blur(20px);
   z-index: 100;
   overflow: hidden;
@@ -541,8 +600,9 @@
   color: #ffffff;
   margin-left: 10px;
   font-weight: bold;
-  box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
 }
+
 .status-btn.remove:hover {
   background-color: #f44336;
   border-color: #ff7961;
@@ -570,17 +630,25 @@
   scroll-behavior: smooth;
   scroll-snap-type: x mandatory;
   width: 100%;
-  
+
   /* Nascondi scrollbar */
-  scrollbar-width: none;  /* Firefox */
-  -ms-overflow-style: none;  /* IE */
+  scrollbar-width: none;
+  /* Firefox */
+  -ms-overflow-style: none;
+  /* IE */
 }
-.episode-grid::-webkit-scrollbar { display: none; } /* Chrome */
+
+.episode-grid::-webkit-scrollbar {
+  display: none;
+}
+
+/* Chrome */
 
 /* Frecce di Navigazione */
 .ep-nav-btn {
   position: absolute;
-  top: 50%; /* Centrato verticalmente nella card */
+  top: 50%;
+  /* Centrato verticalmente nella card */
   transform: translateY(-50%);
   z-index: 10;
   background: rgba(0, 0, 0, 0.7);
@@ -596,11 +664,12 @@
   font-size: 1.2rem;
   backdrop-filter: blur(4px);
   transition: all 0.2s ease;
-  box-shadow: 0 4px 10px rgba(0,0,0,0.5);
-  
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+
   /* Opzionale: decommenta se vuoi nasconderle finché non passi il mouse */
   /* opacity: 0; */
 }
+
 /* .episode-carousel-wrapper:hover .ep-nav-btn { opacity: 1; } */
 
 .ep-nav-btn:hover {
@@ -609,12 +678,18 @@
   transform: translateY(-50%) scale(1.1);
 }
 
-.ep-nav-btn.left { left: -20px; }
-.ep-nav-btn.right { right: -20px; }
+.ep-nav-btn.left {
+  left: -20px;
+}
+
+.ep-nav-btn.right {
+  right: -20px;
+}
 
 /* Card Episodio Netflix */
 .netflix-ep-card {
-  flex: 0 0 300px; /* Larghezza fissa */
+  flex: 0 0 300px;
+  /* Larghezza fissa */
   scroll-snap-align: start;
   position: relative;
   background: transparent;
@@ -626,7 +701,8 @@
 }
 
 .netflix-ep-card.current {
-  opacity: 1; /* Il feedback lo diamo colorando il testo o altro, non coi bordi netti su Netflix */
+  opacity: 1;
+  /* Il feedback lo diamo colorando il testo o altro, non coi bordi netti su Netflix */
 }
 
 .netflix-ep-card.locked {
@@ -642,7 +718,7 @@
   background: #222;
   border-radius: 4px;
   overflow: hidden;
-  box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
 }
 
 .episode-img {
@@ -667,7 +743,7 @@
   font-weight: 900;
   color: #fff;
   z-index: 5;
-  text-shadow: 2px 2px 20px rgba(0,0,0,1), -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
+  text-shadow: 2px 2px 20px rgba(0, 0, 0, 1), -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
   line-height: 1;
   font-family: Arial, Helvetica, sans-serif;
   letter-spacing: -2px;
@@ -697,6 +773,7 @@
   cursor: pointer;
   opacity: 0.7;
 }
+
 .ep-download:hover {
   opacity: 1;
 }
@@ -715,15 +792,24 @@
 
 /* Overlay Lucchetto */
 .locked-overlay {
-  position: absolute; inset: 0;
-  background: rgba(0,0,0,0.6);
-  display: flex; flex-direction: column;
-  align-items: center; justify-content: center;
-  color: #fff; gap: 5px;
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  gap: 5px;
 }
+
 .locked-text {
-  font-size: 0.7rem; font-weight: bold; text-transform: uppercase;
-  background: rgba(0,0,0,0.8); padding: 2px 6px; border-radius: 4px;
+  font-size: 0.7rem;
+  font-weight: bold;
+  text-transform: uppercase;
+  background: rgba(0, 0, 0, 0.8);
+  padding: 2px 6px;
+  border-radius: 4px;
 }
 
 /* --- COLLEZIONE SAGA (Timeline Style) --- */
@@ -733,57 +819,66 @@
 }
 
 .collection-scroll {
-  display: flex; 
-  gap: 25px; 
+  display: flex;
+  gap: 25px;
   overflow-x: auto;
-  scrollbar-width: none; /* Hide scrollbar for clean look */
-  padding-bottom: 20px; /* Space for hover expansion */
-  padding-top: 15px; /* Spazio per l'anno volante */
+  scrollbar-width: none;
+  /* Hide scrollbar for clean look */
+  padding-bottom: 20px;
+  /* Space for hover expansion */
+  padding-top: 15px;
+  /* Spazio per l'anno volante */
 }
-.collection-scroll::-webkit-scrollbar { display: none; }
+
+.collection-scroll::-webkit-scrollbar {
+  display: none;
+}
 
 .collection-item {
-  flex: 0 0 160px; /* Bigger posters */
-  cursor: pointer; 
+  flex: 0 0 160px;
+  /* Bigger posters */
+  cursor: pointer;
   position: relative;
   transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
   opacity: 0.85;
 }
 
-.collection-item:hover { 
-  transform: translateY(-8px) scale(1.05); 
+.collection-item:hover {
+  transform: translateY(-8px) scale(1.05);
   opacity: 1;
   z-index: 2;
 }
 
-.collection-poster { 
-  width: 100%; 
-  border-radius: 12px; 
-  box-shadow: 0 10px 20px rgba(0,0,0,0.5);
+.collection-poster {
+  width: 100%;
+  border-radius: 12px;
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.5);
   border: 2px solid transparent;
   transition: border-color 0.3s;
 }
 
 .collection-item:hover .collection-poster {
-  border-color: rgba(255,255,255,0.6);
-  box-shadow: 0 15px 30px rgba(0,0,0,0.8);
+  border-color: rgba(255, 255, 255, 0.6);
+  box-shadow: 0 15px 30px rgba(0, 0, 0, 0.8);
 }
 
 .collection-year {
-  position: absolute; 
-  bottom: -5px; /* Float below the poster */
+  position: absolute;
+  bottom: -5px;
+  /* Float below the poster */
   top: auto;
   left: 50%;
   transform: translateX(-50%);
-  background: rgba(229, 9, 20, 0.9); /* Rosso scuro accentato */
+  background: rgba(229, 9, 20, 0.9);
+  /* Rosso scuro accentato */
   color: #fff;
-  font-size: 0.8rem; 
+  font-size: 0.8rem;
   font-weight: bold;
-  padding: 4px 12px; 
+  padding: 4px 12px;
   border-radius: 12px;
   opacity: 0;
   transition: opacity 0.3s, transform 0.3s;
-  box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
   white-space: nowrap;
   pointer-events: none;
 }
@@ -796,12 +891,12 @@
 /* --- MOBILE RESPONSIVE --- */
 @media (max-width: 768px) {
   .hero {
-    min-height: 50vh;
-    margin: -16px -18px 24px -18px;
+    min-height: 60vh;
+    margin: -100px -18px 24px -18px; /* Tira su il componente per nascondere navbar gap su mobile */
   }
 
   .hero-content {
-    padding: 24px 20px;
+    padding: 24px 20px 40px; /* Più spazio sotto per non coprire i comandi */
     max-width: 100%;
   }
 
@@ -836,7 +931,8 @@
     gap: 20px;
   }
 
-  .hero-content-left, .hero-content-right {
+  .hero-content-left,
+  .hero-content-right {
     max-width: 100%;
     width: 100%;
   }
@@ -846,23 +942,46 @@
   }
 
   /* Adatta le card per mobile */
-  .episode-card { flex: 0 0 220px; }
+  .episode-card {
+    flex: 0 0 220px;
+  }
 
   /* Nascondi frecce su mobile (usa touch) */
-  .ep-nav-btn { display: none; }
+  .ep-nav-btn {
+    display: none;
+  }
 
   /* Adatta wrapper per permettere swipe */
-  .episode-carousel-wrapper { margin: 0; }
+  .episode-carousel-wrapper {
+    margin: 0;
+  }
 
   /* Adatta bottoni status */
-  .hero-actions { gap: 8px; }
-  .cta, .trailer-btn { width: 100%; }
-  .status-btn { flex-grow: 1; justify-content: center; }
-  .status-btn.remove { flex-grow: 0; width: 100%; margin-left: 0; margin-top: 8px; }
+  .hero-actions {
+    gap: 8px;
+  }
+
+  .cta,
+  .trailer-btn {
+    width: 100%;
+  }
+
+  .status-btn {
+    flex-grow: 1;
+    justify-content: center;
+  }
+
+  .status-btn.remove {
+    flex-grow: 0;
+    width: 100%;
+    margin-left: 0;
+    margin-top: 8px;
+  }
 
   /* Star rating mobile */
   .star-rating-container {
-    width: 100%; justify-content: space-between;
+    width: 100%;
+    justify-content: space-between;
     padding: 10px 15px;
   }
 }
@@ -915,14 +1034,15 @@
     right: 20px;
     top: 20px;
   }
-  
+
   /* Tap to expand behavior on tablet */
   .volume-control-wrapper:active,
   .volume-control-wrapper:focus-within {
     width: 180px;
-    background: rgba(0,0,0,0.8);
+    background: rgba(0, 0, 0, 0.8);
     padding-right: 15px;
   }
+
   .volume-control-wrapper:active .volume-slider,
   .volume-control-wrapper:focus-within .volume-slider {
     opacity: 1;
@@ -935,19 +1055,26 @@
   .netflix-ep-number {
     font-size: 4.5rem;
   }
-  
+
   .ep-nav-btn {
     width: 40px;
     height: 40px;
   }
-  .ep-nav-btn.left { left: -10px; }
-  .ep-nav-btn.right { right: -10px; }
+
+  .ep-nav-btn.left {
+    left: -10px;
+  }
+
+  .ep-nav-btn.right {
+    right: -10px;
+  }
 }
 
 
 @media (max-width: 520px) {
   .hero {
-    min-height: 320px;
+    min-height: 480px;
+    height: 60vh;
   }
 
   .hero h1 {
@@ -978,8 +1105,10 @@
 
 /* Stile per la card intera quando è vista */
 .episode-card.watched {
-  opacity: 0.7; /* Leggermente trasparente per dare focus a quello corrente */
-  border-color: rgba(74, 232, 255, 0.3); /* Bordo blu tenue */
+  opacity: 0.7;
+  /* Leggermente trasparente per dare focus a quello corrente */
+  border-color: rgba(74, 232, 255, 0.3);
+  /* Bordo blu tenue */
 }
 
 .episode-card.watched:hover {
@@ -991,7 +1120,8 @@
 .watched-overlay {
   position: absolute;
   inset: 0;
-  background: rgba(0, 0, 0, 0.6); /* Scurisce l'immagine */
+  background: rgba(0, 0, 0, 0.6);
+  /* Scurisce l'immagine */
   display: flex;
   align-items: center;
   justify-content: center;
@@ -999,21 +1129,31 @@
 
 .checkmark {
   font-size: 2rem;
-  color: #4ae8ff; /* Colore primario (Ciano) */
+  color: #4ae8ff;
+  /* Colore primario (Ciano) */
   font-weight: bold;
-  text-shadow: 0 0 10px rgba(0,0,0,0.8);
+  text-shadow: 0 0 10px rgba(0, 0, 0, 0.8);
   animation: popIn 0.3s ease-out;
 }
 
 @keyframes popIn {
-  from { transform: scale(0); opacity: 0; }
-  to { transform: scale(1); opacity: 1; }
+  from {
+    transform: scale(0);
+    opacity: 0;
+  }
+
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
 }
 
 /* Modifica al titolo dell'episodio visto (opzionale, già gestito inline nel TSX) */
 .episode-card.watched .episode-title {
-  color: #aaa; /* Titolo grigio per indicare "passato" */
+  color: #aaa;
+  /* Titolo grigio per indicare "passato" */
 }
+
 /* --- TRAILER MODAL --- */
 .trailer-backdrop {
   position: fixed;
@@ -1021,8 +1161,10 @@
   left: 0;
   width: 100%;
   height: 100%;
-  background: rgba(0, 0, 0, 0.95); /* Sfondo scuro quasi opaco */
-  z-index: 10000; /* Molto alto per coprire tutto */
+  background: rgba(0, 0, 0, 0.95);
+  /* Sfondo scuro quasi opaco */
+  z-index: 10000;
+  /* Molto alto per coprire tutto */
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1033,11 +1175,12 @@
 .trailer-content {
   width: 90%;
   max-width: 1100px;
-  aspect-ratio: 16/9; /* Mantiene il formato video corretto */
+  aspect-ratio: 16/9;
+  /* Mantiene il formato video corretto */
   background: #000;
   border-radius: 16px;
   overflow: hidden;
-  box-shadow: 0 20px 50px rgba(0,0,0,0.8);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8);
   border: 1px solid rgba(255, 255, 255, 0.1);
   position: relative;
 }
@@ -1065,17 +1208,24 @@
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
 }
 
 /* --- HERO AUTOPLAY VIDEO --- */
 .hero-bg {
   transition: opacity 2s ease-in-out;
 }
+
 .hero-bg.fade-out {
   opacity: 0;
 }
+
 .hero-bg-video {
   position: absolute;
   top: 50%;
@@ -1090,11 +1240,15 @@
   opacity: 0;
   animation: fadeVideoIn 3s ease-in-out forwards;
 }
+
 .hero-bg-video iframe {
   width: 100%;
   height: 100%;
   pointer-events: none;
 }
+
 @keyframes fadeVideoIn {
-  to { opacity: 0.65; }
+  to {
+    opacity: 0.65;
+  }
 }

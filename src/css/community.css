@@ -4,8 +4,8 @@
   margin: 30px 0;
   overflow: hidden;
   position: relative;
-  /* Sfondo sfumato leggero */
-  background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.02) 50%, transparent 100%);
+  /* Rimosso sfondo sfumato per renderlo trasparente */
+  background: transparent;
   padding: 15px 0;
 }
 
@@ -183,4 +183,22 @@
   font-size: 0.75rem;
   color: #ffd700;
   font-weight: bold;
+}
+
+@media (max-width: 768px) {
+  .activity-card {
+    width: 200px;
+    padding: 8px;
+    gap: 8px;
+  }
+  .activity-poster {
+    width: 35px;
+    height: 52px;
+  }
+  .user-name, .media-title-row {
+    font-size: 0.75rem;
+  }
+  .action-row {
+    font-size: 0.65rem;
+  }
 }

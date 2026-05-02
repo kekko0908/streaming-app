@@ -54,6 +54,20 @@
   z-index: 50;
 }
 
+.card-wrapper.is-hover-blocked:hover {
+  z-index: 1;
+}
+
+.card-wrapper.is-hover-blocked .card:hover {
+  transform: none;
+  border-color: var(--border-color, rgba(255,255,255,0.05));
+  box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+}
+
+.card-wrapper.is-hover-blocked .card:hover .card-info-overlay {
+  opacity: 0;
+}
+
 .card-expanded-modal {
   --expanded-shift: -50%;
   position: absolute;
