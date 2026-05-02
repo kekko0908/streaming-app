@@ -149,6 +149,19 @@
 }
 .expanded-mute-btn:hover { background: rgba(0,0,0,0.9); border-color: #fff; }
 
+.expanded-logo-art {
+  position: absolute;
+  left: 16px;
+  bottom: 16px;
+  z-index: 9;
+  width: min(190px, 48%);
+  max-height: 72px;
+  object-fit: contain;
+  object-position: left bottom;
+  filter: drop-shadow(0 12px 18px rgba(0, 0, 0, 0.85));
+  pointer-events: none;
+}
+
 .expanded-info-container {
   padding: 16px;
   display: flex;
@@ -184,6 +197,15 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.exp-title-logo {
+  display: block;
+  width: min(150px, 34vw);
+  max-height: 34px;
+  object-fit: contain;
+  object-position: left center;
+  filter: drop-shadow(0 7px 10px rgba(0, 0, 0, 0.72));
 }
 
 .exp-btn-open {

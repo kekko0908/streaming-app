@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from "react";
 import { TmdbItem } from "../types/types";
-import { fetchTrailer } from "../utils/api";
+import { fetchTitleLogo, fetchTrailer } from "../utils/api";
 import YouTube from 'react-youtube';
 import { useExclusiveTrailerPlayback } from "../hooks/useExclusiveTrailerPlayback";
 import "../css/homeSpotlight.css";
@@ -14,16 +14,35 @@ interface HomeSpotlightProps {
 
 export default function HomeSpotlight({ item, onSelect, onPlay }: HomeSpotlightProps) {
   const [trailerKey, setTrailerKey] = useState<string | null>(null);
+  const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const [showBgVideo, setShowBgVideo] = useState(false);
   const [isMuted, setIsMuted] = useState(true);
   const [volume, setVolume] = useState(60);
-  const [isIdle, setIsIdle] = useState(false);
   const ytPlayerRef = useRef<any>(null);
 
   const isBgTrailerActive = useExclusiveTrailerPlayback(
     `home-spotlight-${item?.tmdbId}`,
     showBgVideo && Boolean(trailerKey)
   );
+
+  useEffect(() => {
+    let isMounted = true;
+    setLogoUrl(item?.logo || null);
+
+    if (!item) return;
+
+    fetchTitleLogo(item.tmdbId, item.type)
+      .then((logo) => {
+        if (isMounted) setLogoUrl(logo || item.logo || null);
+      })
+      .catch(() => {
+        if (isMounted) setLogoUrl(item.logo || null);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [item?.tmdbId, item?.type, item?.logo]);
 
   useEffect(() => {
     let isMounted = true;
@@ -51,29 +70,6 @@ export default function HomeSpotlight({ item, onSelect, onPlay }: HomeSpotlightP
       return () => clearTimeout(timer);
     }
   }, [trailerKey]);
-
-  // Ascolta inattività (Mouse & Touch)
-  useEffect(() => {
-    if (!showBgVideo || !trailerKey) return;
-
-    let timeout: ReturnType<typeof setTimeout>;
-
-    const handleActivity = () => {
-      setIsIdle(false);
-      clearTimeout(timeout);
-      timeout = setTimeout(() => setIsIdle(true), 2000);
-    };
-
-    timeout = setTimeout(() => setIsIdle(true), 2000);
-
-    const events = ["mousemove", "mousedown", "touchstart", "touchmove", "scroll", "keydown"];
-    events.forEach(event => window.addEventListener(event, handleActivity));
-
-    return () => {
-      events.forEach(event => window.removeEventListener(event, handleActivity));
-      clearTimeout(timeout);
-    };
-  }, [showBgVideo, trailerKey]);
 
   if (!item) return null;
 
@@ -113,10 +109,7 @@ export default function HomeSpotlight({ item, onSelect, onPlay }: HomeSpotlightP
       <div className="home-spotlight-shade" />
 
       {isBgTrailerActive && trailerKey && (
-        <div
-          className="home-spotlight-volume"
-          style={{ opacity: isIdle ? 0 : 1 }}
-        >
+        <div className="home-spotlight-volume">
           <button
             className="circle-btn"
             onClick={() => {
@@ -141,31 +134,46 @@ export default function HomeSpotlight({ item, onSelect, onPlay }: HomeSpotlightP
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>
             )}
           </button>
+          <input
+            type="range"
+            min="0"
+            max="100"
+            value={isMuted ? 0 : volume}
+            onChange={(e) => {
+              const nextVolume = Number(e.target.value);
+              setVolume(nextVolume);
+
+              if (!ytPlayerRef.current) return;
+
+              ytPlayerRef.current.setVolume(nextVolume);
+              if (nextVolume === 0) {
+                setIsMuted(true);
+                ytPlayerRef.current.mute();
+              } else {
+                setIsMuted(false);
+                ytPlayerRef.current.unMute();
+              }
+            }}
+            className="home-spotlight-volume-slider volume-slider"
+            aria-label="Volume trailer home"
+          />
         </div>
       )}
 
-      <div className="home-spotlight-content" style={{ opacity: isIdle ? 0 : 1, pointerEvents: isIdle ? 'none' : 'auto' }}>
-        <h1 className="netflix-title">{item.title}</h1>
-        <div className="netflix-meta">
-          <span>{item.year || "N/D"}</span>
-          <span className="separator">•</span>
-          {item.type === 'movie' && item.runtime ? (
-            <>
-              <span>{item.runtime} min</span>
-              <span className="separator">•</span>
-            </>
-          ) : null}
-          {item.type === 'tv' && item.seasons ? (
-            <>
-              <span>{item.seasons} stagioni</span>
-              <span className="separator">•</span>
-            </>
-          ) : null}
-          <span>{item.type === "movie" ? "Film" : "Serie TV"}</span>
+      <div className="home-spotlight-content">
+        <div
+          className={`home-spotlight-copy ${logoUrl && item.overview ? "has-overview" : ""}`}
+          tabIndex={logoUrl && item.overview ? 0 : undefined}
+        >
+          {logoUrl && (
+            <img className="home-spotlight-logo-art" src={logoUrl} alt={item.title} />
+          )}
+          {logoUrl && item.overview && (
+            <p className="home-spotlight-overview netflix-overview">{item.overview}</p>
+          )}
         </div>
-        {item.overview && <p className="home-spotlight-overview netflix-overview">{item.overview}</p>}
 
-        <div className="hero-actions" style={{ marginTop: '20px' }}>
+        <div className="hero-actions home-spotlight-actions-main">
           <button className="cta netflix-play" type="button" onClick={() => onPlay(item)}>
             ▶ Riproduci
           </button>

@@ -28,13 +28,18 @@
   cursor: pointer;
   transition: transform 0.2s;
 }
+
 .logo:hover {
   transform: scale(1.02);
 }
+
 .logo-img {
-  height: 60px;       /* Altezza giusta per la navbar */
-  width: auto;        /* Mantiene le proporzioni */
-  border-radius: 8px; /* Arrotonda leggermente gli angoli se ha lo sfondo */
+  height: 60px;
+  /* Altezza giusta per la navbar */
+  width: auto;
+  /* Mantiene le proporzioni */
+  border-radius: 8px;
+  /* Arrotonda leggermente gli angoli se ha lo sfondo */
   object-fit: contain;
 }
 
@@ -58,10 +63,14 @@
   background: linear-gradient(to right, #fff, #a5a5a5);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
-  display: none; /* Nascondiamo titolo su mobile per spazio */
+  display: none;
+  /* Nascondiamo titolo su mobile per spazio */
 }
+
 @media (min-width: 768px) {
-  .logo-title { display: block; }
+  .logo-title {
+    display: block;
+  }
 }
 
 .logo-sub {
@@ -69,8 +78,11 @@
   font-size: 0.8rem;
   display: none;
 }
+
 @media (min-width: 768px) {
-  .logo-sub { display: block; }
+  .logo-sub {
+    display: block;
+  }
 }
 
 /* SEARCH BAR NELLA NAV */
@@ -208,6 +220,7 @@
   background: rgba(255, 255, 255, 0.08);
   margin: 6px 0;
 }
+
 /* Sostituisci la parte mobile esistente in navbar.css con questa */
 @media (max-width: 1100px) {
   .nav {
@@ -227,7 +240,7 @@
     gap: 10px;
     margin-bottom: 5px;
   }
-  
+
   /* Nascondiamo i nav-links su mobile perché sono nel menu hamburger */
   .nav-links {
     display: none;
@@ -251,6 +264,7 @@
     display: flex;
   }
 }
+
 /* 1. Transizione fluida per tutti i bottoni */
 .pill {
   transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
@@ -258,16 +272,22 @@
 
 /* 2. HOVER sui bottoni inattivi (Ghost) */
 .pill.ghost:hover {
-  background: rgba(74, 232, 255, 0.1); /* Sfondo azzurrino appena accennato (non nero!) */
-  color: #4ae8ff;                       /* Testo che diventa Blu/Ciano Elettrico */
-  border-color: #4ae8ff;                /* Anche il bordo si illumina */
-  transform: translateY(-2px);          /* Piccolo effetto di sollevamento */
-  box-shadow: 0 4px 12px rgba(74, 232, 255, 0.2); /* Glow leggero sotto */
+  background: rgba(74, 232, 255, 0.1);
+  /* Sfondo azzurrino appena accennato (non nero!) */
+  color: #4ae8ff;
+  /* Testo che diventa Blu/Ciano Elettrico */
+  border-color: #4ae8ff;
+  /* Anche il bordo si illumina */
+  transform: translateY(-2px);
+  /* Piccolo effetto di sollevamento */
+  box-shadow: 0 4px 12px rgba(74, 232, 255, 0.2);
+  /* Glow leggero sotto */
 }
 
 /* 3. HOVER sul bottone attivo (Solid - es. "Home" quando sei in Home) */
 .pill.solid:hover {
-  filter: brightness(1.15); /* Diventa leggermente più luminoso */
+  filter: brightness(1.15);
+  /* Diventa leggermente più luminoso */
   transform: translateY(-2px);
   box-shadow: 0 6px 15px rgba(74, 232, 255, 0.4);
 }
@@ -275,8 +295,8 @@
 /* 4. Opzionale: Fix specifico per il bottone ESCI (che è rosso) */
 /* Questo serve per non farlo diventare blu, ma rosso acceso */
 .pill.ghost:last-child:hover {
-    background: rgba(255, 80, 80, 0.1);
-    color: #ff5050 !important;
-    border-color: #ff5050 !important;
-    box-shadow: 0 4px 12px rgba(255, 80, 80, 0.2);
+  background: rgba(255, 80, 80, 0.1);
+  color: #ff5050 !important;
+  border-color: #ff5050 !important;
+  box-shadow: 0 4px 12px rgba(255, 80, 80, 0.2);
 }

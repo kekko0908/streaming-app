@@ -2,7 +2,7 @@ import "../css/card.css";
 import "../css/archive.css"; 
 import { MediaType, TmdbItem } from "../types/types"; 
 import { useState, useRef, useEffect } from "react";
-import { fetchTrailer } from "../utils/api";
+import { fetchTitleLogo, fetchTrailer } from "../utils/api";
 import YouTube from 'react-youtube';
 import { useExclusiveTrailerPlayback } from "../hooks/useExclusiveTrailerPlayback";
 
@@ -35,6 +35,7 @@ const NAV_HOVER_GUARD_PX = 12;
 export default function Card({ item, onClick, progress, onRemove, isUpcoming, showRating, formatDate, onTypeChange }: CardProps) {
   
   const [trailerKey, setTrailerKey] = useState<string | null>(null);
+  const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const [isExpanded, setIsExpanded] = useState(false);
   const [isMuted, setIsMuted] = useState(true);
   const [expandedAlignment, setExpandedAlignment] = useState<"center" | "left" | "right">("center");
@@ -96,6 +97,7 @@ export default function Card({ item, onClick, progress, onRemove, isUpcoming, sh
     }
     setIsExpanded(false);
     setTrailerKey(null);
+    setLogoUrl(null);
     setIsMuted(true);
     setExpandedAlignment("center");
   };
@@ -118,8 +120,12 @@ export default function Card({ item, onClick, progress, onRemove, isUpcoming, sh
 
       setIsExpanded(true);
       try {
-        const key = await fetchTrailer(item.tmdbId, item.type);
+        const [key, logo] = await Promise.all([
+          fetchTrailer(item.tmdbId, item.type),
+          fetchTitleLogo(item.tmdbId, item.type),
+        ]);
         if (key && hoverTimeoutRef.current) setTrailerKey(key);
+        if (logo && hoverTimeoutRef.current) setLogoUrl(logo);
       } catch(e) {}
     }, 800); 
   };
@@ -334,6 +340,10 @@ export default function Card({ item, onClick, progress, onRemove, isUpcoming, sh
                         />
                     )}
                     
+                    {trailerKey && isTrailerActive && logoUrl && (
+                        <img className="expanded-logo-art" src={logoUrl} alt={item.title} />
+                    )}
+
                     {trailerKey && isTrailerActive && (
                         <button 
                             className="expanded-mute-btn" 
@@ -350,7 +360,11 @@ export default function Card({ item, onClick, progress, onRemove, isUpcoming, sh
                             <button className="exp-btn-play" onClick={handleDirectPlay}>
                                 <svg width="24" height="24" viewBox="0 0 24 24" fill="black"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
                             </button>
-                            <span className="exp-title">{item.title}</span>
+                            {logoUrl ? (
+                                <img className="exp-title-logo" src={logoUrl} alt={item.title} />
+                            ) : !isTrailerActive ? (
+                                <span className="exp-title">{item.title}</span>
+                            ) : null}
                         </div>
                         <button className="exp-btn-open" onClick={onClick} title="Altre Info">
                             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="6 9 12 15 18 9"></polyline></svg>

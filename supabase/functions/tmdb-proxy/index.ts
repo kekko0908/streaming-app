@@ -27,6 +27,7 @@ type DiscoverPayload = {
 };
 type PersonCreditsPayload = { action: "person_credits"; personId: number };
 type TrailerPayload = { action: "trailer"; tmdbId: string; type: MediaType };
+type LogoPayload = { action: "logo"; tmdbId: string; type: MediaType };
 type CreditsPayload = { action: "credits"; tmdbId: string; type: MediaType };
 type SeasonEpisodesPayload = { action: "season_episodes"; tvId: string | number; seasonNumber: number };
 
@@ -43,6 +44,7 @@ type RequestPayload =
   | DiscoverPayload
   | PersonCreditsPayload
   | TrailerPayload
+  | LogoPayload
   | CreditsPayload
   | SeasonEpisodesPayload;
 
@@ -55,6 +57,7 @@ type TmdbItem = {
   overview: string;
   poster: string;
   backdrop: string;
+  logo?: string;
   rating: number;
   runtime?: string;
   genres?: string[];
@@ -319,6 +322,41 @@ async function fetchTrailer(tmdbId: string, type: MediaType) {
   return trailer ? trailer.key : null;
 }
 
+function scoreLogo(logo: any) {
+  return Number(logo.vote_average ?? 0) * 100 + Number(logo.vote_count ?? 0);
+}
+
+function pickLogoByLanguage(logos: any[], language: string | null) {
+  return logos
+    .filter((logo) => (logo.iso_639_1 ?? null) === language && logo.file_path)
+    .sort((a, b) => scoreLogo(b) - scoreLogo(a))[0];
+}
+
+async function fetchTitleLogo(tmdbId: string, type: MediaType) {
+  const data = await fetchJson(
+    `${type}/${tmdbId}/images`,
+    new URLSearchParams({
+      language: "it-IT",
+      include_image_language: "it,en,null",
+    })
+  );
+
+  let logos = Array.isArray(data.logos) ? data.logos : [];
+  let logo =
+    pickLogoByLanguage(logos, "it") ||
+    pickLogoByLanguage(logos, "en") ||
+    pickLogoByLanguage(logos, null) ||
+    logos.filter((item: any) => item.file_path).sort((a: any, b: any) => scoreLogo(b) - scoreLogo(a))[0];
+
+  if (!logo) {
+    const allImageData = await fetchJson(`${type}/${tmdbId}/images`);
+    logos = Array.isArray(allImageData.logos) ? allImageData.logos : [];
+    logo = logos.filter((item: any) => item.file_path).sort((a: any, b: any) => scoreLogo(b) - scoreLogo(a))[0];
+  }
+
+  return logo?.file_path ? imagePath(String(logo.file_path), "original") : null;
+}
+
 async function fetchPersonCredits(personId: number) {
   const data = await fetchJson(`person/${personId}/combined_credits`, new URLSearchParams({ language: "it-IT" }));
   const credits = (data.cast || [])
@@ -431,6 +469,8 @@ Deno.serve(async (req) => {
         return jsonResponse(200, await fetchPersonCredits(payload.personId));
       case "trailer":
         return jsonResponse(200, await fetchTrailer(payload.tmdbId, payload.type));
+      case "logo":
+        return jsonResponse(200, await fetchTitleLogo(payload.tmdbId, payload.type));
       case "credits":
         return jsonResponse(200, await fetchCredits(payload.tmdbId, payload.type));
       case "season_episodes": {

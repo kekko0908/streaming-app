@@ -107,6 +107,12 @@ export async function fetchTrailer(tmdbId: string, type: MediaType): Promise<str
   );
 }
 
+export async function fetchTitleLogo(tmdbId: string, type: MediaType): Promise<string | null> {
+  return getCached(`logo:${type}:${tmdbId}`, () =>
+    invokeTmdb<string | null>({ action: "logo", tmdbId, type })
+  );
+}
+
 export interface CastMember {
   id: number;
   name: string;

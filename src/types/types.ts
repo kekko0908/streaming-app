@@ -122,6 +122,7 @@ export interface TmdbItem {
   overview: string;
   poster: string;
   backdrop: string;
+  logo?: string;
   rating: number;
   runtime?: string;
   genres?: string[];

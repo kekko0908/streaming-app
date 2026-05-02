@@ -6,7 +6,7 @@ import "../css/hero.css";
 import { TmdbItem, SavedItem, WatchStatus, STATUS_SECTIONS, Episode } from "../types/types";
 import StarRating from "./StarRating";
 import TrailerModal from "./TrailerModal";
-import { fetchTrailer, fetchSeasonEpisodes } from "../utils/api";
+import { fetchTitleLogo, fetchTrailer, fetchSeasonEpisodes } from "../utils/api";
 import { useExclusiveTrailerPlayback } from "../hooks/useExclusiveTrailerPlayback";
 
 interface HeroProps {
@@ -124,8 +124,8 @@ export default function Hero({
   const hasEpisodes = item.type === 'tv' && item.seasonsDetails && item.seasonsDetails.length > 0;
   const [showBgVideo, setShowBgVideo] = useState(false);
   const [trailerKey, setTrailerKey] = useState<string | null>(null);
+  const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const [isMuted, setIsMuted] = useState(true);
-  const [isIdle, setIsIdle] = useState(false);
   const [volume, setVolume] = useState(60);
   const ytPlayerRef = useRef<any>(null);
   const isBgTrailerActive = useExclusiveTrailerPlayback(
@@ -133,43 +133,17 @@ export default function Hero({
     showBgVideo && Boolean(trailerKey)
   );
 
-  // Ascolta inattività (Mouse & Touch)
-  useEffect(() => {
-    if (!showBgVideo || !trailerKey) return;
-
-    let timeout: ReturnType<typeof setTimeout>;
-
-    const handleActivity = () => {
-      setIsIdle(false);
-      clearTimeout(timeout);
-      if (isUILocked) return; 
-      timeout = setTimeout(() => {
-        setIsIdle(true);
-      }, 2000); // 2s di inattività
-    };
-
-    if (isUILocked) {
-      setIsIdle(false);
-    } else {
-      timeout = setTimeout(() => setIsIdle(true), 2000);
-    }
-
-    const events = ["mousemove", "mousedown", "touchstart", "touchmove", "scroll", "keydown"];
-    events.forEach(event => window.addEventListener(event, handleActivity));
-
-    return () => {
-      events.forEach(event => window.removeEventListener(event, handleActivity));
-      clearTimeout(timeout);
-    };
-  }, [showBgVideo, trailerKey, isUILocked]);
-
   // 1. Reset al cambio film
   useEffect(() => {
     setUiSelectedSeason(progress.season);
     setTrailerKey(null);
+    setLogoUrl(item.logo || null);
     setShowBgVideo(false);
     fetchTrailer(item.tmdbId, item.type).then(setTrailerKey);
-  }, [item.tmdbId, progress.season, item.type]);
+    fetchTitleLogo(item.tmdbId, item.type)
+      .then((logo) => setLogoUrl(logo || item.logo || null))
+      .catch(() => setLogoUrl(item.logo || null));
+  }, [item.tmdbId, progress.season, item.type, item.logo]);
 
   useEffect(() => {
     if (trailerKey) {
@@ -242,7 +216,7 @@ export default function Hero({
 
   return (
     <section className="hero">
-      <div className="hero-overlay" style={{ opacity: isIdle ? 0.3 : 1, transition: 'opacity 0.8s ease' }} />
+      <div className="hero-overlay" />
       <img src={item.backdrop} alt={item.title} className={`hero-bg ${isBgTrailerActive ? 'fade-out' : ''}`} />
 
       {isBgTrailerActive && trailerKey && (
@@ -277,9 +251,7 @@ export default function Hero({
       {isBgTrailerActive && trailerKey && (
         <div
           className="volume-control-wrapper"
-          style={{
-            opacity: isIdle ? 0 : 1, transition: 'opacity 0.8s ease, width 0.3s cubic-bezier(0.25, 0.8, 0.25, 1)',
-          }}
+          style={{ transition: 'width 0.3s cubic-bezier(0.25, 0.8, 0.25, 1)' }}
         >
           <button
             className="circle-btn"
@@ -330,8 +302,14 @@ export default function Hero({
         </div>
       )}
 
-      <div className="hero-content" style={{ opacity: isIdle ? 0 : 1, pointerEvents: isIdle ? 'none' : 'auto', transition: 'opacity 0.8s ease' }}>
-        <h1 className="netflix-title">{item.title}</h1>
+      <div className="hero-content">
+        <div className="hero-title-lockup">
+          {logoUrl ? (
+            <img className="hero-logo-art" src={logoUrl} alt={item.title} />
+          ) : !isBgTrailerActive ? (
+            <h1 className="netflix-title">{item.title}</h1>
+          ) : null}
+        </div>
 
         <div className="netflix-meta">
           <span>{item.year || "N/D"}</span>

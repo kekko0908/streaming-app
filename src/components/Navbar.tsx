@@ -203,14 +203,6 @@ export default function Navbar({
           Classifica 🏆
         </button>
 
-        {isAdmin && (
-          <button
-            className={`pill ${view === "admin" ? "solid" : "ghost"}`}
-            onClick={() => { navigate("/admin"); resetSelection(); }}
-          >
-            Admin
-          </button>
-        )}
         {session && (
           <div className="user-menu desktop-only" ref={menuRefDesktop}>
             <button

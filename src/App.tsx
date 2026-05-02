@@ -18,6 +18,7 @@ import {
   CastMember    
 } from "./utils/api";
 import { formatDate } from "./utils/helper";
+import { getHomeSpotlightSetting } from "./utils/siteSettings";
 import { useStore } from "./hooks/useStore";
 import { supabase } from "./supabaseClient";
 import { Session } from "@supabase/supabase-js";
@@ -151,6 +152,7 @@ export default function App() {
   const [playerState, setPlayerState] = useState<{season: number, episode: number, startAt?: number} | null>(null);
   const [unavailableItem, setUnavailableItem] = useState<TmdbItem | null>(null);
   const [showUpdates, setShowUpdates] = useState(false);
+  const [configuredSpotlight, setConfiguredSpotlight] = useState<TmdbItem | null>(null);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => setSession(session));
@@ -280,6 +282,37 @@ export default function App() {
     }
 
     loadData();
+
+    return () => {
+      isActive = false;
+    };
+  }, [session]);
+
+  useEffect(() => {
+    if (!session) {
+      setConfiguredSpotlight(null);
+      return;
+    }
+
+    let isActive = true;
+
+    async function loadConfiguredSpotlight() {
+      try {
+        const setting = await getHomeSpotlightSetting();
+        if (!setting) {
+          if (isActive) setConfiguredSpotlight(null);
+          return;
+        }
+
+        const item = await fetchDetails(setting.tmdbId, setting.type);
+        if (isActive) setConfiguredSpotlight(item);
+      } catch (error) {
+        console.error("Errore caricamento titolo selezionato home:", error);
+        if (isActive) setConfiguredSpotlight(null);
+      }
+    }
+
+    loadConfiguredSpotlight();
 
     return () => {
       isActive = false;
@@ -454,7 +487,7 @@ export default function App() {
   const filteredMyList = getFilteredList();
 
   const isAuthRoute = location.pathname === "/auth";
-  const spotlightItem = homeLists.popular[0] || homeLists.trending[0];
+  const spotlightItem = configuredSpotlight || homeLists.popular[0] || homeLists.trending[0];
 
   if (!session && !isAuthRoute) return <SiteLock onLogin={() => navigate("/auth")} />;
 
@@ -483,7 +516,11 @@ export default function App() {
               <RequireAdmin session={session} isAdmin={isAdmin} adminReady={adminReady}>
                 <DeferredSection>
                   <PageTransition>
-                    <AdminDashboard currentUserId={session?.user?.id || ""} onAdminStateChange={setIsAdmin} />
+                    <AdminDashboard
+                      currentUserId={session?.user?.id || ""}
+                      onAdminStateChange={setIsAdmin}
+                      onHomeSpotlightChange={setConfiguredSpotlight}
+                    />
                   </PageTransition>
                 </DeferredSection>
               </RequireAdmin>

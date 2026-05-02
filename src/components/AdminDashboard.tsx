@@ -4,7 +4,10 @@ import {
   AdminSuggestionSummary,
   AdminUserDetail,
   AdminUserRow,
+  MediaType,
+  TmdbItem,
 } from "../types/types";
+import { fetchDetails, searchTmdb } from "../utils/api";
 import {
   deleteAdminSuggestion,
   fetchAdminOverview,
@@ -12,11 +15,17 @@ import {
   fetchAdminUsers,
   setAdminRole,
 } from "../utils/adminApi";
+import {
+  clearHomeSpotlightSetting,
+  getHomeSpotlightSetting,
+  setHomeSpotlightSetting,
+} from "../utils/siteSettings";
 import "../css/admin.css";
 
 interface AdminDashboardProps {
   currentUserId: string;
   onAdminStateChange?: (isAdmin: boolean) => void;
+  onHomeSpotlightChange?: (item: TmdbItem | null) => void;
 }
 
 const PAGE_SIZE = 12;
@@ -111,7 +120,7 @@ function CommunityList({
   );
 }
 
-export default function AdminDashboard({ currentUserId, onAdminStateChange }: AdminDashboardProps) {
+export default function AdminDashboard({ currentUserId, onAdminStateChange, onHomeSpotlightChange }: AdminDashboardProps) {
   const [overview, setOverview] = useState<AdminOverview | null>(null);
   const [overviewLoading, setOverviewLoading] = useState(true);
   const [overviewError, setOverviewError] = useState("");
@@ -131,6 +140,13 @@ export default function AdminDashboard({ currentUserId, onAdminStateChange }: Ad
 
   const [busySuggestionIds, setBusySuggestionIds] = useState<number[]>([]);
   const [busyRoleIds, setBusyRoleIds] = useState<string[]>([]);
+  const [spotlightItem, setSpotlightItem] = useState<TmdbItem | null>(null);
+  const [spotlightType, setSpotlightType] = useState<MediaType>("movie");
+  const [spotlightQuery, setSpotlightQuery] = useState("");
+  const [spotlightResults, setSpotlightResults] = useState<TmdbItem[]>([]);
+  const [spotlightLoading, setSpotlightLoading] = useState(false);
+  const [spotlightSaving, setSpotlightSaving] = useState(false);
+  const [spotlightMessage, setSpotlightMessage] = useState("");
 
   useEffect(() => {
     setPage(1);
@@ -215,6 +231,39 @@ export default function AdminDashboard({ currentUserId, onAdminStateChange }: Ad
     };
   }, [selectedUserId]);
 
+  useEffect(() => {
+    let isActive = true;
+
+    async function loadSpotlight() {
+      setSpotlightLoading(true);
+      setSpotlightMessage("");
+
+      try {
+        const setting = await getHomeSpotlightSetting();
+        if (!setting) {
+          if (isActive) setSpotlightItem(null);
+          return;
+        }
+
+        const item = await fetchDetails(setting.tmdbId, setting.type);
+        if (isActive) setSpotlightItem(item);
+      } catch (error) {
+        if (isActive) {
+          setSpotlightItem(null);
+          setSpotlightMessage("Impossibile caricare il titolo selezionato.");
+        }
+      } finally {
+        if (isActive) setSpotlightLoading(false);
+      }
+    }
+
+    loadSpotlight();
+
+    return () => {
+      isActive = false;
+    };
+  }, []);
+
   const totalPages = Math.max(1, Math.ceil(usersTotal / PAGE_SIZE));
 
   const refreshOverview = async () => {
@@ -249,6 +298,69 @@ export default function AdminDashboard({ currentUserId, onAdminStateChange }: Ad
     if (result.ok && result.data) {
       setSelectedUser(result.data);
       setDetailError("");
+    }
+  };
+
+  const handleSpotlightSearch = async () => {
+    const query = spotlightQuery.trim();
+    if (query.length < 2) {
+      setSpotlightResults([]);
+      setSpotlightMessage("Inserisci almeno 2 caratteri per cercare un titolo.");
+      return;
+    }
+
+    setSpotlightLoading(true);
+    setSpotlightMessage("");
+
+    try {
+      const results = await searchTmdb(query, spotlightType);
+      setSpotlightResults(results.slice(0, 8));
+      if (results.length === 0) setSpotlightMessage("Nessun titolo trovato.");
+    } catch (error) {
+      console.error("Errore ricerca spotlight:", error);
+      setSpotlightResults([]);
+      setSpotlightMessage("Ricerca non riuscita.");
+    } finally {
+      setSpotlightLoading(false);
+    }
+  };
+
+  const handleSelectSpotlight = async (item: TmdbItem) => {
+    setSpotlightSaving(true);
+    setSpotlightMessage("");
+
+    try {
+      const fullItem = await fetchDetails(item.tmdbId, item.type);
+      await setHomeSpotlightSetting({ tmdbId: fullItem.tmdbId, type: fullItem.type });
+      setSpotlightItem(fullItem);
+      setSpotlightResults([]);
+      setSpotlightQuery("");
+      setSpotlightMessage(`Titolo selezionato aggiornato: ${fullItem.title}`);
+      onHomeSpotlightChange?.(fullItem);
+    } catch (error) {
+      console.error("Errore salvataggio spotlight:", error);
+      setSpotlightMessage("Impossibile salvare il titolo selezionato.");
+    } finally {
+      setSpotlightSaving(false);
+    }
+  };
+
+  const handleClearSpotlight = async () => {
+    setSpotlightSaving(true);
+    setSpotlightMessage("");
+
+    try {
+      await clearHomeSpotlightSetting();
+      setSpotlightItem(null);
+      setSpotlightResults([]);
+      setSpotlightQuery("");
+      setSpotlightMessage("Titolo selezionato rimosso. La home usera il fallback automatico.");
+      onHomeSpotlightChange?.(null);
+    } catch (error) {
+      console.error("Errore reset spotlight:", error);
+      setSpotlightMessage("Impossibile rimuovere il titolo selezionato.");
+    } finally {
+      setSpotlightSaving(false);
     }
   };
 
@@ -327,6 +439,87 @@ export default function AdminDashboard({ currentUserId, onAdminStateChange }: Ad
         title="Stato della piattaforma"
         subtitle="KPI operativi costruiti sui dati reali gia presenti in Supabase."
       />
+
+      <section className="admin-panel admin-spotlight-panel">
+        <div className="admin-panel-header">
+          <div>
+            <h3>Titolo selezionato in home</h3>
+            <p>Decidi quale film o serie mostrare nello spotlight principale della homepage.</p>
+          </div>
+          {spotlightItem && (
+            <button className="pill ghost" onClick={handleClearSpotlight} disabled={spotlightSaving}>
+              Usa automatico
+            </button>
+          )}
+        </div>
+
+        <div className="admin-spotlight-layout">
+          <article className="admin-spotlight-current">
+            {spotlightLoading && !spotlightItem ? (
+              <div className="admin-loading">Caricamento titolo selezionato...</div>
+            ) : spotlightItem ? (
+              <>
+                <img src={spotlightItem.poster || spotlightItem.backdrop || "https://via.placeholder.com/120x180"} alt={spotlightItem.title} />
+                <div>
+                  <span className="admin-eyebrow">In evidenza ora</span>
+                  <h4>{spotlightItem.title}</h4>
+                  <p>{spotlightItem.year || "N/D"} - {spotlightItem.type === "movie" ? "Film" : "Serie TV"}</p>
+                  <small>{spotlightItem.overview || "Nessuna trama disponibile."}</small>
+                </div>
+              </>
+            ) : (
+              <div className="admin-empty-inline">Nessun titolo fissato: la home sceglie automaticamente dai titoli del momento.</div>
+            )}
+          </article>
+
+          <div className="admin-spotlight-tools">
+            <div className="admin-spotlight-search">
+              <select
+                className="admin-search"
+                value={spotlightType}
+                onChange={(event) => setSpotlightType(event.target.value as MediaType)}
+              >
+                <option value="movie">Film</option>
+                <option value="tv">Serie TV</option>
+              </select>
+              <input
+                className="admin-search"
+                placeholder="Cerca titolo TMDb..."
+                value={spotlightQuery}
+                onChange={(event) => setSpotlightQuery(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") handleSpotlightSearch();
+                }}
+              />
+              <button className="pill solid" onClick={handleSpotlightSearch} disabled={spotlightLoading || spotlightSaving}>
+                Cerca
+              </button>
+            </div>
+
+            {spotlightMessage && <div className="admin-spotlight-message">{spotlightMessage}</div>}
+
+            {spotlightResults.length > 0 && (
+              <div className="admin-spotlight-results">
+                {spotlightResults.map((item) => (
+                  <button
+                    key={`${item.type}-${item.tmdbId}`}
+                    type="button"
+                    className="admin-spotlight-result"
+                    onClick={() => handleSelectSpotlight(item)}
+                    disabled={spotlightSaving}
+                  >
+                    <img src={item.poster || "https://via.placeholder.com/80x120"} alt={item.title} />
+                    <span>
+                      <strong>{item.title}</strong>
+                      <small>{item.year || "N/D"} - {item.type === "movie" ? "Film" : "Serie TV"}</small>
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </section>
 
       {overviewLoading ? (
         <div className="admin-loading">Caricamento overview admin...</div>
