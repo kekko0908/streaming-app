@@ -9,7 +9,7 @@ import { useExclusiveTrailerPlayback } from "../hooks/useExclusiveTrailerPlaybac
 interface CardProps {
   item: TmdbItem;
   onClick: () => void;
-  progress?: { season: number; episode: number; watchedEpisodes?: number; totalEpisodes?: number };
+  progress?: { season: number; episode: number; watchedEpisodes?: number; totalEpisodes?: number; progressSeconds?: number; progressMinutes?: number };
   onRemove?: () => void;
   isUpcoming?: boolean;
   showRating?: boolean;
@@ -31,6 +31,13 @@ function resolvePosterSrc(poster?: string) {
 }
 
 const NAV_HOVER_GUARD_PX = 12;
+
+function formatProgressTime(totalSeconds: number) {
+  const safeSeconds = Math.max(0, Math.floor(totalSeconds || 0));
+  const minutes = Math.floor(safeSeconds / 60);
+  const seconds = safeSeconds % 60;
+  return `${minutes}:${String(seconds).padStart(2, "0")}`;
+}
 
 export default function Card({ item, onClick, progress, onRemove, isUpcoming, showRating, formatDate, onTypeChange }: CardProps) {
   
@@ -254,10 +261,11 @@ export default function Card({ item, onClick, progress, onRemove, isUpcoming, sh
   // Progresso Serie TV: episodi visti / episodi totali
   const tvProgress =
     item.type === 'tv' &&
-    progress?.watchedEpisodes && progress.watchedEpisodes > 0 &&
     progress?.totalEpisodes && progress.totalEpisodes > 0
-      ? Math.min(1, progress.watchedEpisodes / progress.totalEpisodes)
+      ? Math.min(1, (progress.watchedEpisodes || 0) / progress.totalEpisodes)
       : null;
+  const tvResumeSeconds = item.type === "tv" ? Math.max(0, progress?.progressSeconds || item.progressSeconds || 0) : 0;
+  const showTvResumeBadge = item.type === "tv" && tvResumeSeconds > 15 && !isCompleted;
 
   // Valore finale per la barra
   const effectiveProgress = item.type === 'movie' ? movieProgress : tvProgress;
@@ -300,6 +308,10 @@ export default function Card({ item, onClick, progress, onRemove, isUpcoming, sh
 
           {item.type === 'tv' && progress && !isCompleted && !hasNewEpisodes && (
             <div className="progress-badge">S:{progress.season} E:{progress.episode}</div>
+          )}
+
+          {showTvResumeBadge && (
+            <div className="resume-progress-badge">Riprendi da {formatProgressTime(tvResumeSeconds)}</div>
           )}
 
           {isUpcoming && item.releaseDateFull && formatDate && (

@@ -14,6 +14,31 @@ export function pickYear(date?: string) {
   return date && date.length >= 4 ? date.slice(0, 4) : "";
 }
 
+export function slugifyTitle(title: string) {
+  return title
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "")
+    .replace(/_+/g, "_");
+}
+
+export function buildMediaPath(item: Pick<{ tmdbId: string; type: "movie" | "tv"; title: string }, "tmdbId" | "type" | "title">) {
+  const basePath = item.type === "tv" ? "/serie-tv" : "/film";
+  return `${basePath}/${item.tmdbId}-${slugifyTitle(item.title)}`;
+}
+
+export function parseMediaRoute(pathname: string): { type: "movie" | "tv"; tmdbId: string } | null {
+  const match = pathname.match(/^\/(film|serie-tv)\/(\d+)(?:-[^/]+)?$/);
+  if (!match) return null;
+
+  return {
+    type: match[1] === "serie-tv" ? "tv" : "movie",
+    tmdbId: match[2],
+  };
+}
+
 export function buildEmbedUrl(tmdbId: string, type: string, season: number, episode: number, startAt?: number) {
   const timeParam = startAt ? `?startAt=${Math.floor(startAt)}` : "";
   return type === "tv"

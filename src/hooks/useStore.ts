@@ -5,7 +5,7 @@ import { ProfileStats } from "../types/profileStats";
 
 export function useStore() {
   const [myList, setMyList] = useState<SavedItem[]>([]);
-  const [watchProgress, setWatchProgress] = useState<Record<string, { season: number; episode: number; watchedEpisodes?: number; totalEpisodes?: number }>>({});
+  const [watchProgress, setWatchProgress] = useState<Record<string, { season: number; episode: number; watchedEpisodes?: number; totalEpisodes?: number; progressSeconds?: number; progressMinutes?: number }>>({});
   const [loading, setLoading] = useState(false);
   const [isUILocked, setIsUILocked] = useState(() => {
     return localStorage.getItem("sfa_ui_locked") === "true";
@@ -68,6 +68,14 @@ export function useStore() {
 
       const progressMap: any = {};
       data.forEach((row: any) => {
+        const progressSeconds = Number(row.progress_seconds ?? row.current_time ?? 0) || 0;
+        const progressMinutes = Number(
+          (row.progress_minutes ??
+          row.current_minute ??
+          row.watched_minutes ??
+          (progressSeconds / 60)) ||
+          0
+        ) || 0;
         const hasTvProgress =
           row.current_season !== null && row.current_season !== undefined ||
           row.current_episode !== null && row.current_episode !== undefined ||
@@ -80,7 +88,9 @@ export function useStore() {
             season: row.current_season || 1,
             episode: row.current_episode || 1,
             watchedEpisodes: row.total_watched_episodes || 0,
-            totalEpisodes: row.media_items?.total_episodes || 0
+            totalEpisodes: row.media_items?.total_episodes || 0,
+            progressSeconds,
+            progressMinutes
           };
         }
       });
@@ -244,11 +254,10 @@ export function useStore() {
         } 
         // Caso B: In Corso / Da Guardare (Mantieni progresso attuale o inizia da 0)
         else {
-            const current = watchProgress[item.tmdbId] || { season: 1, episode: 1 };
+            const current = watchProgress[item.tmdbId] || { season: 1, episode: 1, watchedEpisodes: 0 };
             season = current.season;
             episode = current.episode;
-            // Ricalcola il totale basato sul punto dove sei arrivato
-            totalWatched = calculateTotalEpisodes(item, season, episode);
+            totalWatched = current.watchedEpisodes || 0;
         }
 
         updates.current_season = season;
@@ -322,12 +331,46 @@ export function useStore() {
 
     // Se stiamo aggiornando solo i secondi (auto-save)
     if (seconds !== undefined) {
-         setMyList(prev => prev.map(m => m.tmdbId === item.tmdbId ? { ...m, progressSeconds: seconds, progressMinutes: seconds / 60 } : m));
+         const progressSeconds = Math.max(0, Math.floor(seconds));
+         const progressMinutes = progressSeconds / 60;
+         const progressUpdate: any = {
+             user_id: userId,
+             tmdb_id: parseInt(item.tmdbId),
+             progress_seconds: progressSeconds,
+             current_time: progressSeconds,
+             progress_minutes: progressMinutes,
+             last_watched_at: new Date().toISOString()
+         };
+
+         setMyList(prev => prev.map(m => m.tmdbId === item.tmdbId ? { ...m, progressSeconds, progressMinutes } : m));
+         if (item.type === "tv") {
+           setWatchProgress(prev => ({
+             ...prev,
+             [item.tmdbId]: {
+               season,
+               episode,
+               watchedEpisodes: prev[item.tmdbId]?.watchedEpisodes || 0,
+               totalEpisodes: getTotalEpisodesFromItem(item) || prev[item.tmdbId]?.totalEpisodes || 0,
+               progressSeconds,
+               progressMinutes
+             }
+           }));
+           await supabase.from('user_library').upsert({
+             user_id: userId,
+             tmdb_id: parseInt(item.tmdbId),
+             current_season: season,
+             current_episode: episode,
+             status: "in-corso"
+           }, { onConflict: 'user_id, tmdb_id' });
+         }
          await supabase.from('user_library').upsert({
              user_id: userId,
              tmdb_id: parseInt(item.tmdbId),
-             progress_seconds: Math.floor(seconds),
-             current_time: Math.floor(seconds), // Backup per retrocompatibilità
+             current_season: item.type === "tv" ? season : undefined,
+             current_episode: item.type === "tv" ? episode : undefined,
+             progress_seconds: progressSeconds,
+             progress_minutes: progressMinutes,
+              current_time: progressSeconds, // Backup per retrocompatibilità
              last_watched_at: new Date().toISOString()
          }, { onConflict: 'user_id, tmdb_id' });
          return;
@@ -383,6 +426,9 @@ export function useStore() {
         current_season: season,
         current_episode: episode,
         total_watched_episodes: totalEpisodes, // <--- SALVIAMO IL TOTALE ANCHE QUI
+        progress_seconds: 0,
+        current_time: 0,
+        progress_minutes: 0,
         status: newStatus
     }, { onConflict: 'user_id, tmdb_id' });
 
@@ -428,7 +474,7 @@ export function useStore() {
     fetchLibrary();
   };
 
-  const getProgress = (tmdbId: string) => watchProgress[tmdbId] || { season: 1, episode: 1, watchedEpisodes: 0, totalEpisodes: 0 };
+  const getProgress = (tmdbId: string) => watchProgress[tmdbId] || { season: 1, episode: 1, watchedEpisodes: 0, totalEpisodes: 0, progressSeconds: 0, progressMinutes: 0 };
 
   const fetchStats = async (): Promise<ProfileStats | null> => {
     const { data: { user } } = await supabase.auth.getUser();

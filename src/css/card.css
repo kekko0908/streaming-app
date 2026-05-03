@@ -398,6 +398,25 @@
   box-shadow: 0 4px 10px rgba(0,0,0,0.5);
 }
 
+.resume-progress-badge {
+  position: absolute;
+  top: 42px;
+  right: 10px;
+  max-width: calc(100% - 20px);
+  background: rgba(7, 17, 26, 0.92);
+  border: 1px solid rgba(74, 232, 255, 0.22);
+  color: #dffcff;
+  font-weight: 700;
+  font-size: 0.68rem;
+  line-height: 1.2;
+  padding: 4px 8px;
+  border-radius: 6px;
+  backdrop-filter: blur(6px);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.36);
+  z-index: 5;
+  white-space: nowrap;
+}
+
 .upcoming-date {
   position: absolute;
   bottom: 10px;
@@ -557,11 +576,11 @@
 /* Modal / Drawer */
 .drawer-backdrop {
   position: fixed;
-  inset: 0;
+  inset: var(--player-safe-top, 84px) 0 0;
   background: rgba(0,0,0,0.9);
-  z-index: 100;
+  z-index: 1900;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
   padding: 20px;
   backdrop-filter: blur(5px);
@@ -693,12 +712,14 @@
 @media (max-width: 960px) {
   .drawer-backdrop {
     padding: 10px;
+    --player-safe-top: 126px;
   }
 }
 
 @media (max-width: 480px) {
   .drawer-backdrop {
     padding: 6px;
+    --player-safe-top: 132px;
   }
 }
 

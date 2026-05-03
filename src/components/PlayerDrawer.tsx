@@ -1,36 +1,13 @@
 /* src/components/PlayerDrawer.tsx */
 import { useState, useRef, useEffect } from "react";
 import { buildEmbedUrl } from "../utils/helper";
+import { fetchSeasonEpisodes } from "../utils/api";
 import "../css/card.css"; 
 import "../css/watch_party.css";
-import { SeasonDetail, TmdbItem } from "../types/types";
+import { Episode, TmdbItem } from "../types/types";
 import { useWatchParty } from "../hooks/useWatchParty";
 import { supabase } from "../supabaseClient";
-
-// ... (MANTENIAMO ICONS, RTC_CONFIG, E PLAYBEEP INVARIATI COME PRIMA) ...
-const RTC_CONFIG = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
-const Icons = {
-    MicOn: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>,
-    MicOff: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="1" y1="1" x2="23" y2="23"/><path d="M9 9v3a3 3 0 0 0 5.12 2.12M15 9.34V4a3 3 0 0 0-5.94-.6"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>,
-    Sync: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="M12 5l7 7-7 7"/></svg>,
-    Send: () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>,
-    Close: () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-};
-const playBeep = (freq = 440, type: OscillatorType = 'sine') => {
-  try {
-    const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    gain.gain.value = 0.05; 
-    osc.type = type;
-    osc.frequency.value = freq;
-    osc.connect(gain);
-    gain.connect(ctx.destination);
-    osc.start();
-    gain.gain.exponentialRampToValueAtTime(0.00001, ctx.currentTime + 0.15); 
-    setTimeout(() => ctx.close(), 200);
-  } catch (e) { console.error("Audio error", e); }
-};
+import { Icons, RTC_CONFIG, playBeep, resolveEpisodeNavigation } from "./player/playerDrawerUtils";
 
 interface PlayerProps {
   item: TmdbItem;
@@ -41,90 +18,16 @@ interface PlayerProps {
   onTogglePip?: () => void;
   onNavigateEpisode?: (season: number, episode: number) => void;
   onProgressUpdate?: (seconds: number) => void;
+  onEpisodeWatched?: (
+    season: number,
+    episode: number,
+    nextTarget?: { season: number; episode: number } | null
+  ) => void;
   startAt?: number;
 }
 
-type EpisodeTarget = {
-  season: number;
-  episode: number;
-};
-
-function resolveEpisodeNavigation(
-  seasonsDetails: SeasonDetail[] | undefined,
-  season: number,
-  episode: number
-): {
-  previousTarget: EpisodeTarget | null;
-  nextTarget: EpisodeTarget | null;
-  nextLabel: string;
-} {
-  if (!seasonsDetails || seasonsDetails.length === 0) {
-    return {
-      previousTarget: episode > 1 ? { season, episode: episode - 1 } : null,
-      nextTarget: { season, episode: episode + 1 },
-      nextLabel: "Prossimo",
-    };
-  }
-
-  const sortedSeasons = [...seasonsDetails]
-    .filter((entry) => entry.season_number > 0 && entry.episode_count > 0)
-    .sort((a, b) => a.season_number - b.season_number);
-
-  const currentSeasonIndex = sortedSeasons.findIndex(
-    (entry) => entry.season_number === season
-  );
-
-  if (currentSeasonIndex === -1) {
-    return {
-      previousTarget: episode > 1 ? { season, episode: episode - 1 } : null,
-      nextTarget: { season, episode: episode + 1 },
-      nextLabel: "Prossimo",
-    };
-  }
-
-  const currentSeason = sortedSeasons[currentSeasonIndex];
-  const previousSeason =
-    currentSeasonIndex > 0 ? sortedSeasons[currentSeasonIndex - 1] : null;
-  const nextSeason =
-    currentSeasonIndex < sortedSeasons.length - 1
-      ? sortedSeasons[currentSeasonIndex + 1]
-      : null;
-
-  const previousTarget =
-    episode > 1
-      ? { season, episode: episode - 1 }
-      : previousSeason
-        ? {
-            season: previousSeason.season_number,
-            episode: previousSeason.episode_count,
-          }
-        : null;
-
-  if (episode < currentSeason.episode_count) {
-    return {
-      previousTarget,
-      nextTarget: { season, episode: episode + 1 },
-      nextLabel: "Prossimo",
-    };
-  }
-
-  if (nextSeason) {
-    return {
-      previousTarget,
-      nextTarget: { season: nextSeason.season_number, episode: 1 },
-      nextLabel: "Prossima stagione",
-    };
-  }
-
-  return {
-    previousTarget,
-    nextTarget: null,
-    nextLabel: "Prossimo",
-  };
-}
-
 export default function PlayerDrawer({ 
-  item, season, episode, onClose, isPipMode, onTogglePip, onNavigateEpisode, onProgressUpdate, startAt 
+  item, season, episode, onClose, isPipMode, onTogglePip, onNavigateEpisode, onProgressUpdate, onEpisodeWatched, startAt 
 }: PlayerProps) {
   const [isPartyMode, setIsPartyMode] = useState(false);
   const [roomInput, setRoomInput] = useState(""); 
@@ -148,12 +51,106 @@ export default function PlayerDrawer({
   const [currentProgress, setCurrentProgress] = useState(item.progressSeconds || 0);
   const [showResumePrompt, setShowResumePrompt] = useState(!!(item.progressSeconds && item.progressSeconds > 15));
   const [navigationMessage, setNavigationMessage] = useState("");
+  const [showSavePositionModal, setShowSavePositionModal] = useState(false);
+  const [saveMinutesInput, setSaveMinutesInput] = useState("0");
+  const [saveSecondsInput, setSaveSecondsInput] = useState("0");
   const lastSavedRef = useRef(0);
+  const completionSavedRef = useRef("");
+  const durationRef = useRef(0);
+  const currentProgressRef = useRef(item.progressSeconds || 0);
   const { previousTarget, nextTarget, nextLabel } = resolveEpisodeNavigation(
     item.seasonsDetails,
     season,
     episode
   );
+  const [nextEpisodeState, setNextEpisodeState] = useState<"checking" | "available" | "unavailable" | "finished">(
+    nextTarget ? "checking" : "finished"
+  );
+  const runtimeMinutes = Number.parseInt(item.runtime || "", 10);
+  const fallbackDurationSeconds =
+    (Number.isFinite(runtimeMinutes) && runtimeMinutes > 0 ? runtimeMinutes : 45) * 60;
+  const nextEpisodeButtonLabel =
+    nextEpisodeState === "finished"
+      ? "Nessun prossimo episodio"
+      : nextEpisodeState === "available"
+        ? nextLabel
+        : "Prossimo episodio non disponibile";
+  const isNextEpisodeAvailable = nextEpisodeState === "available";
+
+  const isEpisodeReleased = (ep?: Episode | null) => {
+    if (!ep?.air_date) return false;
+    const airDate = new Date(ep.air_date);
+    if (Number.isNaN(airDate.getTime())) return false;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    airDate.setHours(0, 0, 0, 0);
+    return airDate <= today;
+  };
+
+  const markEpisodeWatched = () => {
+    if (!onEpisodeWatched) return;
+    const completionKey = `${item.tmdbId}-${season}-${episode}`;
+    if (completionSavedRef.current === completionKey) return;
+    completionSavedRef.current = completionKey;
+    onEpisodeWatched(season, episode, nextTarget);
+    setNavigationMessage("Episodio completato");
+  };
+
+  const saveProgressNow = () => {
+    const progress = currentProgressRef.current;
+    const completionKey = `${item.tmdbId}-${season}-${episode}`;
+    if (progress > 0 && completionSavedRef.current !== completionKey && onProgressUpdate) {
+      lastSavedRef.current = progress;
+      onProgressUpdate(progress);
+    }
+  };
+
+  const handleManualSavePosition = () => {
+    const knownSeconds = Math.max(0, Math.floor(currentProgressRef.current || 0));
+    setSaveMinutesInput(String(Math.floor(knownSeconds / 60)));
+    setSaveSecondsInput(String(knownSeconds % 60));
+    setShowSavePositionModal(true);
+  };
+
+  const confirmManualSavePosition = () => {
+    const minutes = Math.max(0, Math.floor(Number(saveMinutesInput) || 0));
+    const seconds = Math.max(0, Math.min(59, Math.floor(Number(saveSecondsInput) || 0)));
+    const nextProgress = (minutes * 60) + seconds;
+    if (nextProgress <= 0) {
+      setNavigationMessage("Inserisci una posizione valida");
+      return;
+    }
+
+    updateProgressFromTime(nextProgress);
+    if (onProgressUpdate) onProgressUpdate(nextProgress);
+    lastSavedRef.current = nextProgress;
+    setNavigationMessage(`Posizione salvata a ${minutes}:${String(seconds).padStart(2, "0")}`);
+    setShowSavePositionModal(false);
+  };
+
+  const updateProgressFromTime = (time: number) => {
+    if (time <= 0) return;
+    currentProgressRef.current = time;
+    setCurrentProgress(time);
+
+    const completionKey = `${item.tmdbId}-${season}-${episode}`;
+    const alreadyCompleted = completionSavedRef.current === completionKey;
+
+    if (!alreadyCompleted && Math.abs(time - lastSavedRef.current) >= 15) {
+      lastSavedRef.current = time;
+      if (onProgressUpdate) onProgressUpdate(time);
+    }
+
+    const durationSeconds = durationRef.current || fallbackDurationSeconds;
+    if (item.type === "tv" && time >= durationSeconds * 0.98) {
+      markEpisodeWatched();
+    }
+  };
+
+  const handleClose = () => {
+    saveProgressNow();
+    onClose();
+  };
 
   // --- TRACCIAMENTO AUTOMATICO ---
   useEffect(() => {
@@ -167,28 +164,41 @@ export default function PlayerDrawer({
         // Logica specifica per i messaggi del player
         // Molti player mandano { event: 'timeupdate', currentTime: 123 }
         // Altri mandano stringhe
+        const payload = typeof data === "string" && data.trim().startsWith("{")
+          ? JSON.parse(data)
+          : data;
+
         let time = 0;
-        if (typeof data === 'object' && data.event === 'timeupdate') {
-          time = data.currentTime || data.time || 0;
+        if (typeof payload === 'object' && payload) {
+          const eventName = String(payload.event || payload.type || payload.name || "").toLowerCase();
+          if (eventName.includes("time") || eventName.includes("progress")) {
+            time = Number(payload.currentTime ?? payload.current_time ?? payload.time ?? payload.seconds ?? payload.position ?? 0) || 0;
+          }
+          const duration = Number(payload.duration ?? payload.totalDuration ?? payload.total_duration ?? 0);
+          if (Number.isFinite(duration) && duration > 0) durationRef.current = duration;
         } else if (typeof data === 'string' && data.startsWith('timeupdate:')) {
            time = parseFloat(data.split(':')[1]);
         }
 
-        if (time > 0) {
-          setCurrentProgress(time);
-          
-          // Salva su DB ogni 15 secondi per non sovraccaricare
-          if (Math.abs(time - lastSavedRef.current) > 15) {
-            lastSavedRef.current = time;
-            if (onProgressUpdate) onProgressUpdate(time);
-          }
-        }
+        if (time > 0) updateProgressFromTime(time);
       } catch (e) { /* ignore */ }
     };
 
     window.addEventListener('message', handleMessage);
     return () => window.removeEventListener('message', handleMessage);
-  }, [onProgressUpdate]);
+  }, [fallbackDurationSeconds, item.tmdbId, item.type, onProgressUpdate, onEpisodeWatched, season, episode]);
+
+  useEffect(() => {
+    if (showResumePrompt) return;
+
+    const timer = window.setInterval(() => {
+      const completionKey = `${item.tmdbId}-${season}-${episode}`;
+      if (completionSavedRef.current === completionKey) return;
+      updateProgressFromTime(currentProgressRef.current + 1);
+    }, 1000);
+
+    return () => window.clearInterval(timer);
+  }, [fallbackDurationSeconds, item.tmdbId, item.type, onProgressUpdate, onEpisodeWatched, season, episode, showResumePrompt]);
 
   const handleResume = () => {
     setShowResumePrompt(false);
@@ -196,7 +206,52 @@ export default function PlayerDrawer({
 
   useEffect(() => {
     setNavigationMessage("");
-  }, [season, episode, item.tmdbId]);
+    completionSavedRef.current = "";
+    durationRef.current = 0;
+    currentProgressRef.current = startAt || item.progressSeconds || 0;
+    lastSavedRef.current = currentProgressRef.current;
+  }, [season, episode, item.tmdbId, item.progressSeconds, startAt]);
+
+  useEffect(() => {
+    let isActive = true;
+
+    if (item.type !== "tv") {
+      setNextEpisodeState(nextTarget ? "available" : "finished");
+      return;
+    }
+
+    if (!nextTarget) {
+      setNextEpisodeState("finished");
+      return;
+    }
+
+    setNextEpisodeState("checking");
+
+    fetchSeasonEpisodes(item.tmdbId, nextTarget.season)
+      .then((episodes) => {
+        if (!isActive) return;
+        const nextEpisode = episodes.find((entry) => entry.episode_number === nextTarget.episode) as Episode | undefined;
+        if (!nextEpisode) {
+          setNextEpisodeState("unavailable");
+          return;
+        }
+
+        if (!isEpisodeReleased(nextEpisode)) {
+          setNextEpisodeState("unavailable");
+          return;
+        }
+
+        setNextEpisodeState("available");
+      })
+      .catch(() => {
+        if (!isActive) return;
+        setNextEpisodeState("unavailable");
+      });
+
+    return () => {
+      isActive = false;
+    };
+  }, [item.tmdbId, item.type, nextLabel, nextTarget]);
 
   // 2. CONTROLLO LOGIN: Aggiorniamo isLogged
   useEffect(() => {
@@ -336,7 +391,7 @@ export default function PlayerDrawer({
   };
 
   return (
-    <div className={isPipMode ? "pip-backdrop" : "drawer-backdrop"} onClick={!isPipMode ? onClose : undefined}>
+    <div className={isPipMode ? "pip-backdrop" : "drawer-backdrop"} onClick={!isPipMode ? handleClose : undefined}>
       <div className={`drawer drawer-responsive ${isPartyMode ? 'party-active' : ''} ${isPipMode ? 'pip-drawer' : ''}`} onClick={e => e.stopPropagation()}>
         
         {/* PLAYER VIDEO */}
@@ -364,7 +419,13 @@ export default function PlayerDrawer({
                         </button>
                     )}
 
-                    <button className="pill ghost" onClick={onClose}><Icons.Close /></button>
+                    {!isPipMode && (
+                        <button className="pill ghost save-position-btn" onClick={handleManualSavePosition}>
+                          Salva posizione
+                        </button>
+                    )}
+
+                    <button className="pill ghost" onClick={handleClose}><Icons.Close /></button>
                 </div>
             </div>
             
@@ -391,6 +452,44 @@ export default function PlayerDrawer({
                     </div>
                 </div>
             )}
+
+            {showSavePositionModal && (
+                <div className="save-position-overlay animate-fadeIn" onClick={() => setShowSavePositionModal(false)}>
+                    <div className="save-position-modal" onClick={event => event.stopPropagation()}>
+                        <div className="save-position-header">
+                            <span className="save-position-kicker">Sincronizza episodio</span>
+                            <h4>Salva posizione</h4>
+                        </div>
+                        <div className="save-position-fields">
+                            <label>
+                                <span>Minuti</span>
+                                <input
+                                  type="number"
+                                  min="0"
+                                  value={saveMinutesInput}
+                                  onChange={event => setSaveMinutesInput(event.target.value)}
+                                  autoFocus
+                                />
+                            </label>
+                            <span className="save-position-separator">:</span>
+                            <label>
+                                <span>Secondi</span>
+                                <input
+                                  type="number"
+                                  min="0"
+                                  max="59"
+                                  value={saveSecondsInput}
+                                  onChange={event => setSaveSecondsInput(event.target.value)}
+                                />
+                            </label>
+                        </div>
+                        <div className="save-position-actions">
+                            <button className="pill ghost" onClick={() => setShowSavePositionModal(false)}>Annulla</button>
+                            <button className="pill solid" onClick={confirmManualSavePosition}>Salva</button>
+                        </div>
+                    </div>
+                </div>
+            )}
             
             {/* 5. BINGE-WATCHING CONTROL BAR */}
             {item.type === 'tv' && !isPipMode && onNavigateEpisode && (
@@ -408,7 +507,7 @@ export default function PlayerDrawer({
                    <div className="binge-info">
                        Stagione <span style={{color: '#fff', fontWeight: 'bold'}}>{season}</span> • 
                        Episodio <span style={{color: '#fff', fontWeight: 'bold'}}>{episode}</span>
-                      {navigationMessage && (
+                       {navigationMessage && (
                         <div style={{ color: '#f5c26b', fontSize: '0.85rem', marginTop: 6 }}>
                           {navigationMessage}
                         </div>
@@ -417,10 +516,23 @@ export default function PlayerDrawer({
                    
                    <button 
                       className="pill solid"
-                      style={{ background: '#e50914', color: '#fff', border: 'none', fontSize: 0 }}
-                      data-nav-label={nextLabel}
+                      style={{
+                        background: isNextEpisodeAvailable ? '#e50914' : '#3a3d47',
+                        color: '#fff',
+                        border: 'none',
+                        fontSize: 0,
+                        opacity: isNextEpisodeAvailable ? 1 : 0.72,
+                        cursor: isNextEpisodeAvailable ? 'pointer' : 'not-allowed'
+                      }}
+                      data-nav-label={nextEpisodeButtonLabel}
+                      disabled={!nextTarget || !isNextEpisodeAvailable}
                       onClick={() => {
+                        if (!nextTarget || !isNextEpisodeAvailable) {
+                          setNavigationMessage(nextTarget ? "Prossimo episodio non disponibile" : "Hai finito la serie");
+                          return;
+                        }
                         if (nextTarget) {
+                          markEpisodeWatched();
                           onNavigateEpisode(nextTarget.season, nextTarget.episode);
                           return;
                         }

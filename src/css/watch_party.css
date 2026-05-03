@@ -11,7 +11,7 @@
   justify-content: flex-start;
   padding: 0;
   overflow: hidden;
-  height: 88vh;
+  height: min(88vh, calc(100dvh - var(--player-safe-top, 84px) - 40px));
   min-height: 520px;
   background: #000;
   transition: width 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
@@ -20,7 +20,7 @@
 
 .drawer-responsive.party-active {
   width: 96%;
-  height: 90vh;
+  height: min(90vh, calc(100dvh - var(--player-safe-top, 84px) - 40px));
 }
 
 /* --- VIDEO CONTAINER (Sinistra) --- */
@@ -52,6 +52,104 @@
   overflow: hidden;
   text-overflow: ellipsis;
   max-width: 300px;
+}
+
+.save-position-btn {
+  padding-inline: 14px;
+  font-size: 0.78rem;
+  white-space: nowrap;
+}
+
+.save-position-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 80;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(0, 0, 0, 0.72);
+  backdrop-filter: blur(10px);
+}
+
+.save-position-modal {
+  width: min(420px, 100%);
+  border: 1px solid rgba(74, 232, 255, 0.28);
+  border-radius: 18px;
+  background: linear-gradient(180deg, rgba(15, 18, 28, 0.98), rgba(5, 7, 12, 0.98));
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.7), 0 0 30px rgba(74, 232, 255, 0.16);
+  padding: 22px;
+}
+
+.save-position-header {
+  margin-bottom: 18px;
+}
+
+.save-position-kicker {
+  color: #4ae8ff;
+  display: block;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  margin-bottom: 6px;
+  text-transform: uppercase;
+}
+
+.save-position-header h4 {
+  color: #fff;
+  font-size: 1.35rem;
+  margin: 0;
+}
+
+.save-position-fields {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: end;
+  gap: 12px;
+}
+
+.save-position-fields label {
+  display: grid;
+  gap: 8px;
+}
+
+.save-position-fields label span {
+  color: #9aa4b5;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.save-position-fields input {
+  width: 100%;
+  height: 54px;
+  border: 1px solid rgba(74, 232, 255, 0.35) !important;
+  border-radius: 12px !important;
+  background: rgba(0, 0, 0, 0.45) !important;
+  color: #fff !important;
+  font-size: 1.25rem;
+  font-weight: 800;
+  text-align: center;
+  box-shadow: inset 0 0 18px rgba(74, 232, 255, 0.08);
+}
+
+.save-position-fields input:focus {
+  border-color: #4ae8ff !important;
+  box-shadow: 0 0 20px rgba(74, 232, 255, 0.24), inset 0 0 18px rgba(74, 232, 255, 0.12);
+}
+
+.save-position-separator {
+  color: #4ae8ff;
+  font-size: 2rem;
+  font-weight: 900;
+  line-height: 54px;
+}
+
+.save-position-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 22px;
 }
 
 .video-frame {
@@ -383,6 +481,13 @@
   color: #aaa;
   font-size: 0.95rem;
   letter-spacing: 0.5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  text-align: center;
+  min-width: 0;
 }
 
 .binge-bar button[data-nav-label]::after {
@@ -416,7 +521,8 @@
 @media (max-width: 960px) {
   .drawer-responsive {
     width: 98% !important;
-    height: 94vh;
+    height: calc(100dvh - var(--player-safe-top, 126px) - 20px);
+    min-height: 0;
     flex-direction: column; /* Video sopra, Chat sotto */
     border-radius: 12px 12px 0 0;
   }

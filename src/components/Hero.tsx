@@ -12,7 +12,7 @@ import { useExclusiveTrailerPlayback } from "../hooks/useExclusiveTrailerPlaybac
 interface HeroProps {
   item: TmdbItem;
   myList: SavedItem[];
-  progress: { season: number; episode: number };
+  progress: { season: number; episode: number; watchedEpisodes?: number; totalEpisodes?: number; progressSeconds?: number; progressMinutes?: number };
   onPlay: (season: number, episode: number) => void;
   onAddToList: (status: WatchStatus) => void;
   onRate: (rating: number) => void;
@@ -21,6 +21,13 @@ interface HeroProps {
   onSelectCollectionItem?: (item: TmdbItem) => void;
   isUILocked: boolean;
   toggleUILock: () => void;
+}
+
+function formatProgressTime(totalSeconds: number) {
+  const safeSeconds = Math.max(0, Math.floor(totalSeconds || 0));
+  const minutes = Math.floor(safeSeconds / 60);
+  const seconds = safeSeconds % 60;
+  return `${minutes}:${String(seconds).padStart(2, "0")}`;
 }
 
 function CustomStatusDropdown({
@@ -113,6 +120,17 @@ export default function Hero({
       ? item.runtime
       : `${item.runtime} min`
     : "";
+  const seriesResumeSeconds = item.type === "tv" ? Math.max(0, progress.progressSeconds || item.progressSeconds || 0) : 0;
+  const hasSeriesResume = item.type === "tv" && (
+    seriesResumeSeconds > 15 ||
+    (progress.watchedEpisodes || 0) > 0 ||
+    progress.season > 1 ||
+    progress.episode > 1 ||
+    currentListStatus === "in-corso"
+  );
+  const primarySeriesLabel = hasSeriesResume
+    ? `Riprendi S${progress.season}:E${progress.episode}`
+    : `Guarda S${progress.season}:E${progress.episode}`;
 
   const [uiSelectedSeason, setUiSelectedSeason] = useState<number>(progress.season || 1);
   const [episodesList, setEpisodesList] = useState<Episode[]>([]);
@@ -211,6 +229,23 @@ export default function Hero({
     airDate.setHours(0, 0, 0, 0);
     return airDate <= today;
   };
+
+  const releasedEpisodesInCurrentSeason = uiSelectedSeason === progress.season
+    ? episodesList.filter((ep) => isEpisodeReleased(ep))
+    : [];
+  const latestReleasedEpisodeNumber = releasedEpisodesInCurrentSeason.length > 0
+    ? Math.max(...releasedEpisodesInCurrentSeason.map((ep) => ep.episode_number))
+    : null;
+  const hasUnavailableResumeTarget = item.type === "tv" &&
+    uiSelectedSeason === progress.season &&
+    latestReleasedEpisodeNumber !== null &&
+    progress.episode > latestReleasedEpisodeNumber;
+  const effectiveProgressEpisode = hasUnavailableResumeTarget && latestReleasedEpisodeNumber
+    ? latestReleasedEpisodeNumber
+    : progress.episode;
+  const effectivePrimarySeriesLabel = hasUnavailableResumeTarget
+    ? `Ultimo disponibile S${progress.season}:E${effectiveProgressEpisode}`
+    : primarySeriesLabel;
 
   const isActiveInList = (statusId: string) => savedItem?.status === statusId;
 
@@ -322,6 +357,13 @@ export default function Hero({
 
         {/* --- AZIONI PRINCIPALI --- */}
         <div className="hero-actions">
+          {item.type === 'tv' ? (
+            <>
+              <button className="cta netflix-play" onClick={() => onPlay(progress.season, progress.episode)}>
+                {effectivePrimarySeriesLabel}
+              </button>
+            </>
+          ) : (
           <button className="cta netflix-play" onClick={() => onPlay(progress.season, progress.episode)}>
             {item.progressSeconds && item.progressSeconds > 15 ? (
               <>↺ Riprendi <span className="hero-resume-time">{Math.floor(item.progressSeconds / 60)}:{(Math.floor(item.progressSeconds % 60)).toString().padStart(2, '0')}</span></>
@@ -330,6 +372,7 @@ export default function Hero({
             )}
             {item.type === 'tv' ? ` - S${progress.season}:E${progress.episode}` : ""}
           </button>
+          )}
 
           <div className="circle-btn rating" title="TMDB Rating">
             {item.rating.toFixed(1)}
@@ -443,8 +486,20 @@ export default function Hero({
                   ) : episodesList.length > 0 ? (
                     episodesList.map((ep) => {
                       const released = isEpisodeReleased(ep);
-                      const isCurrent = uiSelectedSeason === progress.season && ep.episode_number === progress.episode;
-                      const isWatched = (uiSelectedSeason < progress.season) || (uiSelectedSeason === progress.season && ep.episode_number < progress.episode);
+                      const isCurrent = uiSelectedSeason === progress.season && ep.episode_number === effectiveProgressEpisode;
+                      const episodesBeforeSeason = item.seasonsDetails
+                        ?.filter((season) => season.season_number < uiSelectedSeason)
+                        .reduce((total, season) => total + season.episode_count, 0) || 0;
+                      const episodeAbsoluteNumber = episodesBeforeSeason + ep.episode_number;
+                      const isWatched = released && (progress.watchedEpisodes
+                        ? episodeAbsoluteNumber <= progress.watchedEpisodes
+                        : (uiSelectedSeason < progress.season) || (uiSelectedSeason === progress.season && ep.episode_number < effectiveProgressEpisode));
+                      const runtimeMinutes = Number.parseInt(item.runtime || "", 10);
+                      const episodeDurationSeconds = (Number.isFinite(runtimeMinutes) && runtimeMinutes > 0 ? runtimeMinutes : 45) * 60;
+                      const episodeProgressSeconds = released && isCurrent ? progress.progressSeconds || 0 : 0;
+                      const partialProgressPercent = !isWatched && episodeProgressSeconds
+                        ? Math.min(98, Math.max(0, (episodeProgressSeconds / episodeDurationSeconds) * 100))
+                        : 0;
 
                       const imgUrl = ep.still_path
                         ? `https://image.tmdb.org/t/p/w500${ep.still_path}`
@@ -474,6 +529,19 @@ export default function Hero({
                               <div className="locked-overlay">
                                 <span style={{ fontSize: '1.5rem' }}>🔒</span>
                                 <span className="locked-text">{ep.air_date}</span>
+                              </div>
+                            )}
+                            {isCurrent && !isWatched && episodeProgressSeconds > 15 && (
+                              <div className="episode-resume-badge">
+                                Riprendi da {formatProgressTime(episodeProgressSeconds)}
+                              </div>
+                            )}
+                            {(isWatched || partialProgressPercent > 0) && (
+                              <div className="episode-neon-progress" aria-hidden="true">
+                                <div
+                                  className={`episode-neon-progress-fill ${isWatched ? "complete" : ""}`}
+                                  style={{ width: `${isWatched ? 100 : partialProgressPercent}%` }}
+                                />
                               </div>
                             )}
                           </div>

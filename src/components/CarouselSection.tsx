@@ -10,7 +10,7 @@ interface CarouselProps {
   onSelect: (item: TmdbItem) => void;
   isUpcoming?: boolean;
   formatDate?: (d?: string) => string;
-  getProgress?: (tmdbId: string) => { season: number; episode: number; watchedEpisodes?: number; totalEpisodes?: number };
+  getProgress?: (tmdbId: string) => { season: number; episode: number; watchedEpisodes?: number; totalEpisodes?: number; progressSeconds?: number; progressMinutes?: number };
 }
 
 export default function CarouselSection({ title, icon, items, onSelect, isUpcoming, formatDate, getProgress }: CarouselProps) {
@@ -45,7 +45,7 @@ export default function CarouselSection({ title, icon, items, onSelect, isUpcomi
         <h3 className="carousel-title">{title}</h3>
       </div>
 
-      <button className="carousel-btn left" onClick={() => scroll("left")}>❮</button>
+      <button className="carousel-btn left" onClick={() => scroll("left")}>{"<"}</button>
 
       <div className="carousel-track" ref={scrollRef}>
         {items.map((item, index) => (
@@ -62,7 +62,7 @@ export default function CarouselSection({ title, icon, items, onSelect, isUpcomi
         ))}
       </div>
 
-      <button className="carousel-btn right" onClick={() => scroll("right")}>❯</button>
+      <button className="carousel-btn right" onClick={() => scroll("right")}>{">"}</button>
     </div>
   );
 }

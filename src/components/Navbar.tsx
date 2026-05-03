@@ -24,7 +24,8 @@ export default function Navbar({
   const navigate = useNavigate();
   const location = useLocation();
   const path = location.pathname;
-  let view = path === "/" ? "home" : path.substring(1);
+  const isDetailRoute = path.startsWith("/film/") || path.startsWith("/serie-tv/");
+  let view = path === "/" || isDetailRoute ? "home" : path.substring(1);
 
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
