@@ -51,6 +51,20 @@
   display: none;
 }
 
+/* --- FIX FOR DROPDOWN OVERFLOW CLIPPING --- */
+/* Quando il menu a tendina viene aperto in una card, dobbiamo espandere 
+   l'area visibile del carousel track perché ha overflow-x: auto (che forza overflow-y: auto).
+   Per farlo aumentiamo il padding-bottom e compensiamo con margin negativo per 
+   non rovinare il layout della pagina. */
+.carousel-wrapper:has(.list-dropdown-menu) {
+  z-index: 100;
+}
+
+.carousel-track:has(.list-dropdown-menu) {
+  padding-bottom: 240px;
+  margin-bottom: -200px;
+}
+
 .carousel-item {
   flex: 0 0 auto;
   width: 200px;

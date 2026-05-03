@@ -1276,3 +1276,24 @@
     opacity: 0.65;
   }
 }
+
+/* --- EPISODES TAB SHRINK LOGO --- */
+.hero-content.tab-episodi .hero-title-lockup {
+  min-height: auto;
+  margin-bottom: 10px;
+}
+.hero-content.tab-episodi .hero-logo-art {
+  max-height: 100px;
+  width: min(250px, 40vw);
+  transform-origin: left bottom;
+  filter: drop-shadow(0 8px 15px rgba(0, 0, 0, 0.8));
+}
+.hero-content.tab-episodi .hero h1.netflix-title {
+  font-size: 2.2rem;
+}
+.hero-content.tab-episodi .hero-actions {
+  margin-bottom: 15px;
+}
+.hero-content.tab-episodi .hero-tabs-nav {
+  margin-bottom: 10px;
+}

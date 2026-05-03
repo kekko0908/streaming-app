@@ -302,7 +302,7 @@ export default function Hero({
         </div>
       )}
 
-      <div className="hero-content">
+      <div className={`hero-content tab-${activeTab}`}>
         <div className="hero-title-lockup">
           {logoUrl ? (
             <img className="hero-logo-art" src={logoUrl} alt={item.title} />

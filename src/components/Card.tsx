@@ -1,6 +1,6 @@
 import "../css/card.css";
 import "../css/archive.css"; 
-import { MediaType, TmdbItem } from "../types/types"; 
+import { MediaType, TmdbItem, WatchStatus } from "../types/types"; 
 import { useState, useRef, useEffect } from "react";
 import { fetchTitleLogo, fetchTrailer } from "../utils/api";
 import YouTube from 'react-youtube';
@@ -40,6 +40,8 @@ export default function Card({ item, onClick, progress, onRemove, isUpcoming, sh
   const [isMuted, setIsMuted] = useState(true);
   const [expandedAlignment, setExpandedAlignment] = useState<"center" | "left" | "right">("center");
   const [isHoverBlocked, setIsHoverBlocked] = useState(false);
+  const [isInList, setIsInList] = useState(Boolean(item.status));
+  const [showListMenu, setShowListMenu] = useState(false);
   const hoverTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const trailerPlaybackIdRef = useRef(`card-${item.type}-${item.tmdbId}-${Math.random().toString(36).slice(2)}`);
   const cardWrapperRef = useRef<HTMLDivElement | null>(null);
@@ -100,6 +102,7 @@ export default function Card({ item, onClick, progress, onRemove, isUpcoming, sh
     setLogoUrl(null);
     setIsMuted(true);
     setExpandedAlignment("center");
+    setShowListMenu(false);
   };
 
   const handleMouseEnter = () => {
@@ -146,11 +149,43 @@ export default function Card({ item, onClick, progress, onRemove, isUpcoming, sh
     }));
   };
 
+  const handleListBtnClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setShowListMenu(!showListMenu);
+  };
+
+  const handleSelectStatus = (e: React.MouseEvent, status: WatchStatus) => {
+    e.stopPropagation();
+    setIsInList(true);
+    setShowListMenu(false);
+    window.dispatchEvent(new CustomEvent('add_to_list_direct', {
+      detail: {
+        item,
+        status: status
+      }
+    }));
+  };
+
+  const handleRemoveFromListClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setIsInList(false);
+    setShowListMenu(false);
+    window.dispatchEvent(new CustomEvent('remove_from_list_direct', {
+      detail: {
+        tmdbId: item.tmdbId
+      }
+    }));
+  };
+
   useEffect(() => {
     return () => {
         if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
     };
   }, []);
+
+  useEffect(() => {
+    setIsInList(Boolean(item.status));
+  }, [item.status, item.tmdbId]);
 
   useEffect(() => {
     if (!isExpanded) return;
@@ -209,12 +244,6 @@ export default function Card({ item, onClick, progress, onRemove, isUpcoming, sh
     item.communitySortMode === "loved" && (item.communityRating || 0) > 0
       ? `Voto ${item.communityRating?.toFixed(1)}`
       : `${item.communityWatched || 0} visti`;
-  const communityChips = [
-    item.communityListed ? `${item.communityListed} lista` : null,
-    item.communityCompleted ? `${item.communityCompleted} complet.` : null,
-    item.communityRating && item.communityRating > 0 ? `${item.communityRating.toFixed(1)} voto` : null,
-  ].filter(Boolean) as string[];
-
   const isMovieInProgress = item.type === "movie" && item.status === "in-corso";
   const runtimeMinutes = isMovieInProgress && item.runtime ? parseInt(item.runtime, 10) || 0 : 0;
   const watchedMinutes = isMovieInProgress ? Math.max(0, Math.floor(item.progressMinutes || 0)) : 0;
@@ -353,58 +382,87 @@ export default function Card({ item, onClick, progress, onRemove, isUpcoming, sh
                         </button>
                     )}
                 </div>
-                
                 <div className="expanded-info-container">
                     <div className="expanded-actions-row">
-                        <div style={{display:'flex', alignItems:'center', gap:'10px'}}>
-                            <button className="exp-btn-play" onClick={handleDirectPlay}>
+                        <div className="expanded-primary-actions">
+                            <button className="exp-btn-play" onClick={handleDirectPlay} title="Riproduci">
                                 <svg width="24" height="24" viewBox="0 0 24 24" fill="black"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
                             </button>
-                            {logoUrl ? (
-                                <img className="exp-title-logo" src={logoUrl} alt={item.title} />
-                            ) : !isTrailerActive ? (
-                                <span className="exp-title">{item.title}</span>
-                            ) : null}
+                            <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                                <button className={`exp-btn-list ${isInList ? "active" : ""}`} type="button" onClick={handleListBtnClick} title="Gestisci lista">
+                                    {isInList ? (
+                                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                                    ) : (
+                                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                                    )}
+                                </button>
+                                
+                                {showListMenu && (
+                                    <div className="list-dropdown-menu" onClick={e => e.stopPropagation()}>
+                                        <button 
+                                            className={item.status === 'da-guardare' ? 'active-status' : ''} 
+                                            onClick={(e) => handleSelectStatus(e, 'da-guardare')}
+                                        >
+                                            Da guardare
+                                        </button>
+                                        <button 
+                                            className={item.status === 'in-corso' ? 'active-status' : ''} 
+                                            onClick={(e) => handleSelectStatus(e, 'in-corso')}
+                                        >
+                                            In corso
+                                        </button>
+                                        <button 
+                                            className={item.status === 'pianificato' ? 'active-status' : ''} 
+                                            onClick={(e) => handleSelectStatus(e, 'pianificato')}
+                                        >
+                                            Pianificato
+                                        </button>
+                                        <button 
+                                            className={item.status === 'gia-guardato' ? 'active-status' : ''} 
+                                            onClick={(e) => handleSelectStatus(e, 'gia-guardato')}
+                                        >
+                                            Già guardato
+                                        </button>
+                                        
+                                        {isInList && (
+                                            <button className="remove-btn" onClick={handleRemoveFromListClick}>
+                                                Rimuovi dalla lista
+                                            </button>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                            <div className="expanded-title-text" title={item.title}>
+                                {item.title}
+                            </div>
                         </div>
-                        <button className="exp-btn-open" onClick={onClick} title="Altre Info">
-                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
-                        </button>
+                        <div className="expanded-secondary-actions">
+                            <button className="exp-btn-info" onClick={(e) => { e.stopPropagation(); onClick(); }} title="Altre info">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                            </button>
+                        </div>
                     </div>
-                    
-                    <div className="expanded-meta-row">
-                        <span className="match-score">
-                          {hasCommunityStats
-                            ? `Community ${(item.communityScore || 0).toFixed(1)}`
-                            : `Match ${(item.rating * 10).toFixed(0)}%`}
-                        </span>
-                        {(item.year || item.releaseDateFull) && (
-                          <span>{item.year || item.releaseDateFull?.substring(0,4)}</span>
+
+                    <div className="expanded-details-header">
+                        <span className="expanded-match">Match {Math.round((item.rating || 0) * 10)}%</span>
+                        <span className="expanded-resolution">HD</span>
+                        {item.type === 'movie' && item.runtime && (
+                             <span className="expanded-duration">{item.runtime} m</span>
                         )}
-                        {item.type === 'movie' && item.runtime && <span>{parseInt(item.runtime, 10)} min</span>}
-                        {item.type === 'tv' && item.seasons && <span>{item.seasons} Stagioni</span>}
-                        <span className="hd-badge">HD</span>
+                        {item.type === 'tv' && item.seasons && (
+                             <span className="expanded-duration">{item.seasons} Stagion{item.seasons > 1 ? 'i' : 'e'}</span>
+                        )}
                     </div>
 
-                    {communityChips.length > 0 && (
-                      <div className="community-chip-row">
-                        {communityChips.map((chip) => (
-                          <span key={chip} className="community-chip">{chip}</span>
-                        ))}
-                      </div>
-                    )}
-
-                    {item.genres && item.genres.length > 0 && (
-                        <div className="expanded-genres-row">
-                           {item.genres.join(" • ")}
-                        </div>
-                    )}
+                    <div className="expanded-genres">
+                        {item.genres && item.genres.length > 0 ? item.genres.join(" • ") : (item.type === 'tv' ? 'Serie TV • Drammatico' : 'Film • Azione')}
+                    </div>
                 </div>
             </div>
         )}
     </div>
   );
 }
-
 export function SkeletonCard() {
   return (
     <article className="skeleton-card">
