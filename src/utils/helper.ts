@@ -10,6 +10,16 @@ export function imagePath(path: string | null | undefined, size = "w780") {
   return "https://images.unsplash.com/photo-1485846234645-a62644f84728?auto=format&fit=crop&w=500&q=80";
 }
 
+export function getTmdbImageUrl(
+  path: string | null | undefined,
+  size = "w500",
+  fallback = "https://via.placeholder.com/500x750"
+) {
+  if (!path) return fallback;
+  if (path.startsWith("http://") || path.startsWith("https://")) return path;
+  return `https://image.tmdb.org/t/p/${size}${path}`;
+}
+
 export function pickYear(date?: string) {
   return date && date.length >= 4 ? date.slice(0, 4) : "";
 }

@@ -14,7 +14,7 @@ export function useSelectedMedia({
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  const resetSelection = () => {
+  const clearSelected = () => {
     setSelected(null);
   };
 
@@ -22,6 +22,6 @@ export function useSelectedMedia({
     selected,
     setSelected,
     selectItem,
-    resetSelection,
+    clearSelected,
   };
 }

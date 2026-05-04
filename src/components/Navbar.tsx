@@ -3,10 +3,10 @@ import { useNavigate, useLocation } from "react-router-dom";
 import "../css/navbar.css";
 import { Session } from "@supabase/supabase-js";
 import { supabase } from "../supabaseClient";
-import logo from "../assets/logo.png"; 
+import { Icon } from "./ui/Icon";
 
 interface NavbarProps {
-  resetSelection: () => void;
+  clearSelected: () => void;
   query: string;
   setQuery: (q: string) => void;
   onSearch: () => void;
@@ -19,7 +19,7 @@ interface NavbarProps {
 const DEFAULT_AVATAR = "https://api.dicebear.com/7.x/adventurer/svg?seed=Default";
 
 export default function Navbar({ 
-  resetSelection, query, setQuery, onSearch, session, onLogout, onShowUpdates, isAdmin
+  clearSelected, query, setQuery, onSearch, session, onLogout, onShowUpdates, isAdmin
 }: NavbarProps) {
   const navigate = useNavigate();
   const location = useLocation();
@@ -104,7 +104,7 @@ export default function Navbar({
 
   const handleMenuNavigate = (nextPath: string) => {
     navigate(nextPath);
-    resetSelection();
+    clearSelected();
     setIsMenuOpen(false);
   };
 
@@ -117,8 +117,8 @@ export default function Navbar({
     <nav className="nav">
       <div className="nav-left">
         {/* LOGO */}
-        <div className="logo" onClick={() => { navigate("/"); resetSelection(); }}>
-         <img src={logo} alt="SFA Logo" className="logo-img" />
+        <div className="logo" onClick={() => handleMenuNavigate("/")}>
+         <img src="/logo.png" alt="SFA Logo" className="logo-img" width="60" height="60" loading="eager" decoding="async" />
           <div>
             <div className="logo-title">Streaming For All</div>
             <div className="logo-sub">Cinema a casa tua</div>
@@ -154,16 +154,16 @@ export default function Navbar({
             {session && avatarUrl ? (
               <img src={avatarUrl} alt="Avatar utente" />
             ) : (
-              <span className="user-avatar-fallback">☰</span>
+              <span className="user-avatar-fallback"><Icon name="menu" size={20} /></span>
             )}
           </button>
 
           {isMenuOpen && (
             <div className="user-menu-dropdown" role="menu">
               <button className="user-menu-item" onClick={() => handleMenuNavigate("/")}>Home</button>
-              <button className="user-menu-item" onClick={() => handleMenuNavigate("/suggestions")}>Suggerimenti 💡</button>
+              <button className="user-menu-item" onClick={() => handleMenuNavigate("/suggestions")}>Suggerimenti <Icon name="lightbulb" size={16} /></button>
               <button className="user-menu-item" onClick={() => handleMenuNavigate("/archivio")}>Archivio</button>
-              <button className="user-menu-item" onClick={() => handleMenuNavigate("/classifica")}>Classifica 🏆</button>
+              <button className="user-menu-item" onClick={() => handleMenuNavigate("/classifica")}>Classifica <Icon name="trophy" size={16} /></button>
               
               {isAdmin && <button className="user-menu-item" onClick={() => handleMenuNavigate("/admin")}>Admin Dashboard</button>}
               <div className="user-menu-divider" role="separator" />
@@ -187,27 +187,27 @@ export default function Navbar({
       <div className="nav-links">
         <button 
           className={`pill ${view === "home" ? "solid" : "ghost"}`} 
-          onClick={() => { navigate("/"); resetSelection(); }}
+          onClick={() => handleMenuNavigate("/")}
         >
           Home
         </button>
         <button 
           className={`pill ${view === 'suggestions' ? "solid" : "ghost"}`} 
-          onClick={() => navigate('/suggestions')}
+          onClick={() => handleMenuNavigate('/suggestions')}
         >
-          Suggerimenti💡
+          Suggerimenti <Icon name="lightbulb" size={16} />
         </button>
         <button 
           className={`pill ${view === "archive" ? "solid" : "ghost"}`} 
-          onClick={() => { navigate("/archivio"); resetSelection(); }}
+          onClick={() => handleMenuNavigate("/archivio")}
         >
           Archivio
         </button>
         <button 
           className={`pill ${view === "ranking" ? "solid" : "ghost"}`} 
-          onClick={() => { navigate("/classifica"); resetSelection(); }}
+          onClick={() => handleMenuNavigate("/classifica")}
         >
-          Classifica 🏆
+          Classifica <Icon name="trophy" size={16} />
         </button>
 
         {session && (
@@ -279,9 +279,8 @@ export default function Navbar({
         {/* LOGICA BOTTONI UTENTE LOGGATO */}
         {!session && (
           <button 
-            className="pill solid"
-            style={{ background: '#fff', color: '#000' }}
-            onClick={() => { navigate("/auth"); resetSelection(); }}
+            className="pill solid login-pill"
+            onClick={() => handleMenuNavigate("/auth")}
           >
             Accedi
           </button>

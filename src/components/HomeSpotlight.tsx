@@ -1,8 +1,11 @@
 import { useEffect, useState, useRef } from "react";
 import { TmdbItem } from "../types/types";
 import { fetchTitleLogo, fetchTrailer } from "../utils/api";
+import { logDevError } from "../utils/logging";
 import YouTube from 'react-youtube';
 import { useExclusiveTrailerPlayback } from "../hooks/useExclusiveTrailerPlayback";
+import { preloadImage } from "../utils/images";
+import { Icon } from "./ui/Icon";
 import "../css/homeSpotlight.css";
 import "../css/hero.css";
 
@@ -32,10 +35,13 @@ export default function HomeSpotlight({ item, onSelect, onPlay }: HomeSpotlightP
     if (!item) return;
 
     fetchTitleLogo(item.tmdbId, item.type)
-      .then((logo) => {
-        if (isMounted) setLogoUrl(logo || item.logo || null);
+      .then(async (logo) => {
+        const nextLogo = logo || item.logo || null;
+        if (nextLogo) await preloadImage(nextLogo);
+        if (isMounted) setLogoUrl(nextLogo);
       })
-      .catch(() => {
+      .catch((error) => {
+        logDevError("Errore caricamento logo spotlight", error);
         if (isMounted) setLogoUrl(item.logo || null);
       });
 
@@ -55,7 +61,8 @@ export default function HomeSpotlight({ item, onSelect, onPlay }: HomeSpotlightP
       .then((key) => {
         if (isMounted) setTrailerKey(key);
       })
-      .catch(() => {
+      .catch((error) => {
+        logDevError("Errore caricamento trailer spotlight", error);
         if (isMounted) setTrailerKey(null);
       });
 
@@ -75,12 +82,13 @@ export default function HomeSpotlight({ item, onSelect, onPlay }: HomeSpotlightP
 
   return (
     <section className="home-spotlight" aria-label="Titolo selezionato">
-      <img className={`home-spotlight-backdrop ${isBgTrailerActive ? 'fade-out' : ''}`} src={item.backdrop || item.poster} alt="" />
+      <img className={`home-spotlight-backdrop ${isBgTrailerActive ? 'fade-out' : ''}`} src={item.backdrop || item.poster} alt="" loading="eager" decoding="async" />
       
       {isBgTrailerActive && trailerKey && (
         <div className="home-spotlight-bg-video">
           <YouTube
             videoId={trailerKey}
+            className="youtube-fill"
             opts={{
               width: '100%',
               height: '100%',
@@ -99,7 +107,6 @@ export default function HomeSpotlight({ item, onSelect, onPlay }: HomeSpotlightP
               e.target.setVolume(volume);
               if (!isMuted) e.target.unMute();
             }}
-            style={{ width: '100%', height: '100%' }}
             iframeClassName="video-frame"
             title="Sfondo Trailer"
           />
@@ -166,7 +173,7 @@ export default function HomeSpotlight({ item, onSelect, onPlay }: HomeSpotlightP
           tabIndex={logoUrl && item.overview ? 0 : undefined}
         >
           {logoUrl && (
-            <img className="home-spotlight-logo-art" src={logoUrl} alt={item.title} />
+            <img className="home-spotlight-logo-art" src={logoUrl} alt={item.title} loading="eager" decoding="async" />
           )}
           {logoUrl && item.overview && (
             <p className="home-spotlight-overview netflix-overview">{item.overview}</p>
@@ -175,7 +182,7 @@ export default function HomeSpotlight({ item, onSelect, onPlay }: HomeSpotlightP
 
         <div className="hero-actions home-spotlight-actions-main">
           <button className="cta netflix-play" type="button" onClick={() => onPlay(item)}>
-            ▶ Riproduci
+            <Icon name="play" size={18} /> Riproduci
           </button>
           
           {item.rating > 0 && (
@@ -184,7 +191,7 @@ export default function HomeSpotlight({ item, onSelect, onPlay }: HomeSpotlightP
              </div>
           )}
 
-          <button className="pill ghost" type="button" onClick={() => onSelect(item)} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 20px', marginLeft: '10px' }}>
+          <button className="pill ghost home-spotlight-info-button" type="button" onClick={() => onSelect(item)}>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
             Altre info
           </button>

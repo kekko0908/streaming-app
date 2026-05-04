@@ -223,6 +223,7 @@ export function AppRoutes({
         <Route path="/ranking" element={<Navigate to="/classifica" replace />} />
         <Route path="/classifica" element={<RequireAuth session={session}><DeferredSection><PageTransition><Ranking /></PageTransition></DeferredSection></RequireAuth>} />
         <Route path="/suggestions" element={<RequireAuth session={session}><DeferredSection><PageTransition><Suggestions onSelect={onSelectItem} session={session} /></PageTransition></DeferredSection></RequireAuth>} />
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </AnimatePresence>
   );

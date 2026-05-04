@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { supabase } from "../supabaseClient";
 import "../css/siteLock.css";
-import logo from "../assets/logo.png";
 
 interface SiteLockProps {
   onLogin?: () => void;
@@ -51,7 +50,7 @@ export default function SiteLock({ onLogin }: SiteLockProps) {
 
       <div className="lock-card">
         <div className="lock-header">
-          <img src={logo} alt="SFA Logo" className="lock-logo" />
+          <img src="/logo.png" alt="SFA Logo" className="lock-logo" loading="eager" decoding="async" />
           <h2 className="lock-title">Area Riservata</h2>
           <p className="lock-desc">
             Inserisci le tue credenziali per entrare.

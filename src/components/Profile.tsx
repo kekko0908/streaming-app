@@ -4,6 +4,8 @@ import { useStore } from "../hooks/useStore";
 import { motion, Variants } from "framer-motion";
 import { ProfileStats } from "../types/profileStats";
 import { AVATAR_OPTIONS, PROFILE_COLORS, emptyProfileStats } from "./profile/profileConstants";
+import { getTmdbImageUrl } from "../utils/helper";
+import { Icon } from "./ui/Icon";
 import "../css/profile.css";
 
 export default function Profile() {
@@ -147,12 +149,6 @@ export default function Profile() {
     return date.toLocaleDateString("it-IT", { day: "2-digit", month: "short", year: "numeric" });
   };
 
-  const resolvePosterSrc = (poster?: string) => {
-    if (!poster) return "";
-    if (poster.startsWith("http://") || poster.startsWith("https://")) return poster;
-    return `https://image.tmdb.org/t/p/w342${poster}`;
-  };
-
   const getRank = (h: number) => {
     if (h > 500) return "DIVINITÀ DEL DIVANO";
     if (h > 200) return "CINEFILO ESPERTO";
@@ -210,12 +206,12 @@ export default function Profile() {
         <div className="profile-cover-bg"></div>
         <header className="profile-header">
           <button className="settings-btn glass-btn" onClick={() => setShowSettingsModal(true)}>
-            ⚙️ Impostazioni
+            <Icon name="settings" size={18} /> Impostazioni
           </button>
 
           <div className="avatar-wrapper" onClick={() => setShowAvatarModal(true)}>
              <img src={avatarUrl} alt="Avatar" className="profile-avatar" />
-             <div className="avatar-edit-icon">✏️</div>
+             <div className="avatar-edit-icon"><Icon name="edit" size={18} /></div>
           </div>
 
           <h1>Il tuo Profilo</h1>
@@ -236,21 +232,21 @@ export default function Profile() {
         {/* STATS GRID */}
         <motion.div className="stats-row" variants={itemVariants}>
            <div className="stat-card glass-panel stat-hover">
-              <div className="stat-icon">🕒</div>
+              <div className="stat-icon"><Icon name="clock" size={24} /></div>
               <div className="stat-content">
                 <span className="stat-number">{totalHours}</span>
                 <span className="stat-label">ORE TOTALI</span>
               </div>
            </div>
            <div className="stat-card glass-panel stat-hover">
-              <div className="stat-icon">🎬</div>
+              <div className="stat-icon"><Icon name="film" size={24} /></div>
               <div className="stat-content">
                 <span className="stat-number">{movieHours}</span>
                 <span className="stat-label">ORE FILM</span>
               </div>
            </div>
            <div className="stat-card glass-panel stat-hover">
-              <div className="stat-icon">📺</div>
+              <div className="stat-icon"><Icon name="tv" size={24} /></div>
               <div className="stat-content">
                 <span className="stat-number">{tvHours}</span>
                 <span className="stat-label">ORE SERIE TV</span>
@@ -301,7 +297,7 @@ export default function Profile() {
             <div className="highlight-stat">
               {advanced.longest_series_poster && (
                 <img
-                  src={resolvePosterSrc(advanced.longest_series_poster)}
+                  src={getTmdbImageUrl(advanced.longest_series_poster, "w342", "")}
                   alt={advanced.longest_series_title}
                   className="highlight-poster"
                 />
@@ -315,7 +311,7 @@ export default function Profile() {
             <div className="highlight-stat">
               {advanced.heaviest_poster && (
                 <img
-                  src={resolvePosterSrc(advanced.heaviest_poster)}
+                  src={getTmdbImageUrl(advanced.heaviest_poster, "w342", "")}
                   alt={advanced.heaviest_title}
                   className="highlight-poster"
                 />
@@ -329,7 +325,7 @@ export default function Profile() {
             <div className="highlight-stat">
               {advanced.longest_movie_poster && (
                 <img
-                  src={resolvePosterSrc(advanced.longest_movie_poster)}
+                  src={getTmdbImageUrl(advanced.longest_movie_poster, "w342", "")}
                   alt={advanced.longest_movie_title}
                   className="highlight-poster"
                 />
@@ -384,7 +380,7 @@ export default function Profile() {
              <div className="doughnut-chart" style={{ background: gradientString }}>
                 <div className="doughnut-hole"></div>
              </div>
-             <div className="chart-center-icon">✨</div>
+             <div className="chart-center-icon"><Icon name="sparkles" size={24} /></div>
            </div>
            <div className="chart-legend">
               <span className="legend-title">I TUOI GENERI PREFERITI</span>
@@ -468,7 +464,7 @@ export default function Profile() {
 
             {/* DANGER ZONE */}
             <div className="danger-zone">
-                <span className="danger-title">⚠ Zona Pericolosa</span>
+                <span className="danger-title"><Icon name="warning" size={18} /> Zona Pericolosa</span>
                 <p className="warning-text">
                     Questa azione è irreversibile. Cancellerà tutta la tua lista personale, i voti e azzererà le tue ore di visione.
                 </p>

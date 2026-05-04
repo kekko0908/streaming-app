@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { supabase } from "../supabaseClient";
 import "../css/auth.css";
-import logo from "../assets/logo.png";
 
 export default function AuthForm() {
   const [email, setEmail] = useState("");
@@ -37,7 +36,7 @@ export default function AuthForm() {
       </div>
 
       <div className="auth-card">
-        <img src={logo} alt="SFA Logo" className="auth-logo" />
+        <img src="/logo.png" alt="SFA Logo" className="auth-logo" loading="eager" decoding="async" />
         <h2>Area Riservata</h2>
         <p className="auth-desc">Inserisci le tue credenziali per entrare.</p>
 

@@ -67,6 +67,14 @@
   margin-top: 20px;
 }
 
+.home-spotlight-info-button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  margin-left: 10px;
+}
+
 .home-spotlight-kicker {
   margin: 0 0 14px;
   color: var(--primary);

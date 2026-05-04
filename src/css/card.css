@@ -184,6 +184,12 @@
   min-width: 0;
 }
 
+.expanded-list-control {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
 .exp-btn-play,
 .exp-btn-rating,
 .exp-btn-list,
@@ -365,11 +371,15 @@
 }
   .card:hover .card-info-overlay, .marquee-card:hover .card-hover-overlay { opacity: 1; }
 
-  .card-info-overlay h3, .card-title-hover {
+.card-info-overlay h3, .card-title-hover {
   color: #fff;
   font-weight: 700;
   margin-bottom: 10px;
   font-size: 0.95rem;
+}
+
+.card-remove-button {
+  margin-top: 5px;
 }
 
 @media (max-width: 768px) {

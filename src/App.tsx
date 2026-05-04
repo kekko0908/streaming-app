@@ -18,6 +18,10 @@ export default function App() {
   const location = useLocation();
   const navigate = useNavigate();
 
+  function goHome() {
+    navigate("/");
+  }
+
   const {
     myList,
     addToList,
@@ -45,7 +49,7 @@ export default function App() {
     selected,
     setSelected,
     selectItem,
-    resetSelection,
+    clearSelected,
   } = useSelectedMedia({
     navigate,
   });
@@ -63,8 +67,8 @@ export default function App() {
   } = useHomeScreenState({
     session,
     onSearchResultsShown: () => {
-      navigate("/");
-      setSelected(null);
+      goHome();
+      clearSelected();
     },
   });
   const {
@@ -113,7 +117,7 @@ export default function App() {
 
   const handleAppLogout = async () => {
     clearAllPlayerState();
-    setSelected(null);
+    clearSelected();
     await handleLogout();
   };
 
@@ -124,9 +128,9 @@ export default function App() {
     <div className="app">
       {session && (
         <Navbar
-          resetSelection={() => {
+          clearSelected={() => {
             clearAllPlayerState();
-            resetSelection();
+            clearSelected();
           }}
           query={query}
           setQuery={setQuery}
@@ -171,8 +175,8 @@ export default function App() {
         }}
         onCloseSelected={() => {
           clearAllPlayerState();
-          resetSelection();
-          navigate("/");
+          clearSelected();
+          goHome();
         }}
         onToggleUILock={toggleUILock}
         onClearSearch={clearSearch}

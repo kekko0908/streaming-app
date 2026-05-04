@@ -3,8 +3,11 @@ import "../css/archive.css";
 import { MediaType, TmdbItem, WatchStatus } from "../types/types"; 
 import { useState, useRef, useEffect } from "react";
 import { fetchTitleLogo, fetchTrailer } from "../utils/api";
+import { getTmdbImageUrl } from "../utils/helper";
+import { logDevError } from "../utils/logging";
 import YouTube from 'react-youtube';
 import { useExclusiveTrailerPlayback } from "../hooks/useExclusiveTrailerPlayback";
+import { Icon } from "./ui/Icon";
 
 interface CardProps {
   item: TmdbItem;
@@ -22,12 +25,6 @@ function getRatingColor(rating: number) {
   if (rating >= 7.5) return "#00e676";
   if (rating >= 6) return "#ff9100";
   return "#ff1744";
-}
-
-function resolvePosterSrc(poster?: string) {
-  if (!poster) return "https://via.placeholder.com/500x750";
-  if (poster.startsWith("http://") || poster.startsWith("https://")) return poster;
-  return `https://image.tmdb.org/t/p/w500${poster}`;
 }
 
 const NAV_HOVER_GUARD_PX = 12;
@@ -136,7 +133,9 @@ export default function Card({ item, onClick, progress, onRemove, isUpcoming, sh
         ]);
         if (key && hoverTimeoutRef.current) setTrailerKey(key);
         if (logo && hoverTimeoutRef.current) setLogoUrl(logo);
-      } catch(e) {}
+      } catch (error) {
+        logDevError("Errore caricamento hover card", error);
+      }
     }, 800); 
   };
 
@@ -282,9 +281,10 @@ export default function Card({ item, onClick, progress, onRemove, isUpcoming, sh
             onClick={onClick}
         >
           <img 
-            src={resolvePosterSrc(item.poster)} 
+            src={getTmdbImageUrl(item.poster, "w500", "https://via.placeholder.com/500x750")} 
             alt={item.title} 
             loading="lazy" 
+            decoding="async"
           />
 
           {hasCommunityStats && (
@@ -301,7 +301,7 @@ export default function Card({ item, onClick, progress, onRemove, isUpcoming, sh
                className={`rating-badge ${isMasterpiece ? 'masterpiece' : ''}`}
                style={!isMasterpiece ? { backgroundColor: ratingStyle } : undefined}
              >
-               {isMasterpiece && <span className="crown-icon">👑</span>}
+               {isMasterpiece && <Icon name="crown" size={16} className="crown-icon" />}
                {currentRating.toFixed(1)}
              </div>
           )}
@@ -332,7 +332,7 @@ export default function Card({ item, onClick, progress, onRemove, isUpcoming, sh
           <div className="card-info-overlay">
             <h3>{item.title}</h3>
             {onRemove && (
-              <button className="pill tiny danger" onClick={(e) => { e.stopPropagation(); onRemove(); }} style={{ marginTop: '5px' }}>Rimuovi</button>
+              <button className="pill tiny danger card-remove-button" onClick={(e) => { e.stopPropagation(); onRemove(); }}>Rimuovi</button>
             )}
           </div>
         </article>
@@ -370,19 +370,19 @@ export default function Card({ item, onClick, progress, onRemove, isUpcoming, sh
                                 e.target.setVolume(60);
                             }}
                             iframeClassName="card-expanded-video"
-                            style={{ width: '100%', height: '100%' }}
                         />
                     ) : (
                         <img 
-                            src={resolvePosterSrc(item.poster)} 
+                            src={getTmdbImageUrl(item.poster, "w500", "https://via.placeholder.com/500x750")} 
                             alt={item.title} 
                             loading="lazy"
+                            decoding="async"
                             className="expanded-fallback-img"
                         />
                     )}
                     
                     {trailerKey && isTrailerActive && logoUrl && (
-                        <img className="expanded-logo-art" src={logoUrl} alt={item.title} />
+                        <img className="expanded-logo-art" src={logoUrl} alt={item.title} loading="eager" decoding="async" />
                     )}
 
                     {trailerKey && isTrailerActive && (
@@ -390,7 +390,7 @@ export default function Card({ item, onClick, progress, onRemove, isUpcoming, sh
                             className="expanded-mute-btn" 
                             onClick={(e) => { e.stopPropagation(); setIsMuted(!isMuted); }}
                         >
-                            {isMuted ? '🔇' : '🔊'}
+                            <Icon name={isMuted ? "volume-off" : "volume"} size={18} />
                         </button>
                     )}
                 </div>
@@ -400,7 +400,7 @@ export default function Card({ item, onClick, progress, onRemove, isUpcoming, sh
                             <button className="exp-btn-play" onClick={handleDirectPlay} title="Riproduci">
                                 <svg width="24" height="24" viewBox="0 0 24 24" fill="black"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
                             </button>
-                            <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                            <div className="expanded-list-control">
                                 <button className={`exp-btn-list ${isInList ? "active" : ""}`} type="button" onClick={handleListBtnClick} title="Gestisci lista">
                                     {isInList ? (
                                         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>

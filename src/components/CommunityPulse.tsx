@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { supabase } from "../supabaseClient";
 import "../css/community.css";
 import { TmdbItem } from "../types/types";
+import { getTmdbImageUrl } from "../utils/helper";
+import { Icon } from "./ui/Icon";
 
 interface Activity {
   user_name: string;
@@ -47,25 +49,19 @@ export default function CommunityPulse({ onItemClick }: CommunityPulseProps) {
   const getActionConfig = (act: Activity, mediaType: "movie" | "tv") => {
     switch (act.action_type) {
       case 'vote':
-        return { icon: '⭐', color: '#ffd700', text: 'ha votato' };
+        return { icon: 'star' as const, color: '#ffd700', text: 'ha votato' };
       case 'watching':
-        return { icon: '▶️', color: '#00e676', text: 'sta guardando' };
+        return { icon: 'play' as const, color: '#00e676', text: 'sta guardando' };
       case 'completed':
         // Se è una serie TV completata, scriviamo "Ha completato la serie"
-        return { icon: '🏆', color: '#4ae8ff', text: mediaType === 'tv' ? 'ha completato la serie' : 'ha completato' };
+        return { icon: 'trophy' as const, color: '#4ae8ff', text: mediaType === 'tv' ? 'ha completato la serie' : 'ha completato' };
       case 'plan':
-        return { icon: '📌', color: '#ff0050', text: 'vuole vedere' };
+        return { icon: 'pin' as const, color: '#ff0050', text: 'vuole vedere' };
       case 'suggested':
-        return { icon: 'idea', color: '#f5c26b', text: 'ha consigliato' };
+        return { icon: 'lightbulb' as const, color: '#f5c26b', text: 'ha consigliato' };
       default:
-        return { icon: 'nw', color: '#ccc', text: 'ha aggiunto' };
+        return { icon: 'check' as const, color: '#ccc', text: 'ha aggiunto' };
     }
-  };
-
-  const resolvePosterSrc = (poster?: string) => {
-    if (!poster) return "https://via.placeholder.com/90x135";
-    if (poster.startsWith("http://") || poster.startsWith("https://")) return poster;
-    return `https://image.tmdb.org/t/p/w200${poster}`;
   };
 
   const resolveAvatarSrc = (avatar?: string) => {
@@ -113,7 +109,7 @@ export default function CommunityPulse({ onItemClick }: CommunityPulseProps) {
               })}
             >
               <img 
-                src={resolvePosterSrc(act.media_poster)} 
+                src={getTmdbImageUrl(act.media_poster, "w200", "https://via.placeholder.com/90x135")} 
                 alt="poster" 
                 className="activity-poster" 
               />
@@ -125,7 +121,7 @@ export default function CommunityPulse({ onItemClick }: CommunityPulseProps) {
                 </div>
 
                 <div className="action-row" style={{ color: config.color }}>
-                   <span style={{marginRight:4}}>{config.icon}</span>
+                   <Icon name={config.icon} size={14} />
                    {config.text}
                 </div>
 

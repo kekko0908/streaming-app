@@ -2,6 +2,7 @@
 import { useState, useRef, useEffect } from "react";
 import { buildEmbedUrl } from "../utils/helper";
 import { fetchSeasonEpisodes } from "../utils/api";
+import { logDevError } from "../utils/logging";
 import "../css/card.css"; 
 import "../css/watch_party.css";
 import { Episode, TmdbItem } from "../types/types";
@@ -243,7 +244,8 @@ export default function PlayerDrawer({
 
         setNextEpisodeState("available");
       })
-      .catch(() => {
+      .catch((error) => {
+        logDevError("Errore controllo prossimo episodio", error);
         if (!isActive) return;
         setNextEpisodeState("unavailable");
       });
