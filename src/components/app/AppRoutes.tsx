@@ -192,7 +192,8 @@ export function AppRoutes({
             </RequireAuth>
           }
         />
-        <Route path="/archive" element={<RequireAuth session={session}><DeferredSection><PageTransition><Archive onSelect={onSelectItem} /></PageTransition></DeferredSection></RequireAuth>} />
+        <Route path="/archive" element={<Navigate to="/archivio" replace />} />
+        <Route path="/archivio" element={<RequireAuth session={session}><DeferredSection><PageTransition><Archive onSelect={onSelectItem} /></PageTransition></DeferredSection></RequireAuth>} />
         <Route
           path="/list"
           element={
@@ -219,7 +220,8 @@ export function AppRoutes({
             </RequireAuth>
           }
         />
-        <Route path="/ranking" element={<RequireAuth session={session}><DeferredSection><PageTransition><Ranking /></PageTransition></DeferredSection></RequireAuth>} />
+        <Route path="/ranking" element={<Navigate to="/classifica" replace />} />
+        <Route path="/classifica" element={<RequireAuth session={session}><DeferredSection><PageTransition><Ranking /></PageTransition></DeferredSection></RequireAuth>} />
         <Route path="/suggestions" element={<RequireAuth session={session}><DeferredSection><PageTransition><Suggestions onSelect={onSelectItem} session={session} /></PageTransition></DeferredSection></RequireAuth>} />
       </Routes>
     </AnimatePresence>

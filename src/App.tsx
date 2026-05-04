@@ -172,6 +172,7 @@ export default function App() {
         onCloseSelected={() => {
           clearAllPlayerState();
           resetSelection();
+          navigate("/");
         }}
         onToggleUILock={toggleUILock}
         onClearSearch={clearSearch}

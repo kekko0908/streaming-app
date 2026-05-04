@@ -25,7 +25,13 @@ export default function Navbar({
   const location = useLocation();
   const path = location.pathname;
   const isDetailRoute = path.startsWith("/film/") || path.startsWith("/serie-tv/");
-  let view = path === "/" || isDetailRoute ? "home" : path.substring(1);
+  const routeViewMap: Record<string, string> = {
+    "/archivio": "archive",
+    "/archive": "archive",
+    "/classifica": "ranking",
+    "/ranking": "ranking",
+  };
+  let view = path === "/" || isDetailRoute ? "home" : routeViewMap[path] || path.substring(1);
 
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -156,8 +162,8 @@ export default function Navbar({
             <div className="user-menu-dropdown" role="menu">
               <button className="user-menu-item" onClick={() => handleMenuNavigate("/")}>Home</button>
               <button className="user-menu-item" onClick={() => handleMenuNavigate("/suggestions")}>Suggerimenti 💡</button>
-              <button className="user-menu-item" onClick={() => handleMenuNavigate("/archive")}>Archivio</button>
-              <button className="user-menu-item" onClick={() => handleMenuNavigate("/ranking")}>Classifica 🏆</button>
+              <button className="user-menu-item" onClick={() => handleMenuNavigate("/archivio")}>Archivio</button>
+              <button className="user-menu-item" onClick={() => handleMenuNavigate("/classifica")}>Classifica 🏆</button>
               
               {isAdmin && <button className="user-menu-item" onClick={() => handleMenuNavigate("/admin")}>Admin Dashboard</button>}
               <div className="user-menu-divider" role="separator" />
@@ -193,13 +199,13 @@ export default function Navbar({
         </button>
         <button 
           className={`pill ${view === "archive" ? "solid" : "ghost"}`} 
-          onClick={() => { navigate("/archive"); resetSelection(); }}
+          onClick={() => { navigate("/archivio"); resetSelection(); }}
         >
           Archivio
         </button>
         <button 
           className={`pill ${view === "ranking" ? "solid" : "ghost"}`} 
-          onClick={() => { navigate("/ranking"); resetSelection(); }}
+          onClick={() => { navigate("/classifica"); resetSelection(); }}
         >
           Classifica 🏆
         </button>

@@ -16,7 +16,6 @@ export function useSelectedMedia({
 
   const resetSelection = () => {
     setSelected(null);
-    navigate("/");
   };
 
   return {
