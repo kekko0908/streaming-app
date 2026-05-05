@@ -68,22 +68,26 @@ function CustomStatusDropdown({
 
 function StarRatingDropdown({ rating, onRate }: { rating: number; onRate: (rating: number) => void }) {
   const [isOpen, setIsOpen] = useState(false);
+  const handleRate = (nextRating: number) => {
+    onRate(nextRating);
+    window.setTimeout(() => setIsOpen(false), nextRating === 10 ? 1100 : 320);
+  };
 
   return (
     <div className="custom-dropdown-container rating-dropdown">
-      <button className="circle-btn" onClick={() => setIsOpen(!isOpen)} onBlur={() => setTimeout(() => setIsOpen(false), 200)} title="Vota">
+      <button className="circle-btn" onClick={() => setIsOpen(!isOpen)} title="Vota">
         <Icon name="star" size={18} />
       </button>
       <AnimatePresence>
         {isOpen && (
           <motion.div
             className="custom-dropdown-menu rating-dropdown-menu"
-            initial={{ opacity: 0, x: -20, scale: 0.95 }}
-            animate={{ opacity: 1, x: 0, scale: 1 }}
-            exit={{ opacity: 0, x: -20, scale: 0.95 }}
-            transition={{ duration: 0.2 }}
+            initial={{ opacity: 0, x: -20, y: "-50%", scale: 0.95 }}
+            animate={{ opacity: 1, x: 0, y: "-50%", scale: 1 }}
+            exit={{ opacity: 0, x: -20, y: "-50%", scale: 0.95 }}
+            transition={{ duration: 0.2, ease: "easeOut" }}
           >
-            <StarRating initialRating={rating} onRate={onRate} />
+            <StarRating initialRating={rating} onRate={handleRate} />
           </motion.div>
         )}
       </AnimatePresence>

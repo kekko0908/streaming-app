@@ -33,6 +33,17 @@ type ReleaseNotificationRow = {
   read_at: string | null;
 };
 
+type DebugReleaseNotificationInput = {
+  title?: string;
+  type?: "movie" | "tv";
+  tmdbId?: string;
+  releaseDateFull?: string;
+  poster?: string;
+  seasonNumber?: number;
+  episodeNumber?: number;
+  airDate?: string;
+};
+
 const STORAGE_PREFIX = "sfa_release_notifications";
 const STATE_EVENT = "release_notification_state_changed";
 const TOGGLE_EVENT = "toggle_release_notifications";
@@ -89,9 +100,18 @@ function buildRemotePayload(userId: string, record: ReleaseNotificationRecord) {
 }
 
 function mergeFreshItem(current: TmdbItem, fresh: TmdbItem): TmdbItem {
+  const currentRelease = current.releaseDateFull || "";
+  const freshRelease = fresh.releaseDateFull || "";
+  const today = new Date().toISOString().slice(0, 10);
+  const preferredReleaseDate =
+    currentRelease && currentRelease >= today && (!freshRelease || freshRelease < currentRelease)
+      ? currentRelease
+      : freshRelease || currentRelease;
+
   return {
     ...current,
     ...fresh,
+    releaseDateFull: preferredReleaseDate,
     status: current.status,
     progressMinutes: current.progressMinutes,
     progressSeconds: current.progressSeconds,
@@ -136,7 +156,7 @@ function getMovieMessage(item: TmdbItem) {
 
   if (releaseDate.getTime() === today.getTime()) return "Esce oggi.";
   if (releaseDate > today) return `Esce il ${formatDate(item.releaseDateFull)}.`;
-  return `Risulta uscito il ${formatDate(item.releaseDateFull)}.`;
+  return formatReleasedAgo(item.releaseDateFull);
 }
 
 function getTvMessage(item: TmdbItem) {
@@ -146,6 +166,10 @@ function getTvMessage(item: TmdbItem) {
       nextEpisode.season_number ? `S${nextEpisode.season_number}` : "",
       nextEpisode.episode_number ? `E${nextEpisode.episode_number}` : "",
     ].filter(Boolean).join(" ");
+    const diffDays = getDayDiffFromToday(nextEpisode.air_date);
+    if (diffDays !== null && diffDays >= 0) {
+      return `${episodeLabel} ${formatReleasedAgo(nextEpisode.air_date).replace("È uscito", "è uscito")}`;
+    }
     return `Prossimo episodio ${episodeLabel}: ${formatDate(nextEpisode.air_date)}.`;
   }
 
@@ -169,6 +193,40 @@ function buildMessage(record: ReleaseNotificationRecord): ReleaseNotificationMes
 function publishState(enabledKeys: string[]) {
   (window as any).sfaReleaseNotificationKeys = enabledKeys;
   window.dispatchEvent(new CustomEvent(STATE_EVENT, { detail: { enabledKeys } }));
+}
+
+function getYesterdayDate() {
+  const date = new Date();
+  date.setDate(date.getDate() - 1);
+  return date.toISOString().slice(0, 10);
+}
+
+function getDayDiffFromToday(dateStr: string) {
+  const target = new Date(dateStr);
+  const today = new Date();
+  if (Number.isNaN(target.getTime())) return null;
+
+  target.setHours(0, 0, 0, 0);
+  today.setHours(0, 0, 0, 0);
+  return Math.round((today.getTime() - target.getTime()) / (24 * 60 * 60 * 1000));
+}
+
+function formatReleasedAgo(dateStr: string, noun = "uscito") {
+  const diffDays = getDayDiffFromToday(dateStr);
+  if (diffDays === null) return "Data di uscita aggiornata.";
+  if (diffDays === 0) return `È ${noun} oggi.`;
+  if (diffDays === 1) return `È ${noun} ieri.`;
+  if (diffDays > 1 && diffDays < 7) return `È ${noun} ${diffDays} giorni fa.`;
+
+  if (diffDays < 30) {
+    const weeks = Math.max(1, Math.round(diffDays / 7));
+    const label = weeks === 1 ? "una settimana fa" : `${weeks} settimane fa`;
+    return `È ${noun} ${label} (${formatDate(dateStr)}).`;
+  }
+
+  const months = Math.max(1, Math.round(diffDays / 30));
+  const label = months === 1 ? "un mese fa" : `${months} mesi fa`;
+  return `È ${noun} ${label} (${formatDate(dateStr)}).`;
 }
 
 export function useReleaseNotifications(userId: string | undefined, myList: SavedItem[]) {
@@ -431,6 +489,48 @@ export function useReleaseNotifications(userId: string | undefined, myList: Save
   const disableNotifications = (item: TmdbItem) => {
     window.dispatchEvent(new CustomEvent(TOGGLE_EVENT, { detail: { item, enabled: false } }));
   };
+
+  useEffect(() => {
+    if (!import.meta.env.DEV) return;
+
+    (window as any).sfaDebugAddMockReleaseNotification = (input: DebugReleaseNotificationInput = {}) => {
+      const type = input.type || "movie";
+      const releaseDate = input.releaseDateFull || input.airDate || getYesterdayDate();
+      const item: TmdbItem = {
+        tmdbId: input.tmdbId || "999999991",
+        type,
+        title: input.title || (type === "tv" ? "The Alters" : "Il diavolo veste Prada 2"),
+        year: releaseDate.slice(0, 4),
+        releaseDateFull: type === "movie" ? releaseDate : "",
+        overview: "Notifica mock di test.",
+        poster: input.poster || "",
+        backdrop: "",
+        rating: 0,
+        nextEpisodeToAir: type === "tv"
+          ? {
+              id: 999999991,
+              season_number: input.seasonNumber || 1,
+              episode_number: input.episodeNumber || 4,
+              name: "",
+              air_date: releaseDate,
+            }
+          : null,
+      };
+
+      window.dispatchEvent(new CustomEvent(TOGGLE_EVENT, {
+        detail: {
+          item,
+          enabled: true,
+        },
+      }));
+
+      return item;
+    };
+
+    return () => {
+      delete (window as any).sfaDebugAddMockReleaseNotification;
+    };
+  }, []);
 
   return {
     enabledKeys: Object.keys(stored.enabled),

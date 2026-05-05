@@ -19,6 +19,7 @@ type IconName =
   | "lock"
   | "unlock"
   | "menu"
+  | "search"
   | "bell"
   | "bell-off"
   | "chevron-left"
@@ -81,6 +82,12 @@ const paths: Record<IconName, JSX.Element> = {
       <line x1="3" y1="6" x2="21" y2="6" />
       <line x1="3" y1="12" x2="21" y2="12" />
       <line x1="3" y1="18" x2="21" y2="18" />
+    </>
+  ),
+  search: (
+    <>
+      <circle cx="11" cy="11" r="7" />
+      <line x1="16.5" y1="16.5" x2="21" y2="21" />
     </>
   ),
   bell: <path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4" />,

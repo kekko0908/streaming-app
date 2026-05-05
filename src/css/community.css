@@ -64,10 +64,19 @@
   width: max-content;
   padding-left: 20px;
   animation: scroll 100s linear infinite;
+  cursor: grab;
+  touch-action: pan-y;
+  user-select: none;
+  will-change: transform;
 }
 
-.activity-track:hover {
+.activity-track:hover,
+.activity-track.dragging {
   animation-play-state: paused;
+}
+
+.activity-track.dragging {
+  cursor: grabbing;
 }
 
 .community-pulse-empty {
@@ -83,11 +92,11 @@
 
 @keyframes scroll {
   0% {
-    transform: translateX(0);
+    transform: translateX(calc(0px + var(--drag-offset, 0px)));
   }
 
   100% {
-    transform: translateX(-50%);
+    transform: translateX(calc(-50% + var(--drag-offset, 0px)));
   }
 }
 

@@ -52,10 +52,13 @@ export default function Navbar({
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
   const menuRefDesktop = useRef<HTMLDivElement | null>(null);
   const menuRefMobile = useRef<HTMLDivElement | null>(null);
   const notificationsRefDesktop = useRef<HTMLDivElement | null>(null);
   const notificationsRefMobile = useRef<HTMLDivElement | null>(null);
+  const searchRef = useRef<HTMLDivElement | null>(null);
+  const searchInputRef = useRef<HTMLInputElement | null>(null);
 
   // DEBOUNCE RICERCA
   useEffect(() => {
@@ -81,13 +84,16 @@ export default function Navbar({
       const isInsideNotifications =
         notificationsRefDesktop.current?.contains(target) ||
         notificationsRefMobile.current?.contains(target);
+      const isInsideSearch = searchRef.current?.contains(target);
       if (!isInsideDesktop && !isInsideMobile) setIsMenuOpen(false);
       if (!isInsideNotifications) setIsNotificationsOpen(false);
+      if (!isInsideSearch && !query.trim()) setIsSearchOpen(false);
     };
     const handleKey = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         setIsMenuOpen(false);
         setIsNotificationsOpen(false);
+        setIsSearchOpen(false);
       }
     };
     document.addEventListener("mousedown", handleClick);
@@ -101,6 +107,7 @@ export default function Navbar({
   useEffect(() => {
     setIsMenuOpen(false);
     setIsNotificationsOpen(false);
+    setIsSearchOpen(false);
   }, [location, session]);
 
   useEffect(() => {
@@ -152,6 +159,22 @@ export default function Navbar({
     });
   };
 
+  const openSearch = () => {
+    setIsSearchOpen(true);
+    window.setTimeout(() => searchInputRef.current?.focus(), 0);
+  };
+
+  const handleSearchKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === 'Enter') {
+      onSearch();
+      navigate("/");
+      return;
+    }
+    if (event.key === "Escape" && !query.trim()) {
+      setIsSearchOpen(false);
+    }
+  };
+
   return (
     <nav className="nav">
       <div className="nav-left">
@@ -164,19 +187,14 @@ export default function Navbar({
           </div>
         </div>
 
-        {/* BARRA DI RICERCA */}
-        <div className="nav-search-container">
+        {/* BARRA DI RICERCA MOBILE */}
+        <div className="nav-search-container mobile-search">
           <input 
             className="nav-search-input"
             placeholder="Cerca film, serie..."
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                onSearch();
-                navigate("/");
-              }
-            }}
+            onKeyDown={handleSearchKeyDown}
           />
         </div>
 
@@ -244,6 +262,7 @@ export default function Navbar({
         </div>
       </div>
 
+      <div className="nav-center">
       <div className="nav-links">
         <button 
           className={`pill ${view === "home" ? "solid" : "ghost"}`} 
@@ -269,7 +288,31 @@ export default function Navbar({
         >
           Classifica <Icon name="trophy" size={16} />
         </button>
+      </div>
+      </div>
 
+      <div className="nav-right">
+        <div className={`nav-search-container desktop-search ${isSearchOpen || query.trim() ? "open" : ""}`} ref={searchRef}>
+          <input
+            ref={searchInputRef}
+            className="nav-search-input"
+            placeholder="Cerca film, serie..."
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            onFocus={() => setIsSearchOpen(true)}
+            onKeyDown={handleSearchKeyDown}
+            tabIndex={isSearchOpen || query.trim() ? 0 : -1}
+          />
+          <button
+            type="button"
+            className="search-toggle-button"
+            onClick={openSearch}
+            aria-label="Cerca"
+            aria-expanded={isSearchOpen}
+          >
+            <Icon name="search" size={20} />
+          </button>
+        </div>
         {session && (
           <>
           <div className="release-notifications desktop-only" ref={notificationsRefDesktop}>

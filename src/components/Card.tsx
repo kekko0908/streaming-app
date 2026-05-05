@@ -2,7 +2,7 @@ import "../css/card.css";
 import "../css/archive.css"; 
 import { MediaType, TmdbItem, WatchStatus } from "../types/types"; 
 import { useState, useRef, useEffect } from "react";
-import { fetchTitleLogo, fetchTrailer } from "../utils/api";
+import { fetchDetails, fetchTitleLogo, fetchTrailer } from "../utils/api";
 import { getTmdbImageUrl } from "../utils/helper";
 import { logDevError } from "../utils/logging";
 import YouTube from 'react-youtube';
@@ -40,6 +40,8 @@ export default function Card({ item, onClick, progress, onRemove, isUpcoming, sh
   
   const [trailerKey, setTrailerKey] = useState<string | null>(null);
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
+  const [expandedDetails, setExpandedDetails] = useState<TmdbItem | null>(null);
+  const [expandedDetailsReady, setExpandedDetailsReady] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
   const [isMuted, setIsMuted] = useState(true);
   const [expandedAlignment, setExpandedAlignment] = useState<"center" | "left" | "right">("center");
@@ -105,6 +107,8 @@ export default function Card({ item, onClick, progress, onRemove, isUpcoming, sh
     setIsExpanded(false);
     setTrailerKey(null);
     setLogoUrl(null);
+    setExpandedDetails(null);
+    setExpandedDetailsReady(false);
     setIsMuted(true);
     setExpandedAlignment("center");
     setShowListMenu(false);
@@ -128,14 +132,18 @@ export default function Card({ item, onClick, progress, onRemove, isUpcoming, sh
 
       setIsExpanded(true);
       try {
-        const [key, logo] = await Promise.all([
+        const [key, logo, details] = await Promise.all([
           fetchTrailer(item.tmdbId, item.type),
           fetchTitleLogo(item.tmdbId, item.type),
+          fetchDetails(item.tmdbId, item.type),
         ]);
         if (key && hoverTimeoutRef.current) setTrailerKey(key);
         if (logo && hoverTimeoutRef.current) setLogoUrl(logo);
+        if (details && hoverTimeoutRef.current) setExpandedDetails(details);
       } catch (error) {
         logDevError("Errore caricamento hover card", error);
+      } finally {
+        if (hoverTimeoutRef.current) setExpandedDetailsReady(true);
       }
     }, 800); 
   };
@@ -293,6 +301,11 @@ export default function Card({ item, onClick, progress, onRemove, isUpcoming, sh
   const movieProgress = runtimeMinutes > 0 && watchedMinutes > 0
     ? Math.min(1, watchedMinutes / runtimeMinutes)
     : 0;
+  const displayItem = expandedDetailsReady ? (expandedDetails ?? item) : item;
+  const expandedYear = displayItem.year || displayItem.releaseDateFull?.slice(0, 4) || "";
+  const expandedRuntime = displayItem.runtime
+    ? displayItem.runtime.toLowerCase().includes("min") ? displayItem.runtime : `${displayItem.runtime} min`
+    : "";
 
   // Progresso Serie TV: episodi visti / episodi totali
   const tvProgress =
@@ -324,15 +337,13 @@ export default function Card({ item, onClick, progress, onRemove, isUpcoming, sh
             decoding="async"
           />
 
-          <button
-            type="button"
+          <span
             className={`card-notification-button ${hasReleaseNotification ? "active" : ""}`}
-            onClick={handleNotificationClick}
-            aria-label={hasReleaseNotification ? `Disattiva notifiche per ${item.title}` : `Attiva notifiche per ${item.title}`}
+            aria-hidden="true"
             title={hasReleaseNotification ? "Notifiche attive" : "Avvisami sulle uscite"}
           >
             <Icon name="bell" size={16} />
-          </button>
+          </span>
 
           {hasCommunityStats && (
             <div className={`community-badge ${item.communitySortMode === "loved" ? "is-loved" : ""}`}>
@@ -354,7 +365,7 @@ export default function Card({ item, onClick, progress, onRemove, isUpcoming, sh
           )}
 
           {item.type === 'tv' && progress && !isCompleted && !hasNewEpisodes && (
-            <div className="progress-badge">S:{progress.season} E:{progress.episode}</div>
+            <div className={`progress-badge ${hasReleaseNotification ? "with-notification" : ""}`}>S:{progress.season} E:{progress.episode}</div>
           )}
 
           {showTvResumeBadge && (
@@ -389,7 +400,10 @@ export default function Card({ item, onClick, progress, onRemove, isUpcoming, sh
               ref={expandedModalRef}
               className={`card-expanded-modal card-expanded-modal--${expandedAlignment}`}
             >
-                <div className="expanded-video-container" onClick={handleDirectPlay}>
+                <div
+                  className={`expanded-video-container ${trailerKey && isTrailerActive ? "has-youtube-trailer" : ""}`}
+                  onClick={handleDirectPlay}
+                >
                     {trailerKey && isTrailerActive ? (
                         <YouTube
                             videoId={trailerKey}
@@ -504,16 +518,27 @@ export default function Card({ item, onClick, progress, onRemove, isUpcoming, sh
                         </div>
                     </div>
 
-                    <div className="expanded-details-header">
-                        <span className="expanded-match">Match {Math.round((item.rating || 0) * 10)}%</span>
-                        <span className="expanded-resolution">HD</span>
-                        {item.type === 'movie' && item.runtime && (
-                             <span className="expanded-duration">{item.runtime} m</span>
-                        )}
-                        {item.type === 'tv' && item.seasons && (
-                             <span className="expanded-duration">{item.seasons} Stagion{item.seasons > 1 ? 'i' : 'e'}</span>
-                        )}
-                    </div>
+                    {expandedDetailsReady ? (
+                        <div className="expanded-details-header">
+                            <span className="expanded-match">Valutazione {(displayItem.rating || 0).toFixed(1)}</span>
+                            {expandedYear && (
+                                 <span className="expanded-date">{expandedYear}</span>
+                            )}
+                            {displayItem.type === 'movie' && expandedRuntime && (
+                                 <span className="expanded-duration">{expandedRuntime}</span>
+                            )}
+                            {displayItem.type === 'tv' && displayItem.seasons && (
+                                 <span className="expanded-duration">{displayItem.seasons} Stagion{displayItem.seasons > 1 ? 'i' : 'e'}</span>
+                            )}
+                            <span className="expanded-resolution">HD</span>
+                        </div>
+                    ) : (
+                        <div className="expanded-details-placeholder" aria-hidden="true">
+                            <span />
+                            <span />
+                            <span />
+                        </div>
+                    )}
 
                     <div className="expanded-genres">
                         {item.genres && item.genres.length > 0 ? item.genres.join(" • ") : (item.type === 'tv' ? 'Serie TV • Drammatico' : 'Film • Azione')}

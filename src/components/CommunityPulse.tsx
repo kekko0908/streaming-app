@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState, type CSSProperties, type PointerEvent } from "react";
 import { supabase } from "../supabaseClient";
 import "../css/community.css";
 import { TmdbItem } from "../types/types";
@@ -26,6 +26,15 @@ interface CommunityPulseProps {
 export default function CommunityPulse({ onItemClick }: CommunityPulseProps) {
   const [activities, setActivities] = useState<Activity[]>([]);
   const [loading, setLoading] = useState(true);
+  const [dragOffset, setDragOffset] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
+  const dragState = useRef({
+    active: false,
+    startX: 0,
+    startOffset: 0,
+    moved: false,
+  });
+  const suppressClickRef = useRef(false);
 
   useEffect(() => {
     async function load() {
@@ -45,6 +54,46 @@ export default function CommunityPulse({ onItemClick }: CommunityPulseProps) {
   }, []);
 
   const loopActivities = [...activities, ...activities];
+  const trackStyle = { "--drag-offset": `${dragOffset}px` } as CSSProperties;
+
+  const handleTrackPointerDown = (event: PointerEvent<HTMLDivElement>) => {
+    if (event.pointerType === "mouse" && event.button !== 0) return;
+
+    dragState.current = {
+      active: true,
+      startX: event.clientX,
+      startOffset: dragOffset,
+      moved: false,
+    };
+    setIsDragging(true);
+    event.currentTarget.setPointerCapture(event.pointerId);
+  };
+
+  const handleTrackPointerMove = (event: PointerEvent<HTMLDivElement>) => {
+    if (!dragState.current.active) return;
+
+    const delta = event.clientX - dragState.current.startX;
+    if (Math.abs(delta) > 5) {
+      dragState.current.moved = true;
+    }
+    setDragOffset(dragState.current.startOffset + delta);
+  };
+
+  const handleTrackPointerEnd = (event: PointerEvent<HTMLDivElement>) => {
+    if (!dragState.current.active) return;
+
+    suppressClickRef.current = dragState.current.moved;
+    dragState.current.active = false;
+    setIsDragging(false);
+
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+
+    window.setTimeout(() => {
+      suppressClickRef.current = false;
+    }, 0);
+  };
 
   const getActionConfig = (act: Activity, mediaType: "movie" | "tv") => {
     switch (act.action_type) {
@@ -82,7 +131,14 @@ export default function CommunityPulse({ onItemClick }: CommunityPulseProps) {
       ) : activities.length === 0 ? (
         <div className="community-pulse-empty">Nessuna attivita live disponibile in questo momento.</div>
       ) : (
-        <div className="activity-track">
+        <div
+          className={`activity-track ${isDragging ? "dragging" : ""}`}
+          style={trackStyle}
+          onPointerDown={handleTrackPointerDown}
+          onPointerMove={handleTrackPointerMove}
+          onPointerUp={handleTrackPointerEnd}
+          onPointerCancel={handleTrackPointerEnd}
+        >
           {loopActivities.map((act, i) => {
           const inferredType = act.media_type === 'tv' ? 'tv' : 'movie';
           const config = getActionConfig(act, inferredType);
@@ -100,18 +156,22 @@ export default function CommunityPulse({ onItemClick }: CommunityPulseProps) {
             <div 
               key={`${i}-${act.tmdb_id}`} 
               className="activity-card"
-              onClick={() => onItemClick && onItemClick({
+              onClick={() => {
+                if (suppressClickRef.current) return;
+                onItemClick && onItemClick({
                   tmdbId: act.tmdb_id,
                   type: inferredType as any,
                   title: act.media_title,
                   poster: act.media_poster,
                   year: "", overview: "", backdrop: "", rating: 0
-              })}
+                });
+              }}
             >
               <img 
                 src={getTmdbImageUrl(act.media_poster, "w200", "https://via.placeholder.com/90x135")} 
                 alt="poster" 
                 className="activity-poster" 
+                draggable={false}
               />
               
               <div className="activity-content">
