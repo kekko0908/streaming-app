@@ -1,5 +1,5 @@
 export type MediaType = "movie" | "tv";
-export type WatchStatus = "da-guardare" | "in-corso" | "pianificato" | "gia-guardato";
+export type WatchStatus = "da-guardare" | "in-corso" | "gia-guardato";
 export type CommunitySortMode = "watched" | "loved";
 
 export type ViewType = "home" | "list" | "archive" | "auth" | "profile" | "ranking" | "suggestions" | "admin";
@@ -106,6 +106,7 @@ export interface SeasonDetail {
 // --- NUOVA INTERFACCIA EPISODIO ---
 export interface Episode {
   id: number;
+  season_number?: number;
   episode_number: number;
   name: string;
   air_date?: string; // Data di uscita (YYYY-MM-DD)
@@ -128,6 +129,7 @@ export interface TmdbItem {
   genres?: string[];
   seasons?: number;
   seasonsDetails?: SeasonDetail[];
+  nextEpisodeToAir?: Episode | null;
   popularity?: number;
   status?: WatchStatus;
   progressMinutes?: number;
@@ -159,6 +161,5 @@ export type WatchProgress = {
 export const STATUS_SECTIONS: { id: WatchStatus; label: string }[] = [
   { id: "in-corso", label: "In corso" },
   { id: "da-guardare", label: "Da guardare" },
-  { id: "gia-guardato", label: "Gia guardato" },
-  { id: "pianificato", label: "Pianificato" }
+  { id: "gia-guardato", label: "Gia guardato" }
 ];

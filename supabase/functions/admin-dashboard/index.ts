@@ -3,7 +3,7 @@ import { createClient } from "npm:@supabase/supabase-js@2.49.8";
 import { corsHeaders } from "../_shared/cors.ts";
 
 type MediaType = "movie" | "tv";
-type WatchStatus = "da-guardare" | "in-corso" | "pianificato" | "gia-guardato";
+type WatchStatus = "da-guardare" | "in-corso" | "gia-guardato";
 
 type RequestPayload =
   | { action: "overview" }
@@ -29,6 +29,11 @@ function jsonResponse(status: number, body: Record<string, unknown>) {
 
 function normalizeString(value: unknown, fallback = "") {
   return typeof value === "string" && value.trim() ? value.trim() : fallback;
+}
+
+function normalizeWatchStatus(value: unknown): WatchStatus {
+  if (value === "in-corso" || value === "gia-guardato") return value;
+  return "da-guardare";
 }
 
 function getAvatar(profile: Record<string, unknown> | null | undefined, user: Record<string, unknown> | null | undefined) {
@@ -426,7 +431,6 @@ Deno.serve(async (req) => {
       const statusBreakdown: Record<WatchStatus, number> = {
         "da-guardare": 0,
         "in-corso": 0,
-        "pianificato": 0,
         "gia-guardato": 0,
       };
 
@@ -437,7 +441,7 @@ Deno.serve(async (req) => {
 
       const recentLibrary = libraryRows.slice(0, 6).map((row) => {
         const mediaItems = row.media_items as Record<string, unknown> | null;
-        const status = (normalizeString(row.status, "da-guardare") as WatchStatus);
+        const status = normalizeWatchStatus(row.status);
         statusBreakdown[status] = (statusBreakdown[status] ?? 0) + 1;
 
         const rating = Number(row.rating ?? 0);
@@ -466,7 +470,7 @@ Deno.serve(async (req) => {
 
       for (const row of libraryRows.slice(6)) {
         const mediaItems = row.media_items as Record<string, unknown> | null;
-        const status = (normalizeString(row.status, "da-guardare") as WatchStatus);
+        const status = normalizeWatchStatus(row.status);
         statusBreakdown[status] = (statusBreakdown[status] ?? 0) + 1;
 
         const rating = Number(row.rating ?? 0);

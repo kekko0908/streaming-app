@@ -14,6 +14,7 @@ const Archive = lazy(() => import("../Archive"));
 const Ranking = lazy(() => import("../Ranking"));
 const Suggestions = lazy(() => import("../Suggestions"));
 const AdminDashboard = lazy(() => import("../AdminDashboard"));
+const NotFoundPage = lazy(() => import("../NotFoundPage"));
 
 export type HomeLists = {
   trending: TmdbItem[];
@@ -223,7 +224,8 @@ export function AppRoutes({
         <Route path="/ranking" element={<Navigate to="/classifica" replace />} />
         <Route path="/classifica" element={<RequireAuth session={session}><DeferredSection><PageTransition><Ranking /></PageTransition></DeferredSection></RequireAuth>} />
         <Route path="/suggestions" element={<RequireAuth session={session}><DeferredSection><PageTransition><Suggestions onSelect={onSelectItem} session={session} /></PageTransition></DeferredSection></RequireAuth>} />
-        <Route path="*" element={<Navigate to="/" replace />} />
+        <Route path="/404" element={<DeferredSection><PageTransition><NotFoundPage /></PageTransition></DeferredSection>} />
+        <Route path="*" element={<DeferredSection><PageTransition><NotFoundPage /></PageTransition></DeferredSection>} />
       </Routes>
     </AnimatePresence>
   );

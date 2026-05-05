@@ -63,6 +63,15 @@ type TmdbItem = {
   genres?: string[];
   seasons?: number;
   seasonsDetails?: { season_number: number; episode_count: number }[];
+  nextEpisodeToAir?: {
+    id: number;
+    season_number?: number;
+    episode_number: number;
+    name: string;
+    air_date?: string;
+    still_path?: string;
+    overview?: string;
+  } | null;
   popularity?: number;
   collection?: {
     id: number;
@@ -113,6 +122,19 @@ function pickYear(date?: string) {
 function imagePath(path: string | null | undefined, size: string) {
   if (!path) return "";
   return `https://image.tmdb.org/t/p/${size}${path}`;
+}
+
+function mapEpisode(raw: Record<string, unknown> | null | undefined) {
+  if (!raw) return null;
+  return {
+    id: Number(raw.id ?? 0),
+    season_number: Number(raw.season_number ?? 0) || undefined,
+    episode_number: Number(raw.episode_number ?? 0),
+    name: String(raw.name ?? ""),
+    air_date: String(raw.air_date ?? ""),
+    still_path: raw.still_path ? imagePath(String(raw.still_path), "w300") : "",
+    overview: String(raw.overview ?? ""),
+  };
 }
 
 async function fetchJson(path: string, params?: URLSearchParams) {
@@ -295,6 +317,7 @@ async function fetchDetails(tmdbId: string, type: MediaType): Promise<TmdbItem> 
           }))
           .filter((season: any) => season.season_number > 0)
       : [],
+    nextEpisodeToAir: type === "tv" ? mapEpisode(data.next_episode_to_air ?? null) : null,
     popularity: Number(data.popularity ?? 0),
     collection: collectionData,
   };

@@ -100,10 +100,6 @@ export function AdminUserDetailDrawer({
                 <span>Gia guardato</span>
                 <strong>{selectedUser.statusBreakdown["gia-guardato"] || 0}</strong>
               </article>
-              <article>
-                <span>Pianificato</span>
-                <strong>{selectedUser.statusBreakdown["pianificato"] || 0}</strong>
-              </article>
             </div>
           </section>
 

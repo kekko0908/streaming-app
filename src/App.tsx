@@ -6,6 +6,7 @@ import { useAppShellState } from "./hooks/useAppShellState";
 import { useHomeScreenState } from "./hooks/useHomeScreenState";
 import { useMyListViewState } from "./hooks/useMyListViewState";
 import { usePlayerController } from "./hooks/usePlayerController";
+import { useReleaseNotifications } from "./hooks/useReleaseNotifications";
 import { useSelectedMedia } from "./hooks/useSelectedMedia";
 import { useStore } from "./hooks/useStore";
 import Navbar from "./components/Navbar";
@@ -13,6 +14,22 @@ import SiteLock from "./components/SiteLock";
 import { AppOverlays } from "./components/app/AppOverlays";
 import { AppRoutes } from "./components/app/AppRoutes";
 import { UPDATES_VERSION, updatesItems } from "./components/app/appUpdates";
+
+function isProtectedAppRoute(pathname: string) {
+  return (
+    pathname === "/" ||
+    pathname === "/profile" ||
+    pathname === "/admin" ||
+    pathname === "/archive" ||
+    pathname === "/archivio" ||
+    pathname === "/list" ||
+    pathname === "/ranking" ||
+    pathname === "/classifica" ||
+    pathname === "/suggestions" ||
+    pathname.startsWith("/film/") ||
+    pathname.startsWith("/serie-tv/")
+  );
+}
 
 export default function App() {
   const location = useLocation();
@@ -45,6 +62,7 @@ export default function App() {
     handleLogout,
     handleCloseUpdates,
   } = useAppShellState(navigate);
+  const releaseNotifications = useReleaseNotifications(session?.user?.id, myList);
   const {
     selected,
     setSelected,
@@ -122,7 +140,9 @@ export default function App() {
   };
 
   const isAuthRoute = location.pathname === "/auth";
-  if (!session && !isAuthRoute) return <SiteLock onLogin={() => navigate("/auth")} />;
+  if (!session && !isAuthRoute && isProtectedAppRoute(location.pathname)) {
+    return <SiteLock onLogin={() => navigate("/auth")} />;
+  }
 
   return (
     <div className="app">
@@ -139,6 +159,10 @@ export default function App() {
           onLogout={handleAppLogout}
           onShowUpdates={() => setShowUpdates(true)}
           isAdmin={isAdmin}
+          releaseNotifications={releaseNotifications.messages}
+          releaseNotificationsUnreadCount={releaseNotifications.unreadCount}
+          onReleaseNotificationsOpen={releaseNotifications.markAllRead}
+          onDisableReleaseNotification={releaseNotifications.disableNotifications}
         />
       )}
 

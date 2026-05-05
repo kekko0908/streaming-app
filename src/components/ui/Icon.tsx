@@ -19,6 +19,8 @@ type IconName =
   | "lock"
   | "unlock"
   | "menu"
+  | "bell"
+  | "bell-off"
   | "chevron-left"
   | "chevron-right";
 
@@ -79,6 +81,15 @@ const paths: Record<IconName, JSX.Element> = {
       <line x1="3" y1="6" x2="21" y2="6" />
       <line x1="3" y1="12" x2="21" y2="12" />
       <line x1="3" y1="18" x2="21" y2="18" />
+    </>
+  ),
+  bell: <path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4" />,
+  "bell-off": (
+    <>
+      <path d="M13.7 21a2 2 0 0 1-3.4 0" />
+      <path d="M18.6 13.5C18.2 12.2 18 10.4 18 8a6 6 0 0 0-9.3-5" />
+      <path d="M6 8c0 7-3 7-3 9h14" />
+      <line x1="2" y1="2" x2="22" y2="22" />
     </>
   ),
   "chevron-left": <polyline points="15 18 9 12 15 6" />,

@@ -45,6 +45,7 @@ export default function Card({ item, onClick, progress, onRemove, isUpcoming, sh
   const [expandedAlignment, setExpandedAlignment] = useState<"center" | "left" | "right">("center");
   const [isHoverBlocked, setIsHoverBlocked] = useState(false);
   const [isInList, setIsInList] = useState(Boolean(item.status));
+  const [hasReleaseNotification, setHasReleaseNotification] = useState(false);
   const [showListMenu, setShowListMenu] = useState(false);
   const hoverTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const trailerPlaybackIdRef = useRef(`card-${item.type}-${item.tmdbId}-${Math.random().toString(36).slice(2)}`);
@@ -183,6 +184,29 @@ export default function Card({ item, onClick, progress, onRemove, isUpcoming, sh
     }));
   };
 
+  const handleNotificationClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const nextEnabled = !hasReleaseNotification;
+    setHasReleaseNotification(nextEnabled);
+
+    if (nextEnabled && !isInList) {
+      setIsInList(true);
+      window.dispatchEvent(new CustomEvent('add_to_list_direct', {
+        detail: {
+          item,
+          status: "da-guardare"
+        }
+      }));
+    }
+
+    window.dispatchEvent(new CustomEvent('toggle_release_notifications', {
+      detail: {
+        item,
+        enabled: nextEnabled
+      }
+    }));
+  };
+
   useEffect(() => {
     return () => {
         if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
@@ -192,6 +216,19 @@ export default function Card({ item, onClick, progress, onRemove, isUpcoming, sh
   useEffect(() => {
     setIsInList(Boolean(item.status));
   }, [item.status, item.tmdbId]);
+
+  useEffect(() => {
+    const key = `${item.type}:${item.tmdbId}`;
+    const handleNotificationState = (event: Event) => {
+      const customEvent = event as CustomEvent<{ enabledKeys?: string[] }>;
+      setHasReleaseNotification(Boolean(customEvent.detail.enabledKeys?.includes(key)));
+    };
+
+    const currentKeys = (window as any).sfaReleaseNotificationKeys as string[] | undefined;
+    setHasReleaseNotification(Boolean(currentKeys?.includes(key)));
+    window.addEventListener("release_notification_state_changed", handleNotificationState);
+    return () => window.removeEventListener("release_notification_state_changed", handleNotificationState);
+  }, [item.type, item.tmdbId]);
 
   useEffect(() => {
     if (!isExpanded) return;
@@ -286,6 +323,16 @@ export default function Card({ item, onClick, progress, onRemove, isUpcoming, sh
             loading="lazy" 
             decoding="async"
           />
+
+          <button
+            type="button"
+            className={`card-notification-button ${hasReleaseNotification ? "active" : ""}`}
+            onClick={handleNotificationClick}
+            aria-label={hasReleaseNotification ? `Disattiva notifiche per ${item.title}` : `Attiva notifiche per ${item.title}`}
+            title={hasReleaseNotification ? "Notifiche attive" : "Avvisami sulle uscite"}
+          >
+            <Icon name="bell" size={16} />
+          </button>
 
           {hasCommunityStats && (
             <div className={`community-badge ${item.communitySortMode === "loved" ? "is-loved" : ""}`}>
@@ -424,12 +471,6 @@ export default function Card({ item, onClick, progress, onRemove, isUpcoming, sh
                                             In corso
                                         </button>
                                         <button 
-                                            className={item.status === 'pianificato' ? 'active-status' : ''} 
-                                            onClick={(e) => handleSelectStatus(e, 'pianificato')}
-                                        >
-                                            Pianificato
-                                        </button>
-                                        <button 
                                             className={item.status === 'gia-guardato' ? 'active-status' : ''} 
                                             onClick={(e) => handleSelectStatus(e, 'gia-guardato')}
                                         >
@@ -444,6 +485,14 @@ export default function Card({ item, onClick, progress, onRemove, isUpcoming, sh
                                     </div>
                                 )}
                             </div>
+                            <button
+                              className={`exp-btn-notify ${hasReleaseNotification ? "active" : ""}`}
+                              type="button"
+                              onClick={handleNotificationClick}
+                              title={hasReleaseNotification ? "Notifiche attive" : "Avvisami sulle uscite"}
+                            >
+                                <Icon name="bell" size={18} />
+                            </button>
                             <div className="expanded-title-text" title={item.title}>
                                 {item.title}
                             </div>

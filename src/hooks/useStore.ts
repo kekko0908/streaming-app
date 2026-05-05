@@ -3,6 +3,11 @@ import { supabase } from "../supabaseClient";
 import { MediaType, SavedItem, WatchStatus, TmdbItem } from "../types/types";
 import { ProfileStats } from "../types/profileStats";
 
+function normalizeWatchStatus(status: unknown): WatchStatus {
+  if (status === "in-corso" || status === "gia-guardato") return status;
+  return "da-guardare";
+}
+
 export function useStore() {
   const [myList, setMyList] = useState<SavedItem[]>([]);
   const [watchProgress, setWatchProgress] = useState<Record<string, { season: number; episode: number; watchedEpisodes?: number; totalEpisodes?: number; progressSeconds?: number; progressMinutes?: number }>>({});
@@ -51,7 +56,7 @@ export function useStore() {
         tmdbId: String(row.tmdb_id),
         type: inferredType,
         title: row.media_items?.title || 'Sconosciuto',
-        status: row.status,
+        status: normalizeWatchStatus(row.status),
         addedAt: row.added_at,
         rating: row.rating || 0,
         poster: row.media_items?.poster_path || "",

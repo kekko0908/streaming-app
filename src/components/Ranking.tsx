@@ -36,9 +36,9 @@ const CATEGORIES = {
   },
   planned: {
     id: 'planned' as RankingType,
-    label: "Il Pianificatore",
+    label: "Lista d'attesa",
     icon: "📅",
-    desc: "L'Hype Rank! Chi ha la lista d'attesa più lunga? Questi utenti hanno pianificato o messo in 'Da Guardare' una montagna di titoli.",
+    desc: "Chi ha piu titoli salvati da guardare? Questa classifica conta film e serie TV aggiunti alla lista.",
     unitLabel: "in lista",
     format: (val: number) => `${val}` // Numero intero
   },
@@ -225,7 +225,7 @@ export default function Ranking() {
             {activeConfig.desc}
         </div>
         
-        {/* FILTRI TEMPO (Ha senso nasconderli per "Pianificatore" se è una lista statica, ma lo lasciamo per coerenza) */}
+        {/* FILTRI TEMPO */}
         <div className="ranking-tabs">
           <button className={`rank-tab ${range === 'week' ? 'active' : ''}`} onClick={() => setRange('week')}>Settimanale</button>
           <button className={`rank-tab ${range === 'month' ? 'active' : ''}`} onClick={() => setRange('month')}>Mensile</button>

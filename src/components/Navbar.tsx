@@ -4,6 +4,7 @@ import "../css/navbar.css";
 import { Session } from "@supabase/supabase-js";
 import { supabase } from "../supabaseClient";
 import { Icon } from "./ui/Icon";
+import { ReleaseNotificationMessage } from "../hooks/useReleaseNotifications";
 
 interface NavbarProps {
   clearSelected: () => void;
@@ -14,12 +15,27 @@ interface NavbarProps {
   onLogout: () => void;
   onShowUpdates: () => void;
   isAdmin: boolean;
+  releaseNotifications: ReleaseNotificationMessage[];
+  releaseNotificationsUnreadCount: number;
+  onReleaseNotificationsOpen: () => void;
+  onDisableReleaseNotification: (item: ReleaseNotificationMessage["item"]) => void;
 }
 
 const DEFAULT_AVATAR = "https://api.dicebear.com/7.x/adventurer/svg?seed=Default";
 
 export default function Navbar({ 
-  clearSelected, query, setQuery, onSearch, session, onLogout, onShowUpdates, isAdmin
+  clearSelected,
+  query,
+  setQuery,
+  onSearch,
+  session,
+  onLogout,
+  onShowUpdates,
+  isAdmin,
+  releaseNotifications,
+  releaseNotificationsUnreadCount,
+  onReleaseNotificationsOpen,
+  onDisableReleaseNotification,
 }: NavbarProps) {
   const navigate = useNavigate();
   const location = useLocation();
@@ -35,8 +51,11 @@ export default function Navbar({
 
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const menuRefDesktop = useRef<HTMLDivElement | null>(null);
   const menuRefMobile = useRef<HTMLDivElement | null>(null);
+  const notificationsRefDesktop = useRef<HTMLDivElement | null>(null);
+  const notificationsRefMobile = useRef<HTMLDivElement | null>(null);
 
   // DEBOUNCE RICERCA
   useEffect(() => {
@@ -59,10 +78,17 @@ export default function Navbar({
       const target = event.target as Node;
       const isInsideDesktop = menuRefDesktop.current?.contains(target);
       const isInsideMobile = menuRefMobile.current?.contains(target);
+      const isInsideNotifications =
+        notificationsRefDesktop.current?.contains(target) ||
+        notificationsRefMobile.current?.contains(target);
       if (!isInsideDesktop && !isInsideMobile) setIsMenuOpen(false);
+      if (!isInsideNotifications) setIsNotificationsOpen(false);
     };
     const handleKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setIsMenuOpen(false);
+      if (event.key === "Escape") {
+        setIsMenuOpen(false);
+        setIsNotificationsOpen(false);
+      }
     };
     document.addEventListener("mousedown", handleClick);
     document.addEventListener("keydown", handleKey);
@@ -74,6 +100,7 @@ export default function Navbar({
 
   useEffect(() => {
     setIsMenuOpen(false);
+    setIsNotificationsOpen(false);
   }, [location, session]);
 
   useEffect(() => {
@@ -110,7 +137,19 @@ export default function Navbar({
 
   const handleLogoutClick = () => {
     setIsMenuOpen(false);
+    setIsNotificationsOpen(false);
     onLogout();
+  };
+
+  const toggleNotifications = () => {
+    setIsNotificationsOpen((prev) => {
+      const next = !prev;
+      if (next) {
+        setIsMenuOpen(false);
+        onReleaseNotificationsOpen();
+      }
+      return next;
+    });
   };
 
   return (
@@ -140,6 +179,27 @@ export default function Navbar({
             }}
           />
         </div>
+
+        {session && (
+          <div className="release-notifications mobile-only" ref={notificationsRefMobile}>
+            <button
+              type="button"
+              className={`notification-button ${isNotificationsOpen ? "open" : ""}`}
+              onClick={toggleNotifications}
+              aria-label="Notifiche uscite"
+              aria-expanded={isNotificationsOpen}
+            >
+              <Icon name="bell" size={20} />
+              {releaseNotificationsUnreadCount > 0 && <span className="notification-badge">{releaseNotificationsUnreadCount}</span>}
+            </button>
+            {isNotificationsOpen && (
+              <NotificationsPanel
+                notifications={releaseNotifications}
+                onDisable={onDisableReleaseNotification}
+              />
+            )}
+          </div>
+        )}
 
         {/* MENU MOBILE COMPLETO (Sempre visibile su mobile) */}
         <div className="user-menu mobile-only" ref={menuRefMobile}>
@@ -211,6 +271,25 @@ export default function Navbar({
         </button>
 
         {session && (
+          <>
+          <div className="release-notifications desktop-only" ref={notificationsRefDesktop}>
+            <button
+              type="button"
+              className={`notification-button ${isNotificationsOpen ? "open" : ""}`}
+              onClick={toggleNotifications}
+              aria-label="Notifiche uscite"
+              aria-expanded={isNotificationsOpen}
+            >
+              <Icon name="bell" size={20} />
+              {releaseNotificationsUnreadCount > 0 && <span className="notification-badge">{releaseNotificationsUnreadCount}</span>}
+            </button>
+            {isNotificationsOpen && (
+              <NotificationsPanel
+                notifications={releaseNotifications}
+                onDisable={onDisableReleaseNotification}
+              />
+            )}
+          </div>
           <div className="user-menu desktop-only" ref={menuRefDesktop}>
             <button
               type="button"
@@ -275,6 +354,7 @@ export default function Navbar({
               </div>
             )}
           </div>
+          </>
         )}
         {/* LOGICA BOTTONI UTENTE LOGGATO */}
         {!session && (
@@ -287,5 +367,53 @@ export default function Navbar({
         )}
       </div>
     </nav>
+  );
+}
+
+function NotificationsPanel({
+  notifications,
+  onDisable,
+}: {
+  notifications: ReleaseNotificationMessage[];
+  onDisable: (item: ReleaseNotificationMessage["item"]) => void;
+}) {
+  return (
+    <div className="notifications-panel" role="dialog" aria-label="Notifiche uscite">
+      <div className="notifications-panel-header">
+        <div>
+          <span>Avvisi uscite</span>
+          <strong>{notifications.length}</strong>
+        </div>
+      </div>
+
+      {notifications.length === 0 ? (
+        <div className="notifications-empty">
+          <Icon name="bell-off" size={22} />
+          <p>Nessuna campanella attiva.</p>
+        </div>
+      ) : (
+        <div className="notifications-list">
+          {notifications.map((notification) => (
+            <article key={notification.id} className="notification-row">
+              <img src={notification.item.poster || "https://via.placeholder.com/80x120"} alt={notification.title} />
+              <div>
+                <span>{notification.meta}</span>
+                <strong>{notification.title}</strong>
+                <p>{notification.message}</p>
+              </div>
+              <button
+                type="button"
+                className="notification-dismiss"
+                onClick={() => onDisable(notification.item)}
+                aria-label={`Disattiva notifiche per ${notification.title}`}
+                title="Disattiva notifiche"
+              >
+                <Icon name="x" size={15} />
+              </button>
+            </article>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
