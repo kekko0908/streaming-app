@@ -26,6 +26,7 @@ function isProtectedAppRoute(pathname: string) {
     pathname === "/ranking" ||
     pathname === "/classifica" ||
     pathname === "/suggestions" ||
+    pathname === "/calendario" ||
     pathname.startsWith("/film/") ||
     pathname.startsWith("/serie-tv/")
   );
@@ -160,7 +161,9 @@ export default function App() {
           onShowUpdates={() => setShowUpdates(true)}
           isAdmin={isAdmin}
           releaseNotifications={releaseNotifications.messages}
+          releaseNotificationsUnread={releaseNotifications.unreadMessages}
           releaseNotificationsUnreadCount={releaseNotifications.unreadCount}
+          onReleaseNotificationRead={releaseNotifications.markRead}
           onReleaseNotificationsOpen={releaseNotifications.markAllRead}
           onDisableReleaseNotification={releaseNotifications.disableNotifications}
         />

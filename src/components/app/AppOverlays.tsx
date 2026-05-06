@@ -1,6 +1,7 @@
 import { lazy } from "react";
 import { Session } from "@supabase/supabase-js";
 import { TmdbItem } from "../../types/types";
+import { formatDate, getTmdbImageUrl } from "../../utils/helper";
 import { setTrailerPlaybackBlocked } from "../../utils/trailerPlayback";
 import type { UpdateItem } from "../UpdatesModal";
 import { DeferredOverlay, DeferredSection } from "./AppShell";
@@ -70,11 +71,39 @@ export function AppOverlays({
       )}
 
       {unavailableItem && (
-        <div className="modal-backdrop-glass" onClick={onCloseUnavailable}>
-          <div className="modal-glass-box" onClick={(event) => event.stopPropagation()}>
-            <h3>Film {unavailableItem.title} ancora non disponibile</h3>
-            <p>Non e ancora uscito o non e presente nel catalogo streaming.</p>
-            <button className="pill solid" onClick={onCloseUnavailable}>Ok</button>
+        <div className="drawer-backdrop unavailable-player-backdrop" onClick={onCloseUnavailable}>
+          <div className="unavailable-player" onClick={(event) => event.stopPropagation()}>
+            <div
+              className="unavailable-player-art"
+              style={{ backgroundImage: `url(${getTmdbImageUrl(unavailableItem.backdrop || unavailableItem.poster, "w1280")})` }}
+              aria-hidden="true"
+            />
+            <div className="unavailable-player-scrim" aria-hidden="true" />
+            <button className="unavailable-player-close" onClick={onCloseUnavailable} aria-label="Chiudi">
+              x
+            </button>
+
+            <div className="unavailable-player-content">
+              <img
+                src={getTmdbImageUrl(unavailableItem.poster, "w500")}
+                alt={`Poster ${unavailableItem.title}`}
+                className="unavailable-player-poster"
+              />
+              <div className="unavailable-player-copy">
+                <span className="unavailable-player-kicker">Non ancora disponibile</span>
+                <h3>{unavailableItem.title}</h3>
+                <div className="unavailable-release-card">
+                  <span>Uscita prevista</span>
+                  <strong>{formatDate(unavailableItem.releaseDateFull) || "Data non confermata"}</strong>
+                </div>
+                <p>
+                  Il player sara disponibile quando il film sara uscito e il catalogo streaming avra una fonte valida.
+                </p>
+                <button className="pill solid unavailable-player-action" onClick={onCloseUnavailable}>
+                  Torna alla scheda
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

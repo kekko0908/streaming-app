@@ -1,6 +1,6 @@
 /* src/components/PlayerDrawer.tsx */
 import { useState, useRef, useEffect } from "react";
-import { buildEmbedUrl } from "../utils/helper";
+import { buildEmbedUrl, formatDate, getTmdbImageUrl } from "../utils/helper";
 import { fetchSeasonEpisodes } from "../utils/api";
 import { logDevError } from "../utils/logging";
 import "../css/card.css"; 
@@ -25,6 +25,42 @@ interface PlayerProps {
     nextTarget?: { season: number; episode: number } | null
   ) => void;
   startAt?: number;
+}
+
+function UnavailablePlayerState({ item, onRetry }: { item: TmdbItem; onRetry: () => void }) {
+  const releaseLabel = item.releaseDateFull ? formatDate(item.releaseDateFull) : "Data non confermata";
+
+  return (
+    <div className="unavailable-player unavailable-player-inline">
+      <div
+        className="unavailable-player-art"
+        style={{ backgroundImage: `url(${getTmdbImageUrl(item.backdrop || item.poster, "w1280")})` }}
+        aria-hidden="true"
+      />
+      <div className="unavailable-player-scrim" aria-hidden="true" />
+      <div className="unavailable-player-content">
+        <img
+          src={getTmdbImageUrl(item.poster, "w500")}
+          alt={`Poster ${item.title}`}
+          className="unavailable-player-poster"
+        />
+        <div className="unavailable-player-copy">
+          <span className="unavailable-player-kicker">Catalogo non disponibile</span>
+          <h3>{item.title}</h3>
+          <div className="unavailable-release-card">
+            <span>{item.releaseDateFull ? "Data di uscita" : "Uscita"}</span>
+            <strong>{releaseLabel}</strong>
+          </div>
+          <p>
+            Il film risulta uscito, ma la sorgente streaming non ha ancora un player valido per questo titolo.
+          </p>
+          <button className="pill solid unavailable-player-action" onClick={onRetry}>
+            Riprova player
+          </button>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 export default function PlayerDrawer({ 
@@ -59,6 +95,10 @@ export default function PlayerDrawer({
   const completionSavedRef = useRef("");
   const durationRef = useRef(0);
   const currentProgressRef = useRef(item.progressSeconds || 0);
+  const iframeRef = useRef<HTMLIFrameElement | null>(null);
+  const playerSignalRef = useRef(false);
+  const [catalogUnavailable, setCatalogUnavailable] = useState(false);
+  const [forceShowPlayer, setForceShowPlayer] = useState(false);
   const { previousTarget, nextTarget, nextLabel } = resolveEpisodeNavigation(
     item.seasonsDetails,
     season,
@@ -160,6 +200,11 @@ export default function PlayerDrawer({
       // if (!event.origin.includes('vixsrc.to')) return;
 
       try {
+        if (event.source === iframeRef.current?.contentWindow) {
+          playerSignalRef.current = true;
+          setCatalogUnavailable(false);
+        }
+
         const data = event.data;
         
         // Logica specifica per i messaggi del player
@@ -188,6 +233,22 @@ export default function PlayerDrawer({
     window.addEventListener('message', handleMessage);
     return () => window.removeEventListener('message', handleMessage);
   }, [fallbackDurationSeconds, item.tmdbId, item.type, onProgressUpdate, onEpisodeWatched, season, episode]);
+
+  useEffect(() => {
+    playerSignalRef.current = false;
+    setCatalogUnavailable(false);
+    setForceShowPlayer(false);
+  }, [item.tmdbId, item.type, season, episode]);
+
+  useEffect(() => {
+    if (item.type !== "movie" || forceShowPlayer) return;
+
+    const timer = window.setTimeout(() => {
+      if (!playerSignalRef.current) setCatalogUnavailable(true);
+    }, 4500);
+
+    return () => window.clearTimeout(timer);
+  }, [item.tmdbId, item.type, season, episode, forceShowPlayer]);
 
   useEffect(() => {
     if (showResumePrompt) return;
@@ -431,13 +492,27 @@ export default function PlayerDrawer({
                 </div>
             </div>
             
-            <iframe 
-                key={`${season}-${episode}-${showResumePrompt}`}
-                src={buildEmbedUrl(item.tmdbId, item.type, season, episode, showResumePrompt ? 0 : (startAt || item.progressSeconds))} 
-                allowFullScreen 
-                title="Player" 
-                className="video-frame"
-            />
+            {!catalogUnavailable && (
+                <iframe
+                    ref={iframeRef}
+                    key={`${season}-${episode}-${showResumePrompt}`}
+                    src={buildEmbedUrl(item.tmdbId, item.type, season, episode, showResumePrompt ? 0 : (startAt || item.progressSeconds))}
+                    allowFullScreen
+                    title="Player"
+                    className="video-frame"
+                />
+            )}
+
+            {catalogUnavailable && (
+                <UnavailablePlayerState
+                    item={item}
+                    onRetry={() => {
+                      playerSignalRef.current = true;
+                      setForceShowPlayer(true);
+                      setCatalogUnavailable(false);
+                    }}
+                />
+            )}
 
             {showResumePrompt && (
                 <div className="resume-overlay animate-fadeIn">

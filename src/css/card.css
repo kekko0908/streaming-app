@@ -727,6 +727,197 @@
   border-radius: 10px;
   background: #000;
 }
+
+.unavailable-player-backdrop {
+  align-items: center;
+}
+
+.unavailable-player {
+  position: relative;
+  width: min(1040px, calc(100vw - 32px));
+  min-height: min(620px, calc(100dvh - var(--player-safe-top, 84px) - 48px));
+  overflow: hidden;
+  border-radius: 18px;
+  border: 1px solid rgba(74, 232, 255, 0.2);
+  background: #07090f;
+  box-shadow: 0 28px 80px rgba(0, 0, 0, 0.58), 0 0 44px rgba(74, 232, 255, 0.12);
+}
+
+.unavailable-player-inline {
+  width: 100%;
+  min-height: auto;
+  aspect-ratio: 16 / 9;
+  border-radius: 10px;
+  box-shadow: inset 0 0 0 1px rgba(74, 232, 255, 0.08), 0 18px 52px rgba(0, 0, 0, 0.42);
+}
+
+.unavailable-player-art {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center;
+  filter: saturate(1.05) brightness(0.52);
+  transform: scale(1.04);
+}
+
+.unavailable-player-scrim {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(90deg, rgba(5, 6, 10, 0.96) 0%, rgba(5, 6, 10, 0.78) 44%, rgba(5, 6, 10, 0.36) 100%),
+    linear-gradient(0deg, rgba(5, 6, 10, 0.92) 0%, rgba(5, 6, 10, 0.18) 58%, rgba(5, 6, 10, 0.68) 100%);
+}
+
+.unavailable-player-close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  z-index: 3;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(8, 10, 16, 0.72);
+  color: #fff;
+  cursor: pointer;
+  font-size: 1.1rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.unavailable-player-close:hover {
+  border-color: rgba(255, 0, 90, 0.44);
+  background: rgba(255, 0, 90, 0.14);
+  color: #ff9fba;
+}
+
+.unavailable-player-content {
+  position: relative;
+  z-index: 2;
+  min-height: inherit;
+  display: grid;
+  grid-template-columns: minmax(180px, 280px) minmax(0, 1fr);
+  align-items: center;
+  gap: clamp(22px, 5vw, 56px);
+  padding: clamp(26px, 5vw, 64px);
+}
+
+.unavailable-player-inline .unavailable-player-content {
+  min-height: 100%;
+  grid-template-columns: minmax(120px, 190px) minmax(0, 1fr);
+  gap: clamp(18px, 4vw, 34px);
+  padding: clamp(20px, 4vw, 42px);
+}
+
+.unavailable-player-inline .unavailable-player-copy h3 {
+  font-size: clamp(1.6rem, 4vw, 3.5rem);
+}
+
+.unavailable-player-poster {
+  width: 100%;
+  aspect-ratio: 2 / 3;
+  object-fit: cover;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  box-shadow: 0 24px 54px rgba(0, 0, 0, 0.58), 0 0 22px rgba(74, 232, 255, 0.12);
+  background: #111;
+}
+
+.unavailable-player-copy {
+  max-width: 560px;
+}
+
+.unavailable-player-kicker {
+  display: inline-flex;
+  align-items: center;
+  min-height: 30px;
+  padding: 0 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 0, 90, 0.32);
+  background: rgba(255, 0, 90, 0.12);
+  color: #ff8dad;
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.unavailable-player-copy h3 {
+  margin: 16px 0 18px;
+  color: #fff;
+  font-size: clamp(2rem, 5vw, 4.6rem);
+  line-height: 0.95;
+  letter-spacing: 0;
+}
+
+.unavailable-release-card {
+  width: min(360px, 100%);
+  padding: 16px 18px;
+  border-radius: 10px;
+  border: 1px solid rgba(74, 232, 255, 0.24);
+  background: rgba(2, 10, 16, 0.62);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.unavailable-release-card span {
+  display: block;
+  color: #8ef3ff;
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+
+.unavailable-release-card strong {
+  display: block;
+  color: #fff;
+  font-size: clamp(1.6rem, 4vw, 2.6rem);
+  line-height: 1;
+}
+
+.unavailable-player-copy p {
+  max-width: 520px;
+  margin: 18px 0 24px;
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 0.98rem;
+  line-height: 1.55;
+}
+
+.unavailable-player-action {
+  width: fit-content;
+}
+
+@media (max-width: 760px) {
+  .unavailable-player {
+    min-height: calc(100dvh - var(--player-safe-top, 84px) - 28px);
+  }
+
+  .unavailable-player-scrim {
+    background:
+      linear-gradient(0deg, rgba(5, 6, 10, 0.98) 0%, rgba(5, 6, 10, 0.72) 54%, rgba(5, 6, 10, 0.4) 100%);
+  }
+
+  .unavailable-player-content {
+    grid-template-columns: 1fr;
+    align-content: end;
+    gap: 18px;
+    padding: 58px 22px 28px;
+  }
+
+  .unavailable-player-poster {
+    width: min(170px, 48vw);
+  }
+
+  .unavailable-player-inline {
+    aspect-ratio: auto;
+    min-height: 520px;
+  }
+
+  .unavailable-player-inline .unavailable-player-content {
+    grid-template-columns: 1fr;
+  }
+}
 /* --- STATI SERIE TV (Completato / Nuovi Episodi) --- */
 
 /* 1. Effetto Opaco per Serie Completate */

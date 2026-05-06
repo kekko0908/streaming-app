@@ -2,7 +2,7 @@ export type MediaType = "movie" | "tv";
 export type WatchStatus = "da-guardare" | "in-corso" | "gia-guardato";
 export type CommunitySortMode = "watched" | "loved";
 
-export type ViewType = "home" | "list" | "archive" | "auth" | "profile" | "ranking" | "suggestions" | "admin";
+export type ViewType = "home" | "list" | "archive" | "auth" | "profile" | "ranking" | "suggestions" | "calendar" | "admin";
 
 export interface SuggestionItem {
   id: number;
@@ -134,6 +134,9 @@ export interface TmdbItem {
   status?: WatchStatus;
   progressMinutes?: number;
   progressSeconds?: number;
+  currentSeason?: number;
+  currentEpisode?: number;
+  watchedEpisodes?: number;
   communityListed?: number;
   communityWatched?: number;
   communityCompleted?: number;

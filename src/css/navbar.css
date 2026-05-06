@@ -260,6 +260,23 @@
   transform: translateY(-1px);
 }
 
+.notification-button.has-unread {
+  border-color: rgba(255, 59, 95, 0.78);
+  color: #fff0f3;
+  background: rgba(255, 59, 95, 0.14);
+  box-shadow: 0 0 0 4px rgba(255, 59, 95, 0.12), 0 0 24px rgba(255, 59, 95, 0.32);
+  animation: notification-pulse 1.8s ease-in-out infinite;
+}
+
+.notification-button.has-unread::after {
+  content: "";
+  position: absolute;
+  inset: -6px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 59, 95, 0.45);
+  animation: notification-ring 1.8s ease-out infinite;
+}
+
 .notification-badge {
   position: absolute;
   top: -5px;
@@ -277,6 +294,18 @@
   font-size: 0.68rem;
   font-weight: 900;
   line-height: 1;
+  box-shadow: 0 0 12px rgba(255, 59, 95, 0.72);
+  z-index: 2;
+}
+
+@keyframes notification-pulse {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50% { transform: translateY(-1px) scale(1.05); }
+}
+
+@keyframes notification-ring {
+  0% { opacity: 0.9; transform: scale(0.82); }
+  100% { opacity: 0; transform: scale(1.28); }
 }
 
 .user-menu-button.open {
@@ -413,6 +442,41 @@
   transition: background 0.2s ease, border-color 0.2s ease;
 }
 
+.notification-row.unread {
+  background: linear-gradient(135deg, rgba(74, 232, 255, 0.13), rgba(74, 232, 255, 0.04));
+  border-color: rgba(74, 232, 255, 0.28);
+}
+
+.notification-row.tv.unread {
+  background: linear-gradient(135deg, rgba(255, 0, 90, 0.14), rgba(255, 0, 90, 0.04));
+  border-color: rgba(255, 0, 90, 0.28);
+}
+
+.notification-row.unread::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  border-radius: 50%;
+  background: #4ae8ff;
+  box-shadow: 0 0 12px rgba(74, 232, 255, 0.8);
+}
+
+.notification-row.tv.unread::before {
+  background: #ff3b5f;
+  box-shadow: 0 0 12px rgba(255, 59, 95, 0.8);
+}
+
+.notification-row.movie span {
+  color: #4ae8ff;
+}
+
+.notification-row.tv span {
+  color: #ff7aa2;
+}
+
 .notification-row:hover {
   background: rgba(255, 255, 255, 0.055);
   border-color: rgba(255, 255, 255, 0.08);
@@ -468,6 +532,103 @@
   color: #ff8080;
   border-color: rgba(255, 128, 128, 0.35);
   background: rgba(255, 80, 80, 0.12);
+}
+
+.release-toast {
+  position: fixed;
+  top: 78px;
+  right: 24px;
+  width: min(420px, calc(100vw - 32px));
+  display: grid;
+  grid-template-columns: 52px 1fr auto auto;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 59, 95, 0.36);
+  background: rgba(10, 12, 18, 0.97);
+  box-shadow: 0 18px 42px rgba(0, 0, 0, 0.48), 0 0 34px rgba(255, 59, 95, 0.18);
+  backdrop-filter: blur(14px);
+  z-index: 2400;
+  animation: release-toast-in 0.28s ease-out forwards;
+}
+
+.release-toast img {
+  width: 52px;
+  height: 74px;
+  object-fit: cover;
+  border-radius: 8px;
+  background: #111;
+}
+
+.release-toast-copy {
+  min-width: 0;
+}
+
+.release-toast-copy span {
+  display: block;
+  color: #ffd968;
+  font-size: 0.7rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+
+.release-toast-copy strong {
+  display: block;
+  color: #fff;
+  font-size: 0.98rem;
+  line-height: 1.15;
+  margin-bottom: 4px;
+}
+
+.release-toast-copy p {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 0.82rem;
+  line-height: 1.3;
+}
+
+.release-toast-open,
+.release-toast-close {
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: #fff;
+  background: rgba(255, 255, 255, 0.07);
+  cursor: pointer;
+}
+
+.release-toast-open {
+  min-height: 34px;
+  padding: 0 12px;
+  border-radius: 999px;
+  font-weight: 800;
+}
+
+.release-toast-open:hover {
+  border-color: rgba(255, 217, 104, 0.5);
+  background: rgba(255, 217, 104, 0.16);
+  color: #ffd968;
+}
+
+.release-toast-close {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.release-toast-close:hover {
+  border-color: rgba(255, 128, 128, 0.35);
+  background: rgba(255, 80, 80, 0.12);
+  color: #ff8080;
+}
+
+@keyframes release-toast-in {
+  from { opacity: 0; transform: translateY(-12px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
 }
 
 /* Sostituisci la parte mobile esistente in navbar.css con questa */
@@ -533,6 +694,26 @@
   .notifications-panel {
     right: -50px;
     max-height: min(470px, calc(100vh - 145px));
+  }
+
+  .release-toast {
+    top: 96px;
+    right: 10px;
+    left: 10px;
+    width: auto;
+    grid-template-columns: 44px 1fr auto;
+  }
+
+  .release-toast img {
+    width: 44px;
+    height: 62px;
+  }
+
+  .release-toast-close {
+    position: absolute;
+    top: -9px;
+    right: -7px;
+    background: rgba(10, 12, 18, 0.98);
   }
 }
 

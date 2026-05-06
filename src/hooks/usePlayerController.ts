@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { TmdbItem } from "../types/types";
-import { fetchDetails } from "../utils/api";
+import { fetchDetails, fetchUpcomingReleaseByTmdbId } from "../utils/api";
 import { setTrailerPlaybackBlocked } from "../utils/trailerPlayback";
 import { useDirectActions } from "./useDirectActions";
 import { supabase } from "../supabaseClient";
@@ -56,40 +56,67 @@ export function usePlayerController({
 
   const isUpcomingMovie = (item: TmdbItem) => {
     if (item.type !== "movie" || !item.releaseDateFull) return false;
-    const releaseDate = new Date(item.releaseDateFull);
-    if (Number.isNaN(releaseDate.getTime())) return false;
+    const releaseDate = item.releaseDateFull.slice(0, 10);
     const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    releaseDate.setHours(0, 0, 0, 0);
-    return releaseDate > today;
+    const todayKey = [
+      today.getFullYear(),
+      String(today.getMonth() + 1).padStart(2, "0"),
+      String(today.getDate()).padStart(2, "0"),
+    ].join("-");
+    return releaseDate > todayKey;
   };
 
-  const handlePlay = (season: number, episode: number, item: TmdbItem) => {
+  const getPlayableMovieItem = async (item: TmdbItem) => {
+    if (item.type !== "movie") return item;
+    try {
+      const [storedUpcoming, freshItem] = await Promise.all([
+        fetchUpcomingReleaseByTmdbId(item.tmdbId).catch(() => null),
+        fetchDetails(item.tmdbId, item.type),
+      ]);
+      const releaseDateFull = storedUpcoming?.releaseDateFull || freshItem.releaseDateFull || item.releaseDateFull;
+      return {
+        ...item,
+        ...freshItem,
+        releaseDateFull,
+        poster: storedUpcoming?.poster || freshItem.poster || item.poster,
+        backdrop: storedUpcoming?.backdrop || freshItem.backdrop || item.backdrop,
+        progressMinutes: item.progressMinutes,
+        progressSeconds: item.progressSeconds,
+      };
+    } catch (error) {
+      console.warn("Controllo uscita film non riuscito, uso snapshot locale", error);
+      return item;
+    }
+  };
+
+  const handlePlay = async (season: number, episode: number, item: TmdbItem) => {
     if (!session) {
       alert("Devi accedere!");
       navigate("/auth");
       return;
     }
 
-    if (isUpcomingMovie(item)) {
-      setUnavailableItem(item);
+    const playableItem = await getPlayableMovieItem(item);
+
+    if (isUpcomingMovie(playableItem)) {
+      setUnavailableItem(playableItem);
       return;
     }
 
-    const storedProgress = item.type === "tv" ? getProgress(item.tmdbId) : null;
+    const storedProgress = playableItem.type === "tv" ? getProgress(playableItem.tmdbId) : null;
     const savedSeconds = storedProgress?.season === season && storedProgress?.episode === episode
-      ? storedProgress.progressSeconds || item.progressSeconds || 0
-      : item.progressSeconds || 0;
+      ? storedProgress.progressSeconds || playableItem.progressSeconds || 0
+      : playableItem.progressSeconds || 0;
     const startAt = savedSeconds > 15 ? savedSeconds : 0;
 
     setTrailerPlaybackBlocked(true);
-    setPlayingItem(item);
+    setPlayingItem(playableItem);
     setPlayerState({ season, episode, startAt });
     setShowPlayer(true);
-    if (item.type === "movie" || startAt > 0) {
-      updateProgress(item, season, episode, startAt);
+    if (playableItem.type === "movie" || startAt > 0) {
+      updateProgress(playableItem, season, episode, startAt);
     }
-    if (!myList.find((listItem) => listItem.tmdbId === item.tmdbId)) addToList(item, "in-corso");
+    if (!myList.find((listItem) => listItem.tmdbId === playableItem.tmdbId)) addToList(playableItem, "in-corso");
   };
 
   useDirectActions({
@@ -105,6 +132,12 @@ export function usePlayerController({
         if (typeof item.progressMinutes === "number") fullItem.progressMinutes = item.progressMinutes;
         if (typeof item.progressSeconds === "number") fullItem.progressSeconds = item.progressSeconds;
         setSelected(fullItem);
+
+        if (isUpcomingMovie(fullItem)) {
+          setUnavailableItem(fullItem);
+          return;
+        }
+
         setPlayingItem(fullItem);
         const startAt = fullItem.progressSeconds && fullItem.progressSeconds > 15 ? fullItem.progressSeconds : 0;
         setTrailerPlaybackBlocked(true);

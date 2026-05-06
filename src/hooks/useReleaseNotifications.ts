@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "../supabaseClient";
 import { SavedItem, TmdbItem } from "../types/types";
-import { fetchDetails } from "../utils/api";
+import { fetchDetails, fetchUpcomingReleaseByTmdbId } from "../utils/api";
 import { formatDate } from "../utils/helper";
 
 export type ReleaseNotificationRecord = {
@@ -17,6 +17,9 @@ export type ReleaseNotificationMessage = {
   message: string;
   meta: string;
   kind: "movie" | "tv";
+  phase: "released" | "upcoming" | "unknown";
+  eventDate?: string;
+  unread: boolean;
 };
 
 type StoredReleaseNotifications = {
@@ -102,11 +105,7 @@ function buildRemotePayload(userId: string, record: ReleaseNotificationRecord) {
 function mergeFreshItem(current: TmdbItem, fresh: TmdbItem): TmdbItem {
   const currentRelease = current.releaseDateFull || "";
   const freshRelease = fresh.releaseDateFull || "";
-  const today = new Date().toISOString().slice(0, 10);
-  const preferredReleaseDate =
-    currentRelease && currentRelease >= today && (!freshRelease || freshRelease < currentRelease)
-      ? currentRelease
-      : freshRelease || currentRelease;
+  const preferredReleaseDate = freshRelease || currentRelease;
 
   return {
     ...current,
@@ -115,6 +114,9 @@ function mergeFreshItem(current: TmdbItem, fresh: TmdbItem): TmdbItem {
     status: current.status,
     progressMinutes: current.progressMinutes,
     progressSeconds: current.progressSeconds,
+    currentSeason: current.currentSeason,
+    currentEpisode: current.currentEpisode,
+    watchedEpisodes: current.watchedEpisodes,
   };
 }
 
@@ -137,6 +139,9 @@ function normalizeSavedItem(item: SavedItem): TmdbItem {
     status: item.status,
     progressMinutes: item.progressMinutes,
     progressSeconds: item.progressSeconds,
+    currentSeason: item.currentSeason,
+    currentEpisode: item.currentEpisode,
+    watchedEpisodes: item.watchedEpisodes,
   };
 }
 
@@ -177,19 +182,6 @@ function getTvMessage(item: TmdbItem) {
   return "TMDB non indica ancora un prossimo episodio datato.";
 }
 
-function buildMessage(record: ReleaseNotificationRecord): ReleaseNotificationMessage {
-  const item = record.item;
-  const kind = item.type === "tv" ? "tv" : "movie";
-  return {
-    id: record.key,
-    item,
-    title: item.title,
-    message: kind === "movie" ? getMovieMessage(item) : getTvMessage(item),
-    meta: kind === "movie" ? "Film monitorato" : "Serie monitorata",
-    kind,
-  };
-}
-
 function publishState(enabledKeys: string[]) {
   (window as any).sfaReleaseNotificationKeys = enabledKeys;
   window.dispatchEvent(new CustomEvent(STATE_EVENT, { detail: { enabledKeys } }));
@@ -209,6 +201,100 @@ function getDayDiffFromToday(dateStr: string) {
   target.setHours(0, 0, 0, 0);
   today.setHours(0, 0, 0, 0);
   return Math.round((today.getTime() - target.getTime()) / (24 * 60 * 60 * 1000));
+}
+
+function getDateOnly(dateStr?: string | null) {
+  if (!dateStr) return "";
+  return dateStr.slice(0, 10);
+}
+
+function getTodayDate() {
+  const date = new Date();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${date.getFullYear()}-${month}-${day}`;
+}
+
+function getReleaseEvent(item: TmdbItem): Pick<ReleaseNotificationMessage, "phase" | "eventDate"> & { token: string } {
+  if (item.type === "tv") {
+    const episode = item.nextEpisodeToAir;
+    const eventDate = getDateOnly(episode?.air_date);
+    const episodeToken = [
+      episode?.season_number ? `s${episode.season_number}` : "s0",
+      episode?.episode_number ? `e${episode.episode_number}` : "e0",
+    ].join("");
+
+    if (!eventDate) return { phase: "unknown", token: `tv:${episodeToken}:unknown` };
+    const diffDays = getDayDiffFromToday(eventDate);
+    const phase = diffDays !== null && diffDays >= 0 ? "released" : "upcoming";
+    return { phase, eventDate, token: `tv:${episodeToken}:${phase}:${eventDate}` };
+  }
+
+  const eventDate = getDateOnly(item.releaseDateFull);
+  if (!eventDate) return { phase: "unknown", token: "movie:unknown" };
+  const diffDays = getDayDiffFromToday(eventDate);
+  const phase = diffDays !== null && diffDays >= 0 ? "released" : "upcoming";
+  return { phase, eventDate, token: `movie:${phase}:${eventDate}` };
+}
+
+function getMessageId(record: ReleaseNotificationRecord) {
+  return `${record.key}:${getReleaseEvent(record.item).token}`;
+}
+
+function getRemoteReadIds(record: ReleaseNotificationRecord, readAt: string | null) {
+  if (!readAt) return [];
+  const event = getReleaseEvent(record.item);
+  const messageId = getMessageId(record);
+
+  if (event.phase !== "released" || !event.eventDate) return [messageId];
+
+  const readDate = getDateOnly(readAt);
+  return readDate >= event.eventDate ? [messageId] : [];
+}
+
+function buildMessage(record: ReleaseNotificationRecord, readIds: string[] = []): ReleaseNotificationMessage {
+  const item = record.item;
+  const kind = item.type === "tv" ? "tv" : "movie";
+  const event = getReleaseEvent(item);
+  const id = getMessageId(record);
+  return {
+    id,
+    item,
+    title: item.title,
+    message: kind === "movie" ? getMovieMessage(item) : getTvMessage(item),
+    meta: kind === "movie" ? "Film monitorato" : "Serie monitorata",
+    kind,
+    phase: event.phase,
+    eventDate: event.eventDate,
+    unread: !readIds.includes(id),
+  };
+}
+
+function isReleasedToday(message: ReleaseNotificationMessage) {
+  return message.phase === "released" && message.eventDate === getTodayDate();
+}
+
+function shouldAutoDisableReleasedMovie(item: TmdbItem) {
+  if (item.type !== "movie") return false;
+  if (item.status !== "in-corso" && item.status !== "gia-guardato") return false;
+  return getReleaseEvent(item).phase === "released";
+}
+
+function hasWatchedReleasedEpisode(item: TmdbItem) {
+  if (item.type !== "tv") return false;
+  const episode = item.nextEpisodeToAir;
+  const event = getReleaseEvent(item);
+  if (event.phase !== "released" || !episode?.episode_number) return false;
+
+  if (item.status === "gia-guardato") return true;
+  if (item.status !== "in-corso") return false;
+  if (!item.currentSeason || !item.currentEpisode) return false;
+
+  const watchedSeason = item.currentSeason;
+  const watchedEpisode = item.currentEpisode;
+  const releaseSeason = episode.season_number || 1;
+
+  return watchedSeason > releaseSeason || (watchedSeason === releaseSeason && watchedEpisode >= episode.episode_number);
 }
 
 function formatReleasedAgo(dateStr: string, noun = "uscito") {
@@ -264,10 +350,20 @@ export function useReleaseNotifications(userId: string | undefined, myList: Save
 
   const enrichRecord = async (record: ReleaseNotificationRecord, options?: { preserveRead?: boolean }) => {
     try {
-      const freshItem = await fetchDetails(record.item.tmdbId, record.item.type);
+      const [freshItem, storedUpcoming] = await Promise.all([
+        fetchDetails(record.item.tmdbId, record.item.type),
+        record.item.type === "movie"
+          ? fetchUpcomingReleaseByTmdbId(record.item.tmdbId).catch(() => null)
+          : Promise.resolve(null),
+      ]);
       updateRecord({
         ...record,
-        item: mergeFreshItem(record.item, freshItem),
+        item: mergeFreshItem(record.item, {
+          ...freshItem,
+          releaseDateFull: storedUpcoming?.releaseDateFull || freshItem.releaseDateFull,
+          poster: storedUpcoming?.poster || freshItem.poster,
+          backdrop: storedUpcoming?.backdrop || freshItem.backdrop,
+        }),
       }, options);
     } catch (error) {
       console.warn("Notifiche uscite: dettaglio TMDB non caricato", error);
@@ -298,7 +394,7 @@ export function useReleaseNotifications(userId: string | undefined, myList: Save
       for (const row of (data || []) as ReleaseNotificationRow[]) {
         const record = rowToRecord(row);
         remoteStored.enabled[record.key] = record;
-        if (row.read_at) remoteStored.readIds.push(record.key);
+        remoteStored.readIds.push(...getRemoteReadIds(record, row.read_at));
       }
 
       const localRecordsToMigrate = Object.values(localStored.enabled).filter((record) => !remoteStored.enabled[record.key]);
@@ -312,7 +408,10 @@ export function useReleaseNotifications(userId: string | undefined, myList: Save
 
         for (const record of localRecordsToMigrate) {
           remoteStored.enabled[record.key] = record;
-          if (localStored.readIds.includes(record.key)) remoteStored.readIds.push(record.key);
+          const messageId = getMessageId(record);
+          if (localStored.readIds.includes(messageId) || localStored.readIds.includes(record.key)) {
+            remoteStored.readIds.push(messageId);
+          }
         }
       }
 
@@ -330,12 +429,7 @@ export function useReleaseNotifications(userId: string | undefined, myList: Save
 
   useEffect(() => {
     for (const record of Object.values(stored.enabled)) {
-      const shouldEnrich =
-        !enrichedKeysRef.current.has(record.key) &&
-        (
-          (record.item.type === "movie" && !record.item.releaseDateFull) ||
-          (record.item.type === "tv" && !record.item.nextEpisodeToAir)
-        );
+      const shouldEnrich = !enrichedKeysRef.current.has(record.key);
 
       if (!shouldEnrich) continue;
       enrichedKeysRef.current.add(record.key);
@@ -374,7 +468,7 @@ export function useReleaseNotifications(userId: string | undefined, myList: Save
           }
         } else {
           delete next.enabled[key];
-          next.readIds = current.readIds.filter((id) => id !== key);
+          next.readIds = current.readIds.filter((id) => id !== key && !id.startsWith(`${key}:`));
           if (userId) {
             remoteAction = supabase
               .from("release_notification_settings")
@@ -411,48 +505,89 @@ export function useReleaseNotifications(userId: string | undefined, myList: Save
 
   useEffect(() => {
     if (myList.length === 0) return;
+    const autoDisabledRecords: ReleaseNotificationRecord[] = [];
+
     setStored((current) => {
       let changed = false;
       const nextEnabled = { ...current.enabled };
+      const autoDisabledKeys: string[] = [];
 
       for (const savedItem of myList) {
         const key = getItemKey(savedItem);
         if (!nextEnabled[key]) continue;
         const savedSnapshot = normalizeSavedItem(savedItem);
         const currentItem = nextEnabled[key].item;
+        const mergedItem = {
+          ...currentItem,
+          ...savedSnapshot,
+          releaseDateFull: currentItem.releaseDateFull || savedSnapshot.releaseDateFull,
+          nextEpisodeToAir: currentItem.nextEpisodeToAir || savedSnapshot.nextEpisodeToAir,
+          overview: savedSnapshot.overview || currentItem.overview,
+          backdrop: savedSnapshot.backdrop || currentItem.backdrop,
+          poster: savedSnapshot.poster || currentItem.poster,
+          year: savedSnapshot.year || currentItem.year,
+          currentSeason: savedSnapshot.currentSeason || currentItem.currentSeason,
+          currentEpisode: savedSnapshot.currentEpisode || currentItem.currentEpisode,
+          watchedEpisodes: savedSnapshot.watchedEpisodes || currentItem.watchedEpisodes,
+        };
+
+        if (shouldAutoDisableReleasedMovie(mergedItem) || hasWatchedReleasedEpisode(mergedItem)) {
+          autoDisabledRecords.push({
+            ...nextEnabled[key],
+            item: mergedItem,
+          });
+          autoDisabledKeys.push(key);
+          delete nextEnabled[key];
+          changed = true;
+          continue;
+        }
+
         nextEnabled[key] = {
           ...nextEnabled[key],
-          item: {
-            ...currentItem,
-            ...savedSnapshot,
-            releaseDateFull: savedSnapshot.releaseDateFull || currentItem.releaseDateFull,
-            overview: savedSnapshot.overview || currentItem.overview,
-            backdrop: savedSnapshot.backdrop || currentItem.backdrop,
-            poster: savedSnapshot.poster || currentItem.poster,
-            year: savedSnapshot.year || currentItem.year,
-          },
+          item: mergedItem,
         };
         changed = true;
       }
 
       if (!changed) return current;
-      const next = { ...current, enabled: nextEnabled };
+      const next = {
+        ...current,
+        enabled: nextEnabled,
+        readIds: current.readIds.filter((id) => !autoDisabledKeys.some((key) => id === key || id.startsWith(`${key}:`))),
+      };
       writeStored(userId, next);
       publishState(Object.keys(next.enabled));
 
       if (userId) {
-        supabase
-          .from("release_notification_settings")
-          .upsert(
-            Object.values(nextEnabled).map((record) => ({
-              ...buildRemotePayload(userId, record),
-              read_at: current.readIds.includes(record.key) ? new Date().toISOString() : null,
-            })),
-            { onConflict: "user_id,tmdb_id,media_type" }
-          )
-          .then(({ error }) => {
-            if (error) console.warn("Notifiche uscite: aggiornamento snapshot non riuscito", error.message);
-          });
+        const syncActions: PromiseLike<unknown>[] = autoDisabledRecords.map((record) =>
+          supabase
+            .from("release_notification_settings")
+            .delete()
+            .eq("user_id", userId)
+            .eq("tmdb_id", parseInt(record.item.tmdbId, 10))
+            .eq("media_type", record.item.type)
+        );
+
+        const recordsToUpdate = Object.values(nextEnabled);
+        if (recordsToUpdate.length > 0) {
+          syncActions.push(
+            supabase
+              .from("release_notification_settings")
+              .upsert(
+                recordsToUpdate.map((record) => ({
+                  ...buildRemotePayload(userId, record),
+                  read_at: current.readIds.includes(getMessageId(record)) ? new Date().toISOString() : null,
+                })),
+                { onConflict: "user_id,tmdb_id,media_type" }
+              )
+          );
+        }
+
+        Promise.all(syncActions).then((results) => {
+          for (const result of results as Array<{ error?: { message: string } | null }>) {
+            if (result?.error) console.warn("Notifiche uscite: sincronizzazione snapshot non riuscita", result.error.message);
+          }
+        });
       }
 
       return next;
@@ -460,11 +595,42 @@ export function useReleaseNotifications(userId: string | undefined, myList: Save
   }, [myList, userId]);
 
   const messages = useMemo(
-    () => Object.values(stored.enabled).sort((a, b) => b.enabledAt.localeCompare(a.enabledAt)).map(buildMessage),
-    [stored.enabled]
+    () => Object.values(stored.enabled)
+      .map((record) => buildMessage(record, stored.readIds))
+      .sort((a, b) => {
+        if (a.phase !== b.phase) {
+          if (a.phase === "released") return -1;
+          if (b.phase === "released") return 1;
+        }
+        return (b.eventDate || "").localeCompare(a.eventDate || "");
+      }),
+    [stored.enabled, stored.readIds]
   );
 
-  const unreadCount = messages.filter((message) => !stored.readIds.includes(message.id)).length;
+  const unreadMessages = messages.filter((message) => message.unread && isReleasedToday(message));
+  const unreadCount = unreadMessages.length;
+
+  const markRead = useCallback((message: ReleaseNotificationMessage) => {
+    const readAt = new Date().toISOString();
+    setStored((current) => {
+      if (current.readIds.includes(message.id)) return current;
+      const next = { ...current, readIds: [...current.readIds, message.id] };
+      writeStored(userId, next);
+      return next;
+    });
+
+    if (userId) {
+      supabase
+        .from("release_notification_settings")
+        .update({ read_at: readAt, updated_at: readAt })
+        .eq("user_id", userId)
+        .eq("tmdb_id", parseInt(message.item.tmdbId, 10))
+        .eq("media_type", message.item.type)
+        .then(({ error }) => {
+          if (error) console.warn("Notifiche uscite: lettura remota non aggiornata", error.message);
+        });
+    }
+  }, [userId]);
 
   const markAllRead = () => {
     const readAt = new Date().toISOString();
@@ -535,7 +701,9 @@ export function useReleaseNotifications(userId: string | undefined, myList: Save
   return {
     enabledKeys: Object.keys(stored.enabled),
     messages,
+    unreadMessages,
     unreadCount,
+    markRead,
     markAllRead,
     disableNotifications,
   };

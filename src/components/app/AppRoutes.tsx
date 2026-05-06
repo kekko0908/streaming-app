@@ -13,6 +13,7 @@ const Profile = lazy(() => import("../Profile"));
 const Archive = lazy(() => import("../Archive"));
 const Ranking = lazy(() => import("../Ranking"));
 const Suggestions = lazy(() => import("../Suggestions"));
+const ReleaseCalendar = lazy(() => import("../ReleaseCalendar"));
 const AdminDashboard = lazy(() => import("../AdminDashboard"));
 const NotFoundPage = lazy(() => import("../NotFoundPage"));
 
@@ -223,6 +224,7 @@ export function AppRoutes({
         />
         <Route path="/ranking" element={<Navigate to="/classifica" replace />} />
         <Route path="/classifica" element={<RequireAuth session={session}><DeferredSection><PageTransition><Ranking /></PageTransition></DeferredSection></RequireAuth>} />
+        <Route path="/calendario" element={<RequireAuth session={session}><DeferredSection><PageTransition><ReleaseCalendar upcoming={homeLists.upcoming} myList={myList} onSelect={onSelectItem} /></PageTransition></DeferredSection></RequireAuth>} />
         <Route path="/suggestions" element={<RequireAuth session={session}><DeferredSection><PageTransition><Suggestions onSelect={onSelectItem} session={session} /></PageTransition></DeferredSection></RequireAuth>} />
         <Route path="/404" element={<DeferredSection><PageTransition><NotFoundPage /></PageTransition></DeferredSection>} />
         <Route path="*" element={<DeferredSection><PageTransition><NotFoundPage /></PageTransition></DeferredSection>} />

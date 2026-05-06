@@ -7,7 +7,7 @@ import {
   fetchDetails,
   fetchNowPlaying,
   fetchPopularMovies,
-  fetchUpcoming,
+  fetchUpcomingFromStore,
   searchTmdb,
 } from "../utils/api";
 import { getHomeSpotlightSetting } from "../utils/siteSettings";
@@ -56,7 +56,7 @@ export function useHomeScreenState({
       try {
         const [trending, rawUpcoming, popular, newReleases, drama, action, animation, horror] = await Promise.all([
           fetchCollection("trending/all/day"),
-          fetchUpcoming("IT"),
+          fetchUpcomingFromStore("IT"),
           fetchPopularMovies("IT"),
           fetchNowPlaying("IT"),
           fetchByGenre(18, "movie"),

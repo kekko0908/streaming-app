@@ -16,7 +16,9 @@ interface NavbarProps {
   onShowUpdates: () => void;
   isAdmin: boolean;
   releaseNotifications: ReleaseNotificationMessage[];
+  releaseNotificationsUnread: ReleaseNotificationMessage[];
   releaseNotificationsUnreadCount: number;
+  onReleaseNotificationRead: (message: ReleaseNotificationMessage) => void;
   onReleaseNotificationsOpen: () => void;
   onDisableReleaseNotification: (item: ReleaseNotificationMessage["item"]) => void;
 }
@@ -33,7 +35,9 @@ export default function Navbar({
   onShowUpdates,
   isAdmin,
   releaseNotifications,
+  releaseNotificationsUnread,
   releaseNotificationsUnreadCount,
+  onReleaseNotificationRead,
   onReleaseNotificationsOpen,
   onDisableReleaseNotification,
 }: NavbarProps) {
@@ -46,6 +50,7 @@ export default function Navbar({
     "/archive": "archive",
     "/classifica": "ranking",
     "/ranking": "ranking",
+    "/calendario": "calendar",
   };
   let view = path === "/" || isDetailRoute ? "home" : routeViewMap[path] || path.substring(1);
 
@@ -53,6 +58,8 @@ export default function Navbar({
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [releaseToast, setReleaseToast] = useState<ReleaseNotificationMessage | null>(null);
+  const dismissedReleaseToastIdsRef = useRef<Set<string>>(new Set());
   const menuRefDesktop = useRef<HTMLDivElement | null>(null);
   const menuRefMobile = useRef<HTMLDivElement | null>(null);
   const notificationsRefDesktop = useRef<HTMLDivElement | null>(null);
@@ -111,6 +118,34 @@ export default function Navbar({
   }, [location, session]);
 
   useEffect(() => {
+    const unreadIds = new Set(releaseNotificationsUnread.map((notification) => notification.id));
+    for (const dismissedId of dismissedReleaseToastIdsRef.current) {
+      if (!unreadIds.has(dismissedId)) dismissedReleaseToastIdsRef.current.delete(dismissedId);
+    }
+
+    if (releaseToast) return;
+
+    const nextToast = releaseNotificationsUnread.find(
+      (notification) => !dismissedReleaseToastIdsRef.current.has(notification.id)
+    );
+    if (nextToast) {
+      setReleaseToast(nextToast);
+      onReleaseNotificationRead(nextToast);
+      return;
+    }
+    setReleaseToast(null);
+  }, [releaseNotificationsUnread, releaseToast, onReleaseNotificationRead]);
+
+  useEffect(() => {
+    if (!releaseToast) return;
+    const timer = window.setTimeout(() => {
+      dismissedReleaseToastIdsRef.current.add(releaseToast.id);
+      setReleaseToast(null);
+    }, 9000);
+    return () => window.clearTimeout(timer);
+  }, [releaseToast]);
+
+  useEffect(() => {
     let isActive = true;
     const loadAvatar = async () => {
       if (!session?.user) {
@@ -153,10 +188,24 @@ export default function Navbar({
       const next = !prev;
       if (next) {
         setIsMenuOpen(false);
+        setReleaseToast(null);
         onReleaseNotificationsOpen();
       }
       return next;
     });
+  };
+
+  const openNotificationsFromToast = () => {
+    setIsMenuOpen(false);
+    setIsSearchOpen(false);
+    setIsNotificationsOpen(true);
+    setReleaseToast(null);
+    onReleaseNotificationsOpen();
+  };
+
+  const dismissReleaseToast = () => {
+    if (releaseToast) dismissedReleaseToastIdsRef.current.add(releaseToast.id);
+    setReleaseToast(null);
   };
 
   const openSearch = () => {
@@ -202,7 +251,7 @@ export default function Navbar({
           <div className="release-notifications mobile-only" ref={notificationsRefMobile}>
             <button
               type="button"
-              className={`notification-button ${isNotificationsOpen ? "open" : ""}`}
+              className={`notification-button ${isNotificationsOpen ? "open" : ""} ${releaseNotificationsUnreadCount > 0 ? "has-unread" : ""}`}
               onClick={toggleNotifications}
               aria-label="Notifiche uscite"
               aria-expanded={isNotificationsOpen}
@@ -242,6 +291,7 @@ export default function Navbar({
               <button className="user-menu-item" onClick={() => handleMenuNavigate("/suggestions")}>Suggerimenti <Icon name="lightbulb" size={16} /></button>
               <button className="user-menu-item" onClick={() => handleMenuNavigate("/archivio")}>Archivio</button>
               <button className="user-menu-item" onClick={() => handleMenuNavigate("/classifica")}>Classifica <Icon name="trophy" size={16} /></button>
+              <button className="user-menu-item" onClick={() => handleMenuNavigate("/calendario")}>Calendario uscite <Icon name="calendar" size={16} /></button>
               
               {isAdmin && <button className="user-menu-item" onClick={() => handleMenuNavigate("/admin")}>Admin Dashboard</button>}
               <div className="user-menu-divider" role="separator" />
@@ -288,6 +338,12 @@ export default function Navbar({
         >
           Classifica <Icon name="trophy" size={16} />
         </button>
+        <button
+          className={`pill ${view === "calendar" ? "solid" : "ghost"}`}
+          onClick={() => handleMenuNavigate("/calendario")}
+        >
+          Calendario <Icon name="calendar" size={16} />
+        </button>
       </div>
       </div>
 
@@ -318,7 +374,7 @@ export default function Navbar({
           <div className="release-notifications desktop-only" ref={notificationsRefDesktop}>
             <button
               type="button"
-              className={`notification-button ${isNotificationsOpen ? "open" : ""}`}
+              className={`notification-button ${isNotificationsOpen ? "open" : ""} ${releaseNotificationsUnreadCount > 0 ? "has-unread" : ""}`}
               onClick={toggleNotifications}
               aria-label="Notifiche uscite"
               aria-expanded={isNotificationsOpen}
@@ -409,6 +465,28 @@ export default function Navbar({
           </button>
         )}
       </div>
+
+      {releaseToast && (
+        <div className="release-toast" role="status" aria-live="polite">
+          <img src={releaseToast.item.poster || "https://via.placeholder.com/80x120"} alt="" />
+          <div className="release-toast-copy">
+            <span>{releaseToast.phase === "released" ? "Nuova uscita" : "Avviso aggiornato"}</span>
+            <strong>{releaseToast.title}</strong>
+            <p>{releaseToast.message}</p>
+          </div>
+          <button type="button" className="release-toast-open" onClick={openNotificationsFromToast}>
+            Apri
+          </button>
+          <button
+            type="button"
+            className="release-toast-close"
+            onClick={dismissReleaseToast}
+            aria-label="Chiudi notifica"
+          >
+            <Icon name="x" size={14} />
+          </button>
+        </div>
+      )}
     </nav>
   );
 }
@@ -437,7 +515,7 @@ function NotificationsPanel({
       ) : (
         <div className="notifications-list">
           {notifications.map((notification) => (
-            <article key={notification.id} className="notification-row">
+            <article key={notification.id} className={`notification-row ${notification.kind} ${notification.unread ? "unread" : ""} ${notification.phase === "released" ? "released" : ""}`}>
               <img src={notification.item.poster || "https://via.placeholder.com/80x120"} alt={notification.title} />
               <div>
                 <span>{notification.meta}</span>

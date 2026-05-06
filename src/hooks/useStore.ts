@@ -51,6 +51,9 @@ export function useStore() {
         const mediaType = row.media_items?.media_type;
         const normalizedMediaType = mediaType === "movie" || mediaType === "tv" ? mediaType : undefined;
         const inferredType = normalizedMediaType ?? (hasTvProgress ? "tv" : "movie");
+        const currentSeason = hasTvProgress ? Number(row.current_season || 1) : undefined;
+        const currentEpisode = hasTvProgress ? Number(row.current_episode || 1) : undefined;
+        const watchedEpisodes = hasTvProgress ? Number(row.total_watched_episodes || 0) : undefined;
 
         return ({
         tmdbId: String(row.tmdb_id),
@@ -64,7 +67,10 @@ export function useStore() {
         genres: row.media_items?.genres || [],
         year: "", overview: "", backdrop: "",
         progressMinutes,
-        progressSeconds
+        progressSeconds,
+        currentSeason,
+        currentEpisode,
+        watchedEpisodes
       });
       });
       
