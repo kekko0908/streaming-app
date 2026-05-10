@@ -120,6 +120,10 @@ export default function Hero({
     effectiveProgressEpisode !== progress.episode
       ? `Ultimo disponibile S${progress.season}:E${effectiveProgressEpisode}`
       : primarySeriesLabel;
+  const primaryActionProgress =
+    item.type === "tv" && effectiveProgressEpisode !== progress.episode
+      ? { ...progress, episode: effectiveProgressEpisode }
+      : progress;
 
   return (
     <section className="hero">
@@ -147,7 +151,7 @@ export default function Hero({
 
         <HeroActions
           item={item}
-          progress={progress}
+          progress={primaryActionProgress}
           primaryLabel={effectivePrimarySeriesLabel}
           currentListStatus={currentListStatus}
           userRating={userRating}

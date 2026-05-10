@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Episode, TmdbItem } from "../../types/types";
 import { fetchSeasonEpisodes } from "../../utils/api";
+import { isEpisodeReleased } from "../../utils/episodeAvailability";
 import { logDevError } from "../../utils/logging";
 import { Icon } from "../ui/Icon";
 
@@ -9,15 +10,6 @@ function formatProgressTime(totalSeconds: number) {
   const minutes = Math.floor(safeSeconds / 60);
   const seconds = safeSeconds % 60;
   return `${minutes}:${String(seconds).padStart(2, "0")}`;
-}
-
-function isEpisodeReleased(ep: Episode) {
-  if (!ep.air_date) return false;
-  const today = new Date();
-  const airDate = new Date(ep.air_date);
-  today.setHours(0, 0, 0, 0);
-  airDate.setHours(0, 0, 0, 0);
-  return airDate <= today;
 }
 
 export function EpisodesCarousel({
@@ -66,7 +58,7 @@ export function EpisodesCarousel({
   }, [item.tmdbId, uiSelectedSeason, item.type]);
 
   const releasedEpisodesInCurrentSeason = uiSelectedSeason === progress.season
-    ? episodesList.filter((ep) => isEpisodeReleased(ep))
+    ? episodesList.filter((ep) => isEpisodeReleased(ep, item, uiSelectedSeason))
     : [];
   const latestReleasedEpisodeNumber = releasedEpisodesInCurrentSeason.length > 0
     ? Math.max(...releasedEpisodesInCurrentSeason.map((ep) => ep.episode_number))
@@ -135,7 +127,7 @@ export function EpisodesCarousel({
             <p className="episode-loading-message">Caricamento episodi...</p>
           ) : episodesList.length > 0 ? (
             episodesList.map((ep) => {
-              const released = isEpisodeReleased(ep);
+              const released = isEpisodeReleased(ep, item, uiSelectedSeason);
               const isCurrent = uiSelectedSeason === progress.season && ep.episode_number === effectiveProgressEpisode;
               const episodesBeforeSeason =
                 item.seasonsDetails
@@ -163,7 +155,7 @@ export function EpisodesCarousel({
                   onClick={() => {
                     if (released) onPlay(uiSelectedSeason, ep.episode_number);
                   }}
-                  title={!released ? `Esce il ${ep.air_date}` : ep.name}
+                  title={!released ? (ep.air_date ? `Esce il ${ep.air_date}` : "Data non confermata") : ep.name}
                 >
                   <div className="episode-img-container">
                     <img src={imgUrl} alt={ep.name} className="episode-img" loading="lazy" decoding="async" />
@@ -178,7 +170,7 @@ export function EpisodesCarousel({
                     {!released && (
                       <div className="locked-overlay">
                         <Icon name="lock" size={24} />
-                        <span className="locked-text">{ep.air_date}</span>
+                        <span className="locked-text">{ep.air_date || "Data non confermata"}</span>
                       </div>
                     )}
                     {isCurrent && !isWatched && episodeProgressSeconds > 15 && (

@@ -2,6 +2,7 @@
 import { useState, useRef, useEffect } from "react";
 import { buildEmbedUrl, formatDate, getTmdbImageUrl } from "../utils/helper";
 import { fetchSeasonEpisodes } from "../utils/api";
+import { hasFutureAirDate, isEpisodeTargetBlockedByKnownFuture } from "../utils/episodeAvailability";
 import { logDevError } from "../utils/logging";
 import "../css/card.css"; 
 import "../css/watch_party.css";
@@ -105,7 +106,7 @@ export default function PlayerDrawer({
     episode
   );
   const [nextEpisodeState, setNextEpisodeState] = useState<"checking" | "available" | "unavailable" | "finished">(
-    nextTarget ? "checking" : "finished"
+    nextTarget ? "available" : "finished"
   );
   const runtimeMinutes = Number.parseInt(item.runtime || "", 10);
   const fallbackDurationSeconds =
@@ -117,16 +118,6 @@ export default function PlayerDrawer({
         ? nextLabel
         : "Prossimo episodio non disponibile";
   const isNextEpisodeAvailable = nextEpisodeState === "available";
-
-  const isEpisodeReleased = (ep?: Episode | null) => {
-    if (!ep?.air_date) return false;
-    const airDate = new Date(ep.air_date);
-    if (Number.isNaN(airDate.getTime())) return false;
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    airDate.setHours(0, 0, 0, 0);
-    return airDate <= today;
-  };
 
   const markEpisodeWatched = () => {
     if (!onEpisodeWatched) return;
@@ -287,18 +278,18 @@ export default function PlayerDrawer({
       return;
     }
 
-    setNextEpisodeState("checking");
+    if (isEpisodeTargetBlockedByKnownFuture(nextTarget, item)) {
+      setNextEpisodeState("unavailable");
+      return;
+    }
+
+    setNextEpisodeState("available");
 
     fetchSeasonEpisodes(item.tmdbId, nextTarget.season)
       .then((episodes) => {
         if (!isActive) return;
         const nextEpisode = episodes.find((entry) => entry.episode_number === nextTarget.episode) as Episode | undefined;
-        if (!nextEpisode) {
-          setNextEpisodeState("unavailable");
-          return;
-        }
-
-        if (!isEpisodeReleased(nextEpisode)) {
+        if (hasFutureAirDate(nextEpisode)) {
           setNextEpisodeState("unavailable");
           return;
         }
@@ -308,7 +299,7 @@ export default function PlayerDrawer({
       .catch((error) => {
         logDevError("Errore controllo prossimo episodio", error);
         if (!isActive) return;
-        setNextEpisodeState("unavailable");
+        setNextEpisodeState("available");
       });
 
     return () => {
