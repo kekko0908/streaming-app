@@ -7,9 +7,20 @@ function configuredOrigins() {
     .filter(Boolean);
 }
 
+function configuredOriginSuffixes() {
+  return (Deno.env.get("ALLOWED_ORIGIN_SUFFIXES") ?? "")
+    .split(",")
+    .map((suffix) => suffix.trim().toLowerCase())
+    .filter((suffix) => suffix.startsWith("-") && suffix.endsWith(".vercel.app"));
+}
+
 export function getCorsHeaders(req: Request) {
   const origin = req.headers.get("Origin") ?? "";
-  const allowed = LOCAL_ORIGIN.test(origin) || configuredOrigins().includes(origin);
+  let hostname = "";
+  try { hostname = new URL(origin).hostname.toLowerCase(); } catch { hostname = ""; }
+  const allowed = LOCAL_ORIGIN.test(origin)
+    || configuredOrigins().includes(origin)
+    || configuredOriginSuffixes().some((suffix) => hostname.endsWith(suffix));
   return {
     "Access-Control-Allow-Origin": allowed ? origin : "null",
     "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-cron-secret",
