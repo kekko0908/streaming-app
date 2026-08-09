@@ -8,6 +8,7 @@ import { logDevError } from "../utils/logging";
 import YouTube from 'react-youtube';
 import { useExclusiveTrailerPlayback } from "../hooks/useExclusiveTrailerPlayback";
 import { Icon } from "./ui/Icon";
+import { CardActions } from "./card/CardActions";
 
 interface CardProps {
   item: TmdbItem;
@@ -460,67 +461,18 @@ export default function Card({ item, onClick, progress, onRemove, isUpcoming, sh
                     )}
                 </div>
                 <div className="expanded-info-container">
-                    <div className="expanded-actions-row">
-                        <div className="expanded-primary-actions">
-                            <button className="exp-btn-play" onClick={handleDirectPlay} title="Riproduci">
-                                <svg width="24" height="24" viewBox="0 0 24 24" fill="black"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
-                            </button>
-                            <div className="expanded-list-control">
-                                <button className={`exp-btn-list ${isInList ? "active" : ""}`} type="button" onClick={handleListBtnClick} title="Gestisci lista">
-                                    {isInList ? (
-                                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
-                                    ) : (
-                                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-                                    )}
-                                </button>
-                                
-                                {showListMenu && (
-                                    <div className="list-dropdown-menu" onClick={e => e.stopPropagation()}>
-                                        <button 
-                                            className={item.status === 'da-guardare' ? 'active-status' : ''} 
-                                            onClick={(e) => handleSelectStatus(e, 'da-guardare')}
-                                        >
-                                            Da guardare
-                                        </button>
-                                        <button 
-                                            className={item.status === 'in-corso' ? 'active-status' : ''} 
-                                            onClick={(e) => handleSelectStatus(e, 'in-corso')}
-                                        >
-                                            In corso
-                                        </button>
-                                        <button 
-                                            className={item.status === 'gia-guardato' ? 'active-status' : ''} 
-                                            onClick={(e) => handleSelectStatus(e, 'gia-guardato')}
-                                        >
-                                            Già guardato
-                                        </button>
-                                        
-                                        {isInList && (
-                                            <button className="remove-btn" onClick={handleRemoveFromListClick}>
-                                                Rimuovi dalla lista
-                                            </button>
-                                        )}
-                                    </div>
-                                )}
-                            </div>
-                            <button
-                              className={`exp-btn-notify ${hasReleaseNotification ? "active" : ""}`}
-                              type="button"
-                              onClick={handleNotificationClick}
-                              title={hasReleaseNotification ? "Notifiche attive" : "Avvisami sulle uscite"}
-                            >
-                                <Icon name="bell" size={18} />
-                            </button>
-                            <div className="expanded-title-text" title={item.title}>
-                                {item.title}
-                            </div>
-                        </div>
-                        <div className="expanded-secondary-actions">
-                            <button className="exp-btn-info" onClick={(e) => { e.stopPropagation(); onClick(); }} title="Altre info">
-                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
-                            </button>
-                        </div>
-                    </div>
+                    <CardActions
+                      item={item}
+                      isInList={isInList}
+                      showListMenu={showListMenu}
+                      hasNotification={hasReleaseNotification}
+                      onPlay={handleDirectPlay}
+                      onToggleList={handleListBtnClick}
+                      onSelectStatus={handleSelectStatus}
+                      onRemove={handleRemoveFromListClick}
+                      onToggleNotification={handleNotificationClick}
+                      onInfo={(event) => { event.stopPropagation(); onClick(); }}
+                    />
 
                     {expandedDetailsReady ? (
                         <div className="expanded-details-header">
