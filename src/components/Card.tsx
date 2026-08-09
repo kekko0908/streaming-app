@@ -118,6 +118,7 @@ export default function Card({ item, onClick, progress, onRemove, isUpcoming, sh
   };
 
   const handleMouseEnter = () => {
+    if (variant !== "portrait") return;
     if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
     if (isCoveredByNav()) {
       setIsHoverBlocked(true);
@@ -398,9 +399,31 @@ export default function Card({ item, onClick, progress, onRemove, isUpcoming, sh
               <button className="pill tiny danger card-remove-button" onClick={(e) => { e.stopPropagation(); onRemove(); }}>Rimuovi</button>
             )}
           </div>
+
+          {variant === "landscape" && (
+            <div className="card-landscape-panel" onClick={(event) => event.stopPropagation()}>
+              <CardActions
+                item={item}
+                isInList={isInList}
+                showListMenu={showListMenu}
+                hasNotification={hasReleaseNotification}
+                onPlay={handleDirectPlay}
+                onToggleList={handleListBtnClick}
+                onSelectStatus={handleSelectStatus}
+                onRemove={handleRemoveFromListClick}
+                onToggleNotification={handleNotificationClick}
+                onInfo={(event) => { event.stopPropagation(); onClick(); }}
+              />
+              <div className="card-landscape-meta">
+                {item.year && <span>{item.year}</span>}
+                {item.rating > 0 && <strong>{item.rating.toFixed(1)}</strong>}
+                {item.genres?.slice(0, 2).map((genre) => <span key={genre}>{genre}</span>)}
+              </div>
+            </div>
+          )}
         </article>
 
-        {isExpanded && (
+        {isExpanded && variant === "portrait" && (
             <div
               ref={expandedModalRef}
               className={`card-expanded-modal card-expanded-modal--${expandedAlignment}`}

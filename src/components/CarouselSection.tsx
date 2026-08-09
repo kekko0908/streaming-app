@@ -5,6 +5,7 @@ import Card from "./Card";
 
 interface CarouselProps {
   title: string;
+  description?: string;
   icon?: string;
   items: TmdbItem[];
   onSelect: (item: TmdbItem) => void;
@@ -14,7 +15,7 @@ interface CarouselProps {
   variant?: "portrait" | "landscape" | "ranked";
 }
 
-export default function CarouselSection({ title, icon, items, onSelect, isUpcoming, formatDate, getProgress, variant = "portrait" }: CarouselProps) {
+export default function CarouselSection({ title, description, icon, items, onSelect, isUpcoming, formatDate, getProgress, variant = "portrait" }: CarouselProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
 
   if (!items || items.length === 0) return null;
@@ -43,12 +44,15 @@ export default function CarouselSection({ title, icon, items, onSelect, isUpcomi
     <section className={`carousel-wrapper carousel-wrapper--${variant}`}>
       <div className="carousel-header">
         {icon && <span className="carousel-icon">{icon}</span>}
-        <h3 className="carousel-title">{title}</h3>
+        <div>
+          <h3 className="carousel-title">{title}</h3>
+          {description && <p className="carousel-description">{description}</p>}
+        </div>
       </div>
 
       <button className="carousel-btn left" onClick={() => scroll("left")}>{"<"}</button>
 
-      <div className="carousel-track" ref={scrollRef}>
+      <div className={`carousel-track carousel-track--${variant}`} ref={scrollRef}>
         {items.map((item, index) => (
           <div key={`${item.tmdbId}-${index}`} className={`carousel-item carousel-item--${variant}`}>
             <Card 

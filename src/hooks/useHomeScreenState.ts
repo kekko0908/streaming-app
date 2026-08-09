@@ -22,6 +22,15 @@ type HomeScreenLists = {
   action: TmdbItem[];
   animation: TmdbItem[];
   horror: TmdbItem[];
+  comedy: TmdbItem[];
+  thriller: TmdbItem[];
+  scienceFiction: TmdbItem[];
+  fantasy: TmdbItem[];
+  crime: TmdbItem[];
+  documentary: TmdbItem[];
+  family: TmdbItem[];
+  romance: TmdbItem[];
+  mystery: TmdbItem[];
   newReleases: TmdbItem[];
   digitalReleases: TmdbItem[];
 };
@@ -34,6 +43,15 @@ const EMPTY_HOME_LISTS: HomeScreenLists = {
   action: [],
   animation: [],
   horror: [],
+  comedy: [],
+  thriller: [],
+  scienceFiction: [],
+  fantasy: [],
+  crime: [],
+  documentary: [],
+  family: [],
+  romance: [],
+  mystery: [],
   newReleases: [],
   digitalReleases: [],
 };
@@ -58,7 +76,7 @@ export function useHomeScreenState({
 
     async function loadData() {
       try {
-        const [trending, rawUpcoming, popular, newReleases, digitalReleases, drama, action, animation, horror] = await Promise.all([
+        const [trending, rawUpcoming, popular, newReleases, digitalReleases, drama, action, animation, horror, comedy, thriller, scienceFiction, fantasy, crime, documentary, family, romance, mystery] = await Promise.all([
           fetchTrending(),
           fetchUpcomingFromStore("IT"),
           fetchPopularMovies("IT"),
@@ -68,6 +86,15 @@ export function useHomeScreenState({
           fetchByGenre(28, "movie"),
           fetchByGenre(16, "movie"),
           fetchByGenre(27, "movie"),
+          fetchByGenre(35, "movie"),
+          fetchByGenre(53, "movie"),
+          fetchByGenre(878, "movie"),
+          fetchByGenre(14, "movie"),
+          fetchByGenre(80, "movie"),
+          fetchByGenre(99, "movie"),
+          fetchByGenre(10751, "movie"),
+          fetchByGenre(10749, "movie"),
+          fetchByGenre(9648, "movie"),
         ]);
 
         const realUpcoming = rawUpcoming.filter((item) =>
@@ -84,6 +111,15 @@ export function useHomeScreenState({
           action: action || [],
           animation: animation || [],
           horror: horror || [],
+          comedy: comedy || [],
+          thriller: thriller || [],
+          scienceFiction: scienceFiction || [],
+          fantasy: fantasy || [],
+          crime: crime || [],
+          documentary: documentary || [],
+          family: family || [],
+          romance: romance || [],
+          mystery: mystery || [],
           newReleases: newReleases || [],
           digitalReleases: digitalReleases || [],
         });

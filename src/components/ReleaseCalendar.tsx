@@ -1,26 +1,13 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { MouseEvent } from "react";
 import { motion } from "framer-motion";
 import { SavedItem, TmdbItem } from "../types/types";
 import { Icon } from "./ui/Icon";
-import { getDateKey } from "../utils/release";
+import { fetchCalendarUpcoming, fetchDetails } from "../utils/api";
+import { buildReleaseCalendarEvents, type ReleaseCalendarEvent } from "../utils/releaseCalendar";
 import "../css/releaseCalendar.css";
 
 type CalendarMode = "day" | "week" | "month";
-
-type ReleaseEvent = {
-  id: string;
-  date: string;
-  kind: "movie" | "episode";
-  title: string;
-  subtitle: string;
-  meta: string;
-  genres: string;
-  description: string;
-  provenance: string;
-  poster: string;
-  item: TmdbItem;
-};
 
 const MONTHS = ["Gennaio", "Febbraio", "Marzo", "Aprile", "Maggio", "Giugno", "Luglio", "Agosto", "Settembre", "Ottobre", "Novembre", "Dicembre"];
 const WEEK_DAYS = ["LUN", "MAR", "MER", "GIO", "VEN", "SAB", "DOM"];
@@ -64,51 +51,6 @@ function formatLongDate(date: Date) {
   return new Intl.DateTimeFormat("it-IT", { weekday: "long", day: "numeric", month: "long" }).format(date);
 }
 
-function buildEvents(upcoming: TmdbItem[], myList: SavedItem[]) {
-  const events = new Map<string, ReleaseEvent>();
-  const todayKey = getDateKey();
-
-  upcoming.forEach((item) => {
-    const releaseDate = item.releaseInfo?.date;
-    if (!releaseDate || item.releaseInfo?.verification !== "verified_it" || item.releaseInfo.kind !== "digital" || releaseDate < todayKey) return;
-    const id = `movie-${item.tmdbId}-${releaseDate}`;
-    events.set(id, {
-      id,
-      date: releaseDate,
-      kind: "movie",
-      title: item.title,
-      subtitle: "Film",
-      meta: "",
-      genres: item.genres?.slice(0, 2).join(", ") || "Fantascienza, Avventura",
-      description: item.overview || "Disponibile in uscita.",
-      provenance: "Uscita digitale Italia · verificata TMDB",
-      poster: item.poster,
-      item,
-    });
-  });
-
-  myList.forEach((item) => {
-    const episode = item.nextEpisodeToAir;
-    if (!episode?.air_date || episode.air_date < todayKey) return;
-    const id = `episode-${item.tmdbId}-${episode.air_date}-${episode.season_number || 0}-${episode.episode_number}`;
-    events.set(id, {
-      id,
-      date: episode.air_date,
-      kind: "episode",
-      title: item.title,
-      subtitle: "Nuovo episodio",
-      meta: `S${episode.season_number || 1} • Ep. ${episode.episode_number}`,
-      genres: item.genres?.slice(0, 2).join(", ") || "Fantasy, Mistero",
-      description: episode.overview || item.overview || "Nuovo episodio in arrivo.",
-      provenance: "Messa in onda originale · TMDB",
-      poster: item.poster,
-      item,
-    });
-  });
-
-  return Array.from(events.values()).sort((a, b) => a.date.localeCompare(b.date));
-}
-
 function getVisibleDays(anchorDate: Date, mode: CalendarMode) {
   if (mode === "day") return [anchorDate];
   if (mode === "week") {
@@ -137,7 +79,7 @@ function moveDate(anchorDate: Date, mode: CalendarMode, direction: -1 | 1) {
   return addMonths(anchorDate, direction);
 }
 
-function EventChip({ event, compact, onSelect }: { event: ReleaseEvent; compact?: boolean; onSelect: (item: TmdbItem) => void }) {
+function EventChip({ event, compact, onSelect }: { event: ReleaseCalendarEvent; compact?: boolean; onSelect: (item: TmdbItem) => void }) {
   return (
     <span className={`calendar-event-chip ${compact ? "compact" : ""}`} onClick={(eventClick: MouseEvent<HTMLSpanElement>) => {
       eventClick.stopPropagation();
@@ -158,9 +100,47 @@ export default function ReleaseCalendar({ upcoming, myList, onSelect }: { upcomi
   const [anchorDate, setAnchorDate] = useState(() => new Date());
   const [selectedDateKey, setSelectedDateKey] = useState(() => toDateKey(new Date()));
   const [isExpanded, setIsExpanded] = useState(false);
+  const [calendarMovies, setCalendarMovies] = useState<TmdbItem[]>(upcoming);
+  const [calendarSeries, setCalendarSeries] = useState<SavedItem[]>(myList);
+  const [isLoadingCalendar, setIsLoadingCalendar] = useState(true);
+  const [calendarError, setCalendarError] = useState(false);
+  const didFocusFirstEvent = useRef(false);
 
-  const events = useMemo(() => buildEvents(upcoming, myList), [upcoming, myList]);
-  const eventsByDay = useMemo(() => events.reduce<Record<string, ReleaseEvent[]>>((acc, event) => {
+  useEffect(() => {
+    let active = true;
+
+    async function loadCalendarData() {
+      setIsLoadingCalendar(true);
+      setCalendarError(false);
+      const savedSeries = myList.filter((item) => item.type === "tv");
+      const missingEpisodeData = savedSeries.filter((item) => !item.nextEpisodeToAir).slice(0, 24);
+
+      const [movieResult, seriesResults] = await Promise.all([
+        fetchCalendarUpcoming("IT").catch(() => null),
+        Promise.allSettled(missingEpisodeData.map((item) => fetchDetails(item.tmdbId, "tv"))),
+      ]);
+
+      if (!active) return;
+      const enrichedById = new Map(
+        seriesResults
+          .filter((result): result is PromiseFulfilledResult<TmdbItem> => result.status === "fulfilled")
+          .map((result) => [result.value.tmdbId, result.value])
+      );
+      setCalendarMovies(movieResult?.length ? movieResult : upcoming);
+      setCalendarSeries(myList.map((item) => {
+        const enriched = enrichedById.get(item.tmdbId);
+        return enriched ? { ...item, ...enriched, status: item.status, addedAt: item.addedAt } : item;
+      }));
+      setCalendarError(movieResult === null);
+      setIsLoadingCalendar(false);
+    }
+
+    loadCalendarData();
+    return () => { active = false; };
+  }, [myList, upcoming]);
+
+  const events = useMemo(() => buildReleaseCalendarEvents(calendarMovies, calendarSeries), [calendarMovies, calendarSeries]);
+  const eventsByDay = useMemo(() => events.reduce<Record<string, ReleaseCalendarEvent[]>>((acc, event) => {
     acc[event.date] = [...(acc[event.date] || []), event];
     return acc;
   }, {}), [events]);
@@ -168,6 +148,21 @@ export default function ReleaseCalendar({ upcoming, myList, onSelect }: { upcomi
   const visibleDays = useMemo(() => getVisibleDays(anchorDate, mode), [anchorDate, mode]);
   const selectedEvents = eventsByDay[selectedDateKey] || [];
   const selectedDate = parseDateKey(selectedDateKey);
+
+  useEffect(() => {
+    if (didFocusFirstEvent.current || isLoadingCalendar || events.length === 0) return;
+    didFocusFirstEvent.current = true;
+    const today = new Date();
+    const hasEventInCurrentMonth = events.some((event) => {
+      const date = parseDateKey(event.date);
+      return date.getFullYear() === today.getFullYear() && date.getMonth() === today.getMonth();
+    });
+    if (!hasEventInCurrentMonth) {
+      const firstDate = parseDateKey(events[0].date);
+      setAnchorDate(firstDate);
+      setSelectedDateKey(events[0].date);
+    }
+  }, [events, isLoadingCalendar]);
   const handleDaySelect = (dateKey: string) => {
     setSelectedDateKey(dateKey);
     setIsExpanded(false);
@@ -183,7 +178,7 @@ export default function ReleaseCalendar({ upcoming, myList, onSelect }: { upcomi
       <section className="release-calendar-hero">
         <div>
           <h1>Calendario <span>Uscite</span></h1>
-          <p>Film con uscita digitale italiana verificata ed episodi delle serie che segui.</p>
+          <p>Date italiane verificate per cinema e digitale; episodi con messa in onda originale.</p>
         </div>
       </section>
 
@@ -213,6 +208,11 @@ export default function ReleaseCalendar({ upcoming, myList, onSelect }: { upcomi
           ))}
         </div>
       </div>
+
+      {isLoadingCalendar && <div className="calendar-data-status">Aggiornamento delle prossime uscite...</div>}
+      {!isLoadingCalendar && calendarError && (
+        <div className="calendar-data-status warning">TMDB non è raggiungibile: sono mostrate le date già sincronizzate.</div>
+      )}
 
       <section className="calendar-shell">
         <div className="calendar-main-panel">
@@ -253,7 +253,7 @@ export default function ReleaseCalendar({ upcoming, myList, onSelect }: { upcomi
           <div className="calendar-legend">
             <span><Icon name="film" size={17} /> Film</span>
             <span><Icon name="tv" size={17} /> Nuovo episodio</span>
-            <p>I film usano la data digitale italiana; gli episodi indicano la messa in onda originale.</p>
+            <p>Film: uscita cinema o pubblicazione digitale italiana. Serie: messa in onda originale.</p>
           </div>
         </div>
 

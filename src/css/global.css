@@ -55,6 +55,29 @@ h1, h2, h3, .carousel-title, .logo-title {
   margin-top: -14vh;
   padding-bottom: 32px;
 }
+.home-genre-divider {
+  margin: 76px 20px 14px;
+  padding: 34px clamp(20px, 4vw, 58px);
+  overflow: hidden;
+  border: 1px solid rgba(74, 232, 255, 0.12);
+  border-radius: 20px;
+  background:
+    radial-gradient(circle at 80% 50%, rgba(74, 232, 255, 0.13), transparent 34%),
+    radial-gradient(circle at 18% 0%, rgba(255, 54, 95, 0.14), transparent 38%),
+    #0b0e10;
+}
+.home-genre-divider span {
+  color: #4ae8ff;
+  font-size: 0.68rem;
+  font-weight: 850;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+.home-genre-divider h2 {
+  margin: 4px 0 0;
+  font-size: clamp(2rem, 4vw, 4rem);
+  line-height: 0.95;
+}
 .security-inline-message { margin: 8px 0 0; font-size: 0.86rem; }
 .security-inline-message.error { color: #ff7690; }
 .security-inline-message.success { color: #6cf3c1; }

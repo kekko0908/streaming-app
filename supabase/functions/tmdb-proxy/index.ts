@@ -12,6 +12,7 @@ type GenrePayload = { action: "genre"; genreId: number; type?: MediaType };
 type PopularMoviesPayload = { action: "popular_movies"; region?: string };
 type PopularTVPayload = { action: "popular_tv" };
 type UpcomingPayload = { action: "upcoming"; region?: string };
+type CalendarUpcomingPayload = { action: "calendar_upcoming"; region?: string };
 type NowPlayingPayload = { action: "now_playing"; region?: string };
 type RecommendationsPayload = { action: "recommendations"; tmdbId: string; type: MediaType };
 type DiscoverPayload = {
@@ -41,6 +42,7 @@ type RequestPayload =
   | PopularMoviesPayload
   | PopularTVPayload
   | UpcomingPayload
+  | CalendarUpcomingPayload
   | NowPlayingPayload
   | RecommendationsPayload
   | DiscoverPayload
@@ -59,7 +61,7 @@ type TmdbItem = {
   releaseInfo?: {
     date?: string;
     region: string;
-    kind: "digital" | "original_airdate" | "unknown";
+    kind: "digital" | "theatrical" | "original_airdate" | "unknown";
     verification: "verified_it" | "original_airdate" | "unknown";
     phase: "upcoming" | "released" | "unknown";
     checkedAt?: string;
@@ -188,6 +190,29 @@ async function fetchItalianDigitalReleaseInfo(tmdbId: string, region = "IT") {
   };
 }
 
+async function fetchItalianCalendarReleaseInfo(tmdbId: string, region = "IT") {
+  const checkedAt = new Date().toISOString();
+  const data = await fetchJson(`movie/${tmdbId}/release_dates`);
+  const country = (data.results || []).find((entry: any) => entry.iso_3166_1 === region);
+  const today = todayInRome();
+  const releases = (country?.release_dates || [])
+    .filter((entry: any) => (Number(entry.type) === 3 || Number(entry.type) === 4) && entry.release_date)
+    .map((entry: any) => ({
+      date: String(entry.release_date).slice(0, 10),
+      region,
+      kind: Number(entry.type) === 4 ? "digital" as const : "theatrical" as const,
+      verification: "verified_it" as const,
+      phase: releasePhase(String(entry.release_date).slice(0, 10)),
+      checkedAt,
+    }))
+    .filter((entry: any) => /^\d{4}-\d{2}-\d{2}$/.test(entry.date) && entry.date >= today)
+    .sort((a: any, b: any) => a.date.localeCompare(b.date));
+
+  return Array.from(
+    new Map(releases.map((entry: any) => [`${entry.kind}:${entry.date}`, entry])).values()
+  ) as Array<NonNullable<TmdbItem["releaseInfo"]>>;
+}
+
 function mapEpisode(raw: Record<string, unknown> | null | undefined) {
   if (!raw) return null;
   return {
@@ -290,7 +315,7 @@ async function fetchUpcoming(region = "IT") {
         region,
         include_adult: "false",
         include_video: "false",
-        sort_by: "release_date.asc",
+        sort_by: "primary_release_date.asc",
         "release_date.gte": today,
         "release_date.lte": maxDate,
         with_release_type: "4",
@@ -304,6 +329,45 @@ async function fetchUpcoming(region = "IT") {
     return { ...item, year: pickYear(releaseInfo.date), releaseDateFull: releaseInfo.date, releaseInfo };
   }));
   return verified.filter(Boolean);
+}
+
+async function fetchCalendarUpcoming(region = "IT") {
+  const today = todayInRome();
+  const maxDate = toIsoDate(addMonths(new Date(), 12));
+  const loadCandidates = (releaseType: "3" | "4") => fetchMultiplePages(
+    "discover/movie",
+    "movie",
+    2,
+    new URLSearchParams({
+      language: "it-IT",
+      region,
+      include_adult: "false",
+      include_video: "false",
+      sort_by: "primary_release_date.asc",
+      "release_date.gte": today,
+      "release_date.lte": maxDate,
+      with_release_type: releaseType,
+    })
+  );
+
+  const [theatrical, digital] = await Promise.all([loadCandidates("3"), loadCandidates("4")]);
+  const candidates = Array.from(
+    new Map([...theatrical, ...digital].map((item) => [item.tmdbId, item])).values()
+  ).slice(0, 36);
+  const verified = await Promise.all(candidates.map(async (item) => {
+    const releases = await fetchItalianCalendarReleaseInfo(item.tmdbId, region).catch(() => []);
+    return releases.map((releaseInfo) => ({
+      ...item,
+      year: pickYear(releaseInfo.date),
+      releaseDateFull: releaseInfo.date,
+      releaseInfo,
+    }));
+  }));
+
+  return verified.flat().sort((a, b) =>
+    String(a.releaseInfo?.date).localeCompare(String(b.releaseInfo?.date)) ||
+    (b.popularity ?? 0) - (a.popularity ?? 0)
+  ).slice(0, 60);
 }
 
 async function fetchTrending() {
@@ -546,6 +610,8 @@ Deno.serve(async (req) => {
         return jsonResponse(200, await fetchMultiplePages("tv/popular", "tv", 1, new URLSearchParams({ language: "it-IT" })));
       case "upcoming":
         return jsonResponse(200, await fetchUpcoming(payload.region ?? "IT"));
+      case "calendar_upcoming":
+        return jsonResponse(200, await fetchCalendarUpcoming(safeRegion(payload.region)));
       case "now_playing":
         return jsonResponse(200, await fetchMultiplePages(
           "movie/now_playing",

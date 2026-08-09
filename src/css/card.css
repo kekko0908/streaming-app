@@ -1074,12 +1074,51 @@
 
 /* Shared card variants keep the existing interaction layer. */
 .card--landscape { aspect-ratio: 16 / 9; border-radius: 12px; }
-.card--landscape .card-info-overlay {
-  opacity: 1;
-  padding-top: 48px;
-  background: linear-gradient(180deg, transparent, rgba(3, 5, 6, 0.94));
+.card--landscape:hover {
+  transform: translateY(-4px);
+  border-color: rgba(74, 232, 255, 0.28);
 }
-.card--landscape .card-info-overlay h3 { font-size: clamp(1rem, 1.5vw, 1.35rem); }
+.card--landscape .card-info-overlay {
+  display: none;
+}
+.card-landscape-panel {
+  position: absolute;
+  inset: auto 0 0;
+  z-index: 9;
+  padding: 36px 14px 13px;
+  background: linear-gradient(180deg, transparent, rgba(4, 6, 8, 0.97) 58%);
+  opacity: 0;
+  transform: translateY(8px);
+  transition: opacity 220ms ease, transform 280ms ease;
+}
+.card--landscape:hover .card-landscape-panel,
+.card--landscape:focus-within .card-landscape-panel {
+  opacity: 1;
+  transform: translateY(0);
+}
+.card-landscape-panel .expanded-actions-row { gap: 8px; }
+.card-landscape-panel .expanded-primary-actions { gap: 7px; }
+.card-landscape-panel .exp-btn-play,
+.card-landscape-panel .exp-btn-list,
+.card-landscape-panel .exp-btn-notify,
+.card-landscape-panel .exp-btn-info {
+  width: 31px;
+  height: 31px;
+  border-width: 1px;
+}
+.card-landscape-panel .expanded-title-text {
+  font-size: clamp(0.82rem, 1.2vw, 1.05rem);
+  white-space: nowrap;
+}
+.card-landscape-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  color: #aeb8c1;
+  font-size: 0.68rem;
+}
+.card-landscape-meta strong { color: #54e7a6; }
 .card-wrapper--ranked { margin-left: 8px; }
 .card--ranked { overflow: visible; }
 .card--ranked > img { border-radius: 16px; overflow: hidden; }
@@ -1101,5 +1140,6 @@
   .card:hover { transform: none; }
   .card-expanded-modal { display: none; }
   .card-info-overlay { opacity: 1; }
+  .card-landscape-panel { opacity: 1; transform: none; }
   .carousel-track { scroll-snap-type: x mandatory; }
 }

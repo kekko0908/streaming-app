@@ -25,6 +25,15 @@ export type HomeLists = {
   action: TmdbItem[];
   animation: TmdbItem[];
   horror: TmdbItem[];
+  comedy: TmdbItem[];
+  thriller: TmdbItem[];
+  scienceFiction: TmdbItem[];
+  fantasy: TmdbItem[];
+  crime: TmdbItem[];
+  documentary: TmdbItem[];
+  family: TmdbItem[];
+  romance: TmdbItem[];
+  mystery: TmdbItem[];
   newReleases: TmdbItem[];
   digitalReleases: TmdbItem[];
 };

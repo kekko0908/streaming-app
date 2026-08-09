@@ -8,7 +8,7 @@ export type ReleaseVerification = "verified_it" | "original_airdate" | "unknown"
 export interface ReleaseInfo {
   date?: string;
   region: string;
-  kind: "digital" | "original_airdate" | "unknown";
+  kind: "digital" | "theatrical" | "original_airdate" | "unknown";
   verification: ReleaseVerification;
   phase: ReleasePhase;
   checkedAt?: string;

@@ -4,6 +4,7 @@ import { getDateKey } from "./release";
 
 const CATALOG_TTL_MS = 30 * 60 * 1000;
 const RELEASE_TTL_MS = 15 * 60 * 1000;
+const CALENDAR_TTL_MS = 6 * 60 * 60 * 1000;
 const requestCache = new Map<string, { expiresAt: number; value: Promise<unknown> }>();
 
 function getCached<T>(key: string, ttlMs: number, loader: () => Promise<T>, force = false): Promise<T> {
@@ -66,6 +67,12 @@ export async function fetchPopularTV(): Promise<TmdbItem[]> {
 export async function fetchUpcoming(region: string = "IT"): Promise<TmdbItem[]> {
   return getCached(`upcoming:${region}`, CATALOG_TTL_MS, () =>
     invokeTmdb<TmdbItem[]>({ action: "upcoming", region })
+  );
+}
+
+export async function fetchCalendarUpcoming(region: string = "IT"): Promise<TmdbItem[]> {
+  return getCached(`calendar-upcoming:${region}`, CALENDAR_TTL_MS, () =>
+    invokeTmdb<TmdbItem[]>({ action: "calendar_upcoming", region })
   );
 }
 

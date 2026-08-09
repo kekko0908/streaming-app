@@ -21,6 +21,15 @@ interface HomeRouteContentProps {
     action: TmdbItem[];
     animation: TmdbItem[];
     horror: TmdbItem[];
+    comedy: TmdbItem[];
+    thriller: TmdbItem[];
+    scienceFiction: TmdbItem[];
+    fantasy: TmdbItem[];
+    crime: TmdbItem[];
+    documentary: TmdbItem[];
+    family: TmdbItem[];
+    romance: TmdbItem[];
+    mystery: TmdbItem[];
     newReleases: TmdbItem[];
     digitalReleases: TmdbItem[];
   };
@@ -96,6 +105,8 @@ function HomeLandingView({
       )}
 
       <div className="home-content-overlap">
+        {session && <CommunityPulse onItemClick={onSelectItem} />}
+
         {session && myList.some((item) => item.status === "in-corso") && (
           <CarouselSection
             title="Continua a guardare"
@@ -107,12 +118,16 @@ function HomeLandingView({
           />
         )}
 
-        <CarouselSection title="Disponibili in digitale" items={homeLists.digitalReleases} onSelect={onSelectItem} variant="landscape" />
+        <CarouselSection
+          title="Nuove uscite digitali"
+          description="Film pubblicati per acquisto, noleggio o streaming digitale in Italia. Data verificata su TMDB."
+          items={homeLists.digitalReleases}
+          onSelect={onSelectItem}
+        />
         <CarouselSection title="Da guardare" items={myList.filter((item) => item.status === "da-guardare")} onSelect={onSelectItem} />
         <CarouselSection title="La mia lista" items={myList} onSelect={onSelectItem} />
         <CarouselSection title="Scelti per te" items={homeLists.popular} onSelect={onSelectItem} />
         <CarouselSection title="Top 10 oggi" items={homeLists.trending.slice(0, 10)} onSelect={onSelectItem} variant="ranked" />
-        {session && <CommunityPulse onItemClick={onSelectItem} />}
         {session && <CommunityShelf onSelect={onSelectItem} />}
         <CarouselSection title="Aggiunti di recente" items={homeLists.newReleases} onSelect={onSelectItem} />
         <CarouselSection title="In arrivo" icon={"\uD83D\uDCC5"} items={homeLists.upcoming} onSelect={onSelectItem} isUpcoming={true} formatDate={formatDate} />
@@ -120,6 +135,19 @@ function HomeLandingView({
         <CarouselSection title="Azione e avventura" items={homeLists.action} onSelect={onSelectItem} />
         <CarouselSection title="Animazione" icon={"\u2728"} items={homeLists.animation} onSelect={onSelectItem} />
         <CarouselSection title="Horror" icon={"\uD83D\uDD6F\uFE0F"} items={homeLists.horror} onSelect={onSelectItem} />
+        <div className="home-genre-divider">
+          <span>Esplora senza limiti</span>
+          <h2>Un genere per ogni serata</h2>
+        </div>
+        <CarouselSection title="Commedie" items={homeLists.comedy} onSelect={onSelectItem} />
+        <CarouselSection title="Thriller" items={homeLists.thriller} onSelect={onSelectItem} />
+        <CarouselSection title="Fantascienza" items={homeLists.scienceFiction} onSelect={onSelectItem} />
+        <CarouselSection title="Fantasy" items={homeLists.fantasy} onSelect={onSelectItem} />
+        <CarouselSection title="Crime" items={homeLists.crime} onSelect={onSelectItem} />
+        <CarouselSection title="Documentari" items={homeLists.documentary} onSelect={onSelectItem} />
+        <CarouselSection title="Per tutta la famiglia" items={homeLists.family} onSelect={onSelectItem} />
+        <CarouselSection title="Romance" items={homeLists.romance} onSelect={onSelectItem} />
+        <CarouselSection title="Mistero" items={homeLists.mystery} onSelect={onSelectItem} />
       </div>
     </div>
   );

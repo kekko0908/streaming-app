@@ -12,14 +12,15 @@
 }
 
 /* SFA cinematic rails */
-.carousel-wrapper--landscape { margin-top: 22px; }
+.carousel-wrapper--landscape { margin-top: 26px; }
 .carousel-title {
   font-size: clamp(1.45rem, 2vw, 2rem);
   letter-spacing: 0.015em;
 }
 .carousel-track { scroll-snap-type: x proximity; }
 .carousel-item--landscape {
-  width: clamp(310px, 34vw, 520px);
+  width: auto;
+  flex-basis: clamp(245px, 22vw, 330px);
   scroll-snap-align: start;
 }
 .carousel-item--ranked {
@@ -38,6 +39,14 @@
   gap: 10px;
   margin-bottom: 15px;
   padding-left: 20px; /* Allineato col padding della pagina */
+}
+
+.carousel-description {
+  max-width: 720px;
+  margin: 4px 0 0;
+  color: #8f9aa5;
+  font-size: 0.82rem;
+  line-height: 1.45;
 }
 
 .carousel-title {
@@ -60,7 +69,7 @@
 /* TRACK SCORREVOLE */
 .carousel-track {
   display: flex;
-  gap: 16px;
+  gap: 10px;
   overflow-x: auto;
   padding: 20px 20px 40px 20px; /* Spazio extra sotto per l'hover delle card */
   
@@ -94,12 +103,23 @@
 .carousel-item {
   flex: 0 0 auto;
   width: 200px;
-  transition: transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+  transition: transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1), flex-basis 0.42s cubic-bezier(0.2, 0.75, 0.2, 1), filter 0.25s ease;
   position: relative;
 }
 
 /* --- NETFLIX PUSH-ASIDE MAGIC (SOLO DESKTOP) --- */
 @media (min-width: 769px) {
+  .carousel-track--landscape:has(.carousel-item:hover) .carousel-item--landscape:not(:hover) {
+    flex-basis: clamp(210px, 17vw, 270px);
+    filter: saturate(0.78) brightness(0.78);
+  }
+
+  .carousel-track--landscape .carousel-item--landscape:hover {
+    flex-basis: clamp(390px, 38vw, 560px);
+    z-index: 20;
+    filter: none;
+  }
+
   /* Quando *qualsiasi* card nel track si espande, tutor trasla a sinistra */
   .carousel-track:has(.card-expanded-modal) .carousel-item {
     transform: translateX(-120px);
@@ -194,9 +214,9 @@
   }
 }
 
-.carousel-item.carousel-item--landscape { width: clamp(310px, 34vw, 520px); }
+.carousel-item.carousel-item--landscape { width: auto; flex-basis: clamp(245px, 22vw, 330px); }
 .carousel-item.carousel-item--ranked { width: 230px; padding-left: 36px; }
 @media (max-width: 768px) {
-  .carousel-item.carousel-item--landscape { width: min(82vw, 360px); }
+  .carousel-item.carousel-item--landscape { width: min(82vw, 360px); flex-basis: min(82vw, 360px); }
   .carousel-item.carousel-item--ranked { width: 176px; padding-left: 24px; }
 }

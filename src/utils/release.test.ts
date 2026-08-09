@@ -32,6 +32,17 @@ describe("release domain", () => {
     const base = { tmdbId: "1", type: "movie" as const, title: "Test", year: "", overview: "", poster: "", backdrop: "", rating: 0 };
     expect(isVerifiedFutureDigitalRelease({ ...base, releaseInfo: buildDigitalReleaseInfo("2026-09-01", "2026-08-09T10:00:00Z") })).toBe(true);
     expect(isVerifiedFutureDigitalRelease({ ...base, releaseInfo: buildDigitalReleaseInfo(undefined, "2026-08-09T10:00:00Z") })).toBe(false);
+    expect(isVerifiedFutureDigitalRelease({
+      ...base,
+      releaseInfo: {
+        date: "2026-09-01",
+        region: "IT",
+        kind: "theatrical",
+        verification: "verified_it",
+        phase: "upcoming",
+        checkedAt: "2026-08-09T10:00:00Z",
+      },
+    })).toBe(false);
   });
 
   it("etichetta la data episodio come messa in onda originale", () => {
