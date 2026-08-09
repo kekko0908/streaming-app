@@ -3,14 +3,16 @@ import { Session } from "@supabase/supabase-js";
 import { TmdbItem } from "../types/types";
 import {
   fetchByGenre,
-  fetchCollection,
+  fetchTrending,
   fetchDetails,
   fetchNowPlaying,
   fetchPopularMovies,
+  fetchRecentlyReleasedDigital,
   fetchUpcomingFromStore,
   searchTmdb,
 } from "../utils/api";
 import { getHomeSpotlightSetting } from "../utils/siteSettings";
+import { classifyDate } from "../utils/release";
 
 type HomeScreenLists = {
   trending: TmdbItem[];
@@ -21,6 +23,7 @@ type HomeScreenLists = {
   animation: TmdbItem[];
   horror: TmdbItem[];
   newReleases: TmdbItem[];
+  digitalReleases: TmdbItem[];
 };
 
 const EMPTY_HOME_LISTS: HomeScreenLists = {
@@ -32,6 +35,7 @@ const EMPTY_HOME_LISTS: HomeScreenLists = {
   animation: [],
   horror: [],
   newReleases: [],
+  digitalReleases: [],
 };
 
 export function useHomeScreenState({
@@ -54,19 +58,21 @@ export function useHomeScreenState({
 
     async function loadData() {
       try {
-        const [trending, rawUpcoming, popular, newReleases, drama, action, animation, horror] = await Promise.all([
-          fetchCollection("trending/all/day"),
+        const [trending, rawUpcoming, popular, newReleases, digitalReleases, drama, action, animation, horror] = await Promise.all([
+          fetchTrending(),
           fetchUpcomingFromStore("IT"),
           fetchPopularMovies("IT"),
           fetchNowPlaying("IT"),
+          fetchRecentlyReleasedDigital("IT").catch(() => []),
           fetchByGenre(18, "movie"),
           fetchByGenre(28, "movie"),
           fetchByGenre(16, "movie"),
           fetchByGenre(27, "movie"),
         ]);
 
-        const today = new Date().toISOString().split("T")[0];
-        const realUpcoming = rawUpcoming.filter((item) => item.releaseDateFull && item.releaseDateFull > today);
+        const realUpcoming = rawUpcoming.filter((item) =>
+          item.releaseInfo?.verification === "verified_it" && classifyDate(item.releaseInfo.date) === "upcoming"
+        );
 
         if (!isActive) return;
 
@@ -79,6 +85,7 @@ export function useHomeScreenState({
           animation: animation || [],
           horror: horror || [],
           newReleases: newReleases || [],
+          digitalReleases: digitalReleases || [],
         });
       } catch (error) {
         console.error(error);

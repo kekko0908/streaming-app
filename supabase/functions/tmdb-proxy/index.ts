@@ -1,12 +1,13 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.49.8";
-import { corsHeaders } from "../_shared/cors.ts";
+import { getCorsHeaders } from "../_shared/cors.ts";
 
 type MediaType = "movie" | "tv";
 
 type SearchPayload = { action: "search"; query: string; type: MediaType };
 type DetailsPayload = { action: "details"; tmdbId: string; type: MediaType };
-type CollectionPayload = { action: "collection"; endpoint: string };
+type TrendingPayload = { action: "trending" };
+type ReleaseInfoPayload = { action: "release_info"; tmdbId: string; region?: string };
 type GenrePayload = { action: "genre"; genreId: number; type?: MediaType };
 type PopularMoviesPayload = { action: "popular_movies"; region?: string };
 type PopularTVPayload = { action: "popular_tv" };
@@ -34,7 +35,8 @@ type SeasonEpisodesPayload = { action: "season_episodes"; tvId: string | number;
 type RequestPayload =
   | SearchPayload
   | DetailsPayload
-  | CollectionPayload
+  | TrendingPayload
+  | ReleaseInfoPayload
   | GenrePayload
   | PopularMoviesPayload
   | PopularTVPayload
@@ -54,6 +56,14 @@ type TmdbItem = {
   title: string;
   year: string;
   releaseDateFull?: string;
+  releaseInfo?: {
+    date?: string;
+    region: string;
+    kind: "digital" | "original_airdate" | "unknown";
+    verification: "verified_it" | "original_airdate" | "unknown";
+    phase: "upcoming" | "released" | "unknown";
+    checkedAt?: string;
+  };
   overview: string;
   poster: string;
   backdrop: string;
@@ -100,11 +110,11 @@ const GENRES_MAP: Record<number, string> = {
   10765: "Sci-Fi & Fantasy", 10766: "Soap", 10767: "Talk", 10768: "War & Politics"
 };
 
-function jsonResponse(status: number, body: unknown) {
+function baseJsonResponse(status: number, body: unknown, headers: Record<string, string>) {
   return new Response(JSON.stringify(body), {
     status,
     headers: {
-      ...corsHeaders,
+      ...headers,
       "Content-Type": "application/json",
     },
   });
@@ -112,6 +122,24 @@ function jsonResponse(status: number, body: unknown) {
 
 function isMediaType(value: unknown): value is MediaType {
   return value === "movie" || value === "tv";
+}
+
+function isPositiveId(value: unknown) {
+  return /^\d+$/.test(String(value ?? "")) && Number(value) > 0;
+}
+
+const ALLOWED_SORTS = new Set([
+  "popularity.asc", "popularity.desc", "primary_release_date.asc", "primary_release_date.desc",
+  "first_air_date.asc", "first_air_date.desc", "vote_average.asc", "vote_average.desc",
+]);
+
+function isSafeInteger(value: unknown, min: number, max: number) {
+  return Number.isInteger(Number(value)) && Number(value) >= min && Number(value) <= max;
+}
+
+function safeRegion(value: unknown) {
+  const region = String(value ?? "IT").trim().toUpperCase();
+  return /^[A-Z]{2}$/.test(region) ? region : "IT";
 }
 
 function pickYear(date?: string) {
@@ -122,6 +150,42 @@ function pickYear(date?: string) {
 function imagePath(path: string | null | undefined, size: string) {
   if (!path) return "";
   return `https://image.tmdb.org/t/p/${size}${path}`;
+}
+
+function todayInRome() {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Europe/Rome",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(new Date());
+  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  return `${values.year}-${values.month}-${values.day}`;
+}
+
+function releasePhase(date?: string) {
+  if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return "unknown" as const;
+  return date <= todayInRome() ? "released" as const : "upcoming" as const;
+}
+
+async function fetchItalianDigitalReleaseInfo(tmdbId: string, region = "IT") {
+  const checkedAt = new Date().toISOString();
+  const data = await fetchJson(`movie/${tmdbId}/release_dates`);
+  const country = (data.results || []).find((entry: any) => entry.iso_3166_1 === region);
+  const digitalDates = (country?.release_dates || [])
+    .filter((entry: any) => Number(entry.type) === 4 && entry.release_date)
+    .map((entry: any) => String(entry.release_date).slice(0, 10))
+    .filter((date: string) => /^\d{4}-\d{2}-\d{2}$/.test(date))
+    .sort();
+  const date = digitalDates[0];
+  return {
+    date,
+    region,
+    kind: date ? "digital" as const : "unknown" as const,
+    verification: date ? "verified_it" as const : "unknown" as const,
+    phase: releasePhase(date),
+    checkedAt,
+  };
 }
 
 function mapEpisode(raw: Record<string, unknown> | null | undefined) {
@@ -217,14 +281,7 @@ async function fetchUpcoming(region = "IT") {
   const today = toIsoDate(new Date());
   const maxDate = toIsoDate(addMonths(new Date(), 12));
 
-  const [officialUpcoming, discoveredUpcoming] = await Promise.all([
-    fetchMultiplePages(
-      "movie/upcoming",
-      "movie",
-      3,
-      new URLSearchParams({ language: "it-IT", region })
-    ),
-    fetchMultiplePages(
+  const discoveredUpcoming = await fetchMultiplePages(
       "discover/movie",
       "movie",
       3,
@@ -233,15 +290,27 @@ async function fetchUpcoming(region = "IT") {
         region,
         include_adult: "false",
         include_video: "false",
-        sort_by: "primary_release_date.asc",
+        sort_by: "release_date.asc",
         "release_date.gte": today,
         "release_date.lte": maxDate,
-        with_release_type: "2|3",
+        with_release_type: "4",
       })
-    ),
-  ]);
+    );
 
-  return sortAndLimitUpcoming([...officialUpcoming, ...discoveredUpcoming]);
+  const candidates = sortAndLimitUpcoming(discoveredUpcoming, 40);
+  const verified = await Promise.all(candidates.map(async (item) => {
+    const releaseInfo = await fetchItalianDigitalReleaseInfo(item.tmdbId, region).catch(() => null);
+    if (!releaseInfo?.date || releaseInfo.phase !== "upcoming") return null;
+    return { ...item, year: pickYear(releaseInfo.date), releaseDateFull: releaseInfo.date, releaseInfo };
+  }));
+  return verified.filter(Boolean);
+}
+
+async function fetchTrending() {
+  const data = await fetchJson("trending/all/day", new URLSearchParams({ language: "it-IT" }));
+  return (data.results || [])
+    .filter((item: any) => isMediaType(item.media_type))
+    .map((item: any) => mapSearchItem(item, item.media_type));
 }
 
 async function fetchPopularMovies(region = "IT") {
@@ -261,7 +330,24 @@ async function fetchPopularMovies(region = "IT") {
 }
 
 async function fetchDetails(tmdbId: string, type: MediaType): Promise<TmdbItem> {
+  if (!isPositiveId(tmdbId) || !isMediaType(type)) throw new Error("Invalid media identifier");
   const data = await fetchJson(`${type}/${tmdbId}`, new URLSearchParams({ language: "it-IT" }));
+  const releaseInfo = type === "movie"
+    ? await fetchItalianDigitalReleaseInfo(tmdbId).catch(() => ({
+        region: "IT",
+        kind: "unknown" as const,
+        verification: "unknown" as const,
+        phase: "unknown" as const,
+        checkedAt: new Date().toISOString(),
+      }))
+    : {
+        date: data.next_episode_to_air?.air_date ? String(data.next_episode_to_air.air_date).slice(0, 10) : undefined,
+        region: "ORIGINAL",
+        kind: data.next_episode_to_air?.air_date ? "original_airdate" as const : "unknown" as const,
+        verification: data.next_episode_to_air?.air_date ? "original_airdate" as const : "unknown" as const,
+        phase: releasePhase(data.next_episode_to_air?.air_date),
+        checkedAt: new Date().toISOString(),
+      };
 
   let runtime = "";
   if (type === "movie") {
@@ -301,7 +387,8 @@ async function fetchDetails(tmdbId: string, type: MediaType): Promise<TmdbItem> 
     type,
     title: type === "movie" ? String(data.title ?? "") : String(data.name ?? ""),
     year: pickYear(type === "movie" ? String(data.release_date ?? "") : String(data.first_air_date ?? "")),
-    releaseDateFull: type === "movie" ? String(data.release_date ?? "") : String(data.first_air_date ?? ""),
+    releaseDateFull: type === "movie" ? (releaseInfo.date || String(data.release_date ?? "")) : String(data.first_air_date ?? ""),
+    releaseInfo,
     overview: String(data.overview ?? "Trama non disponibile in italiano."),
     poster: imagePath(String(data.poster_path ?? ""), "w780"),
     backdrop: imagePath(String(data.backdrop_path ?? ""), "original"),
@@ -390,8 +477,12 @@ async function fetchPersonCredits(personId: number) {
 }
 
 Deno.serve(async (req) => {
+  const corsHeaders = getCorsHeaders(req);
+  const jsonResponse = (status: number, body: unknown) => baseJsonResponse(status, body, corsHeaders);
+  const requestId = crypto.randomUUID();
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   if (req.method !== "POST") return jsonResponse(405, { error: "Method not allowed" });
+  if (Number(req.headers.get("content-length") || 0) > 16_384) return jsonResponse(413, { error: "Payload too large", requestId });
 
   if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
     return jsonResponse(500, { error: "Missing Supabase function secrets" });
@@ -421,20 +512,23 @@ Deno.serve(async (req) => {
   try {
     switch (payload.action) {
       case "search": {
-        if (!payload.query || !isMediaType(payload.type)) return jsonResponse(400, { error: "Invalid search payload" });
-        const data = await fetchJson(`search/${payload.type}`, new URLSearchParams({ language: "it-IT", query: payload.query }));
+        const query = String(payload.query ?? "").trim();
+        if (!query || query.length > 120 || !isMediaType(payload.type)) return jsonResponse(400, { error: "Invalid search payload" });
+        const data = await fetchJson(`search/${payload.type}`, new URLSearchParams({ language: "it-IT", query }));
         return jsonResponse(200, (data.results || []).map((item: any) => mapSearchItem(item, payload.type)));
       }
       case "details":
+        if (!isPositiveId(payload.tmdbId) || !isMediaType(payload.type)) return jsonResponse(400, { error: "Invalid details payload" });
         return jsonResponse(200, await fetchDetails(payload.tmdbId, payload.type));
-      case "collection":
-        return jsonResponse(200, await fetchMultiplePages(
-          payload.endpoint,
-          payload.endpoint.includes("tv") ? "tv" : "movie",
-          1,
-          new URLSearchParams({ language: "it-IT" })
-        ));
-      case "genre":
+      case "release_info":
+        if (!isPositiveId(payload.tmdbId)) return jsonResponse(400, { error: "Invalid release payload" });
+        return jsonResponse(200, await fetchItalianDigitalReleaseInfo(payload.tmdbId, safeRegion(payload.region)));
+      case "trending":
+        return jsonResponse(200, await fetchTrending());
+      case "genre": {
+        if (!isSafeInteger(payload.genreId, 1, 99999) || (payload.type && !isMediaType(payload.type))) {
+          return jsonResponse(400, { error: "Invalid genre payload" });
+        }
         return jsonResponse(200, await fetchMultiplePages(
           `discover/${payload.type ?? "movie"}`,
           payload.type ?? "movie",
@@ -445,6 +539,7 @@ Deno.serve(async (req) => {
             with_genres: String(payload.genreId),
           })
         ));
+      }
       case "popular_movies":
         return jsonResponse(200, await fetchPopularMovies(payload.region ?? "IT"));
       case "popular_tv":
@@ -459,6 +554,7 @@ Deno.serve(async (req) => {
           new URLSearchParams({ language: "it-IT", region: payload.region ?? "IT" })
         ));
       case "recommendations":
+        if (!isPositiveId(payload.tmdbId) || !isMediaType(payload.type)) return jsonResponse(400, { error: "Invalid recommendations payload" });
         return jsonResponse(200, await fetchMultiplePages(
           `${payload.type}/${payload.tmdbId}/recommendations`,
           payload.type,
@@ -466,6 +562,9 @@ Deno.serve(async (req) => {
           new URLSearchParams({ language: "it-IT" })
         ));
       case "discover": {
+        if (!isMediaType(payload.type) || !ALLOWED_SORTS.has(payload.sort) || !isSafeInteger(payload.page ?? 1, 1, 100)) {
+          return jsonResponse(400, { error: "Invalid discover payload" });
+        }
         const params = new URLSearchParams({
           language: "it-IT",
           sort_by: payload.sort,
@@ -489,14 +588,19 @@ Deno.serve(async (req) => {
         return jsonResponse(200, (data.results || []).map((item: any) => mapSearchItem(item, payload.type)));
       }
       case "person_credits":
+        if (!isPositiveId(payload.personId)) return jsonResponse(400, { error: "Invalid person payload" });
         return jsonResponse(200, await fetchPersonCredits(payload.personId));
       case "trailer":
+        if (!isPositiveId(payload.tmdbId) || !isMediaType(payload.type)) return jsonResponse(400, { error: "Invalid trailer payload" });
         return jsonResponse(200, await fetchTrailer(payload.tmdbId, payload.type));
       case "logo":
+        if (!isPositiveId(payload.tmdbId) || !isMediaType(payload.type)) return jsonResponse(400, { error: "Invalid logo payload" });
         return jsonResponse(200, await fetchTitleLogo(payload.tmdbId, payload.type));
       case "credits":
+        if (!isPositiveId(payload.tmdbId) || !isMediaType(payload.type)) return jsonResponse(400, { error: "Invalid credits payload" });
         return jsonResponse(200, await fetchCredits(payload.tmdbId, payload.type));
       case "season_episodes": {
+        if (!isPositiveId(payload.tvId) || !isSafeInteger(payload.seasonNumber, 0, 100)) return jsonResponse(400, { error: "Invalid season payload" });
         const data = await fetchJson(
           `tv/${payload.tvId}/season/${payload.seasonNumber}`,
           new URLSearchParams({ language: "it-IT" })
@@ -507,6 +611,7 @@ Deno.serve(async (req) => {
         return jsonResponse(400, { error: "Unsupported action" });
     }
   } catch (error) {
-    return jsonResponse(500, { error: error instanceof Error ? error.message : "Proxy failed" });
+    console.error("tmdb-proxy", requestId, error);
+    return jsonResponse(500, { error: "Media request failed", requestId });
   }
 });

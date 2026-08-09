@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { TmdbItem } from "../types/types";
-import { fetchDetails, fetchUpcomingReleaseByTmdbId } from "../utils/api";
+import { fetchDetails, fetchReleaseInfo } from "../utils/api";
+import { isVerifiedFutureDigitalRelease } from "../utils/release";
 import { setTrailerPlaybackBlocked } from "../utils/trailerPlayback";
 import { useDirectActions } from "./useDirectActions";
 import { supabase } from "../supabaseClient";
@@ -54,39 +55,24 @@ export function usePlayerController({
     };
   }, [showPlayer]);
 
-  const isUpcomingMovie = (item: TmdbItem) => {
-    if (item.type !== "movie" || !item.releaseDateFull) return false;
-    const releaseDate = item.releaseDateFull.slice(0, 10);
-    const today = new Date();
-    const todayKey = [
-      today.getFullYear(),
-      String(today.getMonth() + 1).padStart(2, "0"),
-      String(today.getDate()).padStart(2, "0"),
-    ].join("-");
-    return releaseDate > todayKey;
-  };
-
   const getPlayableMovieItem = async (item: TmdbItem) => {
     if (item.type !== "movie") return item;
-    try {
-      const [storedUpcoming, freshItem] = await Promise.all([
-        fetchUpcomingReleaseByTmdbId(item.tmdbId).catch(() => null),
-        fetchDetails(item.tmdbId, item.type),
-      ]);
-      const releaseDateFull = storedUpcoming?.releaseDateFull || freshItem.releaseDateFull || item.releaseDateFull;
+    const freshItem = await fetchDetails(item.tmdbId, item.type).catch(() => item);
+    const releaseInfo = await fetchReleaseInfo(item.tmdbId, "IT").catch((error) => {
+      console.warn("Verifica uscita digitale non riuscita: Play resta disponibile", error);
       return {
-        ...item,
-        ...freshItem,
-        releaseDateFull,
-        poster: storedUpcoming?.poster || freshItem.poster || item.poster,
-        backdrop: storedUpcoming?.backdrop || freshItem.backdrop || item.backdrop,
-        progressMinutes: item.progressMinutes,
-        progressSeconds: item.progressSeconds,
-      };
-    } catch (error) {
-      console.warn("Controllo uscita film non riuscito, uso snapshot locale", error);
-      return item;
-    }
+        date: undefined, region: "IT", kind: "unknown", verification: "unknown", phase: "unknown",
+        checkedAt: new Date().toISOString(),
+      } as const;
+    });
+    return {
+      ...item,
+      ...freshItem,
+      releaseInfo,
+      releaseDateFull: releaseInfo.date || freshItem.releaseDateFull || item.releaseDateFull,
+      progressMinutes: item.progressMinutes,
+      progressSeconds: item.progressSeconds,
+    };
   };
 
   const handlePlay = async (season: number, episode: number, item: TmdbItem) => {
@@ -98,7 +84,7 @@ export function usePlayerController({
 
     const playableItem = await getPlayableMovieItem(item);
 
-    if (isUpcomingMovie(playableItem)) {
+    if (isVerifiedFutureDigitalRelease(playableItem)) {
       setUnavailableItem(playableItem);
       return;
     }
@@ -128,12 +114,12 @@ export function usePlayerController({
           return;
         }
 
-        const fullItem = await fetchDetails(item.tmdbId, item.type);
+        const fullItem = await getPlayableMovieItem(await fetchDetails(item.tmdbId, item.type));
         if (typeof item.progressMinutes === "number") fullItem.progressMinutes = item.progressMinutes;
         if (typeof item.progressSeconds === "number") fullItem.progressSeconds = item.progressSeconds;
         setSelected(fullItem);
 
-        if (isUpcomingMovie(fullItem)) {
+        if (isVerifiedFutureDigitalRelease(fullItem)) {
           setUnavailableItem(fullItem);
           return;
         }

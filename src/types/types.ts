@@ -2,6 +2,18 @@ export type MediaType = "movie" | "tv";
 export type WatchStatus = "da-guardare" | "in-corso" | "gia-guardato";
 export type CommunitySortMode = "watched" | "loved";
 
+export type ReleasePhase = "upcoming" | "released" | "unknown";
+export type ReleaseVerification = "verified_it" | "original_airdate" | "unknown";
+
+export interface ReleaseInfo {
+  date?: string;
+  region: string;
+  kind: "digital" | "original_airdate" | "unknown";
+  verification: ReleaseVerification;
+  phase: ReleasePhase;
+  checkedAt?: string;
+}
+
 export type ViewType = "home" | "list" | "archive" | "auth" | "profile" | "ranking" | "suggestions" | "calendar" | "admin";
 
 export interface SuggestionItem {
@@ -120,6 +132,7 @@ export interface TmdbItem {
   title: string;
   year: string;
   releaseDateFull?: string;
+  releaseInfo?: ReleaseInfo;
   overview: string;
   poster: string;
   backdrop: string;

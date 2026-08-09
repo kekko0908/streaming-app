@@ -1,18 +1,21 @@
 import { supabase } from "../supabaseClient";
-import { MediaType, TmdbItem } from "../types/types";
+import { MediaType, ReleaseInfo, TmdbItem } from "../types/types";
+import { getDateKey } from "./release";
 
-const requestCache = new Map<string, Promise<unknown>>();
+const CATALOG_TTL_MS = 30 * 60 * 1000;
+const RELEASE_TTL_MS = 15 * 60 * 1000;
+const requestCache = new Map<string, { expiresAt: number; value: Promise<unknown> }>();
 
-function getCached<T>(key: string, loader: () => Promise<T>): Promise<T> {
-  const cached = requestCache.get(key) as Promise<T> | undefined;
-  if (cached) return cached;
+function getCached<T>(key: string, ttlMs: number, loader: () => Promise<T>, force = false): Promise<T> {
+  const cached = requestCache.get(key);
+  if (!force && cached && cached.expiresAt > Date.now()) return cached.value as Promise<T>;
 
   const nextValue = loader().catch((error) => {
     requestCache.delete(key);
     throw error;
   });
 
-  requestCache.set(key, nextValue);
+  requestCache.set(key, { expiresAt: Date.now() + ttlMs, value: nextValue });
   return nextValue;
 }
 
@@ -26,36 +29,42 @@ export async function searchTmdb(query: string, type: MediaType) {
   return invokeTmdb<TmdbItem[]>({ action: "search", query, type });
 }
 
-export async function fetchDetails(tmdbId: string, type: MediaType): Promise<TmdbItem> {
-  return getCached(`details:${type}:${tmdbId}`, () =>
+export async function fetchDetails(tmdbId: string, type: MediaType, force = false): Promise<TmdbItem> {
+  return getCached(`details:${type}:${tmdbId}`, CATALOG_TTL_MS, () =>
     invokeTmdb<TmdbItem>({ action: "details", tmdbId, type })
+  , force);
+}
+
+export async function fetchTrending(): Promise<TmdbItem[]> {
+  return getCached("trending:all:day", CATALOG_TTL_MS, () =>
+    invokeTmdb<TmdbItem[]>({ action: "trending" })
   );
 }
 
-export async function fetchCollection(endpoint: string): Promise<TmdbItem[]> {
-  return getCached(`collection:${endpoint}`, () =>
-    invokeTmdb<TmdbItem[]>({ action: "collection", endpoint })
-  );
+export async function fetchReleaseInfo(tmdbId: string, region = "IT", force = false): Promise<ReleaseInfo> {
+  return getCached(`release:${region}:${tmdbId}`, RELEASE_TTL_MS, () =>
+    invokeTmdb<ReleaseInfo>({ action: "release_info", tmdbId, region })
+  , force);
 }
 
 export async function fetchByGenre(genreId: number, type: MediaType = "movie"): Promise<TmdbItem[]> {
-  return getCached(`genre:${type}:${genreId}`, () =>
+  return getCached(`genre:${type}:${genreId}`, CATALOG_TTL_MS, () =>
     invokeTmdb<TmdbItem[]>({ action: "genre", genreId, type })
   );
 }
 
 export async function fetchPopularMovies(region: string = "IT"): Promise<TmdbItem[]> {
-  return getCached(`popular-movies:${region}`, () =>
+  return getCached(`popular-movies:${region}`, CATALOG_TTL_MS, () =>
     invokeTmdb<TmdbItem[]>({ action: "popular_movies", region })
   );
 }
 
 export async function fetchPopularTV(): Promise<TmdbItem[]> {
-  return getCached("popular-tv", () => invokeTmdb<TmdbItem[]>({ action: "popular_tv" }));
+  return getCached("popular-tv", CATALOG_TTL_MS, () => invokeTmdb<TmdbItem[]>({ action: "popular_tv" }));
 }
 
 export async function fetchUpcoming(region: string = "IT"): Promise<TmdbItem[]> {
-  return getCached(`upcoming:${region}`, () =>
+  return getCached(`upcoming:${region}`, CATALOG_TTL_MS, () =>
     invokeTmdb<TmdbItem[]>({ action: "upcoming", region })
   );
 }
@@ -73,23 +82,26 @@ function mapUpcomingReleaseRow(row: any): TmdbItem {
     backdrop: row.backdrop || snapshot.backdrop || "",
     overview: snapshot.overview || "",
     rating: Number(snapshot.rating || 0),
+    releaseInfo: {
+      date: row.release_date || undefined,
+      region: row.region || "IT",
+      kind: row.release_kind || "unknown",
+      verification: row.verification || "unknown",
+      phase: row.release_status === "released" ? "released" : row.release_status === "upcoming" ? "upcoming" : "unknown",
+      checkedAt: row.last_checked_at || undefined,
+    },
   } as TmdbItem;
 }
 
 export async function fetchUpcomingReleases(region: string = "IT"): Promise<TmdbItem[]> {
-  const today = new Date();
-  const todayKey = [
-    today.getFullYear(),
-    String(today.getMonth() + 1).padStart(2, "0"),
-    String(today.getDate()).padStart(2, "0"),
-  ].join("-");
+  const todayKey = getDateKey();
 
   const { data, error } = await supabase
     .from("upcoming_releases")
-    .select("tmdb_id, media_type, title, poster, backdrop, release_date, item_snapshot")
+    .select("tmdb_id, media_type, title, poster, backdrop, release_date, region, release_kind, verification, release_status, last_checked_at, item_snapshot")
     .eq("region", region)
     .eq("release_status", "upcoming")
-    .gt("release_date", todayKey)
+    .gte("release_date", todayKey)
     .order("release_date", { ascending: true })
     .limit(80);
 
@@ -97,10 +109,29 @@ export async function fetchUpcomingReleases(region: string = "IT"): Promise<Tmdb
   return (data || []).map(mapUpcomingReleaseRow);
 }
 
+export async function fetchRecentlyReleasedDigital(region: string = "IT"): Promise<TmdbItem[]> {
+  const todayKey = getDateKey();
+  const since = new Date(`${todayKey}T12:00:00Z`);
+  since.setUTCDate(since.getUTCDate() - 120);
+  const { data, error } = await supabase
+    .from("upcoming_releases")
+    .select("tmdb_id, media_type, title, poster, backdrop, release_date, region, release_kind, verification, release_status, last_checked_at, item_snapshot")
+    .eq("region", region)
+    .eq("release_status", "released")
+    .eq("release_kind", "digital")
+    .eq("verification", "verified_it")
+    .gte("release_date", since.toISOString().slice(0, 10))
+    .lte("release_date", todayKey)
+    .order("release_date", { ascending: false })
+    .limit(40);
+  if (error) throw error;
+  return (data || []).map(mapUpcomingReleaseRow);
+}
+
 export async function fetchUpcomingReleaseByTmdbId(tmdbId: string, region: string = "IT"): Promise<TmdbItem | null> {
   const { data, error } = await supabase
     .from("upcoming_releases")
-    .select("tmdb_id, media_type, title, poster, backdrop, release_date, item_snapshot")
+    .select("tmdb_id, media_type, title, poster, backdrop, release_date, region, release_kind, verification, release_status, last_checked_at, item_snapshot")
     .eq("region", region)
     .eq("media_type", "movie")
     .eq("tmdb_id", parseInt(tmdbId, 10))
@@ -111,24 +142,8 @@ export async function fetchUpcomingReleaseByTmdbId(tmdbId: string, region: strin
   return data ? mapUpcomingReleaseRow(data) : null;
 }
 
-export async function refreshUpcomingReleases(region: string = "IT"): Promise<TmdbItem[]> {
-  const { data, error } = await supabase.functions.invoke("refresh-upcoming-releases", {
-    body: { region },
-  });
-  if (error) throw error;
-  const items = Array.isArray((data as any)?.items) ? (data as any).items : [];
-  return items as TmdbItem[];
-}
-
 export async function fetchUpcomingFromStore(region: string = "IT"): Promise<TmdbItem[]> {
-  return getCached(`upcoming-store:${region}`, async () => {
-    try {
-      const refreshed = await refreshUpcomingReleases(region);
-      if (refreshed.length > 0) return refreshed;
-    } catch (error) {
-      console.warn("Refresh upcoming releases non disponibile, uso tabella/fallback TMDB", error);
-    }
-
+  return getCached(`upcoming-store:${region}`, CATALOG_TTL_MS, async () => {
     try {
       const stored = await fetchUpcomingReleases(region);
       if (stored.length > 0) return stored;
@@ -141,13 +156,13 @@ export async function fetchUpcomingFromStore(region: string = "IT"): Promise<Tmd
 }
 
 export async function fetchNowPlaying(region: string = "IT"): Promise<TmdbItem[]> {
-  return getCached(`now-playing:${region}`, () =>
+  return getCached(`now-playing:${region}`, CATALOG_TTL_MS, () =>
     invokeTmdb<TmdbItem[]>({ action: "now_playing", region })
   );
 }
 
 export async function fetchRecommendations(tmdbId: string, type: MediaType): Promise<TmdbItem[]> {
-  return getCached(`recommendations:${type}:${tmdbId}`, () =>
+  return getCached(`recommendations:${type}:${tmdbId}`, CATALOG_TTL_MS, () =>
     invokeTmdb<TmdbItem[]>({ action: "recommendations", tmdbId, type })
   );
 }
@@ -182,13 +197,13 @@ export async function fetchPersonCredits(personId: number): Promise<TmdbItem[]> 
 }
 
 export async function fetchTrailer(tmdbId: string, type: MediaType): Promise<string | null> {
-  return getCached(`trailer:${type}:${tmdbId}`, () =>
+  return getCached(`trailer:${type}:${tmdbId}`, CATALOG_TTL_MS, () =>
     invokeTmdb<string | null>({ action: "trailer", tmdbId, type })
   );
 }
 
 export async function fetchTitleLogo(tmdbId: string, type: MediaType): Promise<string | null> {
-  return getCached(`logo:${type}:${tmdbId}`, () =>
+  return getCached(`logo:${type}:${tmdbId}`, CATALOG_TTL_MS, () =>
     invokeTmdb<string | null>({ action: "logo", tmdbId, type })
   );
 }
@@ -201,13 +216,13 @@ export interface CastMember {
 }
 
 export async function fetchCredits(tmdbId: string, type: MediaType): Promise<CastMember[]> {
-  return getCached(`credits:${type}:${tmdbId}`, () =>
+  return getCached(`credits:${type}:${tmdbId}`, CATALOG_TTL_MS, () =>
     invokeTmdb<CastMember[]>({ action: "credits", tmdbId, type })
   );
 }
 
 export async function fetchSeasonEpisodes(tvId: string | number, seasonNumber: number): Promise<any[]> {
-  return getCached(`season:${tvId}:${seasonNumber}`, () =>
+  return getCached(`season:${tvId}:${seasonNumber}`, CATALOG_TTL_MS, () =>
     invokeTmdb<any[]>({ action: "season_episodes", tvId, seasonNumber })
   );
 }

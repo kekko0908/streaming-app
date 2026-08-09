@@ -90,14 +90,16 @@ export function AppOverlays({
                 className="unavailable-player-poster"
               />
               <div className="unavailable-player-copy">
-                <span className="unavailable-player-kicker">Non ancora disponibile</span>
+                <span className="unavailable-player-kicker">Uscita digitale italiana prevista</span>
                 <h3>{unavailableItem.title}</h3>
                 <div className="unavailable-release-card">
-                  <span>Uscita prevista</span>
-                  <strong>{formatDate(unavailableItem.releaseDateFull) || "Data non confermata"}</strong>
+                  <span>Data verificata su TMDB</span>
+                  <strong>{formatDate(unavailableItem.releaseInfo?.date) || "Data non confermata"}</strong>
                 </div>
                 <p>
-                  Il player sara disponibile quando il film sara uscito e il catalogo streaming avra una fonte valida.
+                  Ultimo controllo: {unavailableItem.releaseInfo?.checkedAt
+                    ? new Intl.DateTimeFormat("it-IT", { dateStyle: "medium", timeStyle: "short" }).format(new Date(unavailableItem.releaseInfo.checkedAt))
+                    : "non disponibile"}. La data non garantisce la disponibilita della fonte del player.
                 </p>
                 <button className="pill solid unavailable-player-action" onClick={onCloseUnavailable}>
                   Torna alla scheda

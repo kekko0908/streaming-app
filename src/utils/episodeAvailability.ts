@@ -1,28 +1,13 @@
 import { Episode, TmdbItem } from "../types/types";
+import { classifyDate, getDateKey, normalizeDateKey } from "./release";
 
 type EpisodeTarget = {
   season: number;
   episode: number;
 };
 
-function todayKey() {
-  const today = new Date();
-  return [
-    today.getFullYear(),
-    String(today.getMonth() + 1).padStart(2, "0"),
-    String(today.getDate()).padStart(2, "0"),
-  ].join("-");
-}
-
-function normalizeDateKey(value?: string | null) {
-  if (!value) return "";
-  const key = value.slice(0, 10);
-  return /^\d{4}-\d{2}-\d{2}$/.test(key) ? key : "";
-}
-
 function isReleasedDate(value?: string | null) {
-  const key = normalizeDateKey(value);
-  return Boolean(key && key <= todayKey());
+  return classifyDate(value) === "released";
 }
 
 function compareEpisodeTarget(left: EpisodeTarget, right: EpisodeTarget) {
@@ -53,14 +38,14 @@ export function isEpisodeTargetBlockedByKnownFuture(target: EpisodeTarget, item?
 
 export function hasFutureAirDate(ep?: Episode | null) {
   const key = normalizeDateKey(ep?.air_date);
-  return Boolean(key && key > todayKey());
+  return Boolean(key && key > getDateKey());
 }
 
 export function isEpisodeReleased(ep: Episode, item?: TmdbItem, fallbackSeason?: number) {
   const target = getEpisodeTarget(ep, fallbackSeason);
   const airDate = normalizeDateKey(ep.air_date);
 
-  if (airDate) return airDate <= todayKey();
+  if (airDate) return classifyDate(airDate) === "released";
   if (isEpisodeTargetBlockedByKnownFuture(target, item)) return false;
 
   return isPastSeries(item);
