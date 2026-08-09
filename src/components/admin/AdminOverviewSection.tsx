@@ -90,9 +90,9 @@ export function AdminOverviewSection({
       </section>
 
       <section className="admin-overview-grid">
-        <CommunityList title="Piu visti" items={overview.topWatched} variant="watched" />
-        <CommunityList title="Piu amati" items={overview.topLoved} variant="loved" />
-        <CommunityList title="Piu completati" items={overview.topCompleted} variant="completed" />
+        <CommunityList title="Più visti" items={overview.topWatched} variant="watched" />
+        <CommunityList title="Più amati" items={overview.topLoved} variant="loved" />
+        <CommunityList title="Più completati" items={overview.topCompleted} variant="completed" />
       </section>
 
       <section className="admin-panel">

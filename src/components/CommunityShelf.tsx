@@ -118,14 +118,14 @@ export default function CommunityShelf({ onSelect }: CommunityShelfProps) {
             className={`community-toggle-btn ${mode === "watched" ? "active" : ""}`}
             onClick={() => setMode("watched")}
           >
-            Piu visti
+            Più visti
           </button>
           <button
             type="button"
             className={`community-toggle-btn ${mode === "loved" ? "active" : ""}`}
             onClick={() => setMode("loved")}
           >
-            Piu amati
+            Più amati
           </button>
         </div>
       </div>

@@ -97,7 +97,7 @@ export function AdminUserDetailDrawer({
                 <strong>{selectedUser.statusBreakdown["da-guardare"] || 0}</strong>
               </article>
               <article>
-                <span>Gia guardato</span>
+                <span>Già guardato</span>
                 <strong>{selectedUser.statusBreakdown["gia-guardato"] || 0}</strong>
               </article>
             </div>

@@ -99,7 +99,7 @@ export function AppOverlays({
                 <p>
                   Ultimo controllo: {unavailableItem.releaseInfo?.checkedAt
                     ? new Intl.DateTimeFormat("it-IT", { dateStyle: "medium", timeStyle: "short" }).format(new Date(unavailableItem.releaseInfo.checkedAt))
-                    : "non disponibile"}. La data non garantisce la disponibilita della fonte del player.
+                    : "non disponibile"}. La data non garantisce la disponibilità della fonte del player.
                 </p>
                 <button className="pill solid unavailable-player-action" onClick={onCloseUnavailable}>
                   Torna alla scheda

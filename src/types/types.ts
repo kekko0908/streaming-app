@@ -177,5 +177,5 @@ export type WatchProgress = {
 export const STATUS_SECTIONS: { id: WatchStatus; label: string }[] = [
   { id: "in-corso", label: "In corso" },
   { id: "da-guardare", label: "Da guardare" },
-  { id: "gia-guardato", label: "Gia guardato" }
+  { id: "gia-guardato", label: "Già guardato" }
 ];

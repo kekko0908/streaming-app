@@ -127,7 +127,7 @@ export function useAppShellState(navigate: (path: string) => void) {
       if (!isActive) return;
 
       if (error) {
-        console.error("Errore lettura novita profilo:", error);
+        console.error("Errore lettura novità profilo:", error);
         setShowUpdates(true);
         return;
       }
@@ -190,7 +190,7 @@ export function useAppShellState(navigate: (path: string) => void) {
           },
           { onConflict: "id" }
         );
-      if (error) console.error("Errore salvataggio novita profilo:", error);
+      if (error) console.error("Errore salvataggio novità profilo:", error);
     }
 
     localStorage.setItem(UPDATES_STORAGE_KEY, UPDATES_VERSION);

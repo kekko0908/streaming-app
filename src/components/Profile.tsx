@@ -381,7 +381,7 @@ export default function Profile() {
 
           <div className="records-grid">
             <div className="record-card primary-record">
-              <span className="record-label">Piu episodi in un giorno</span>
+              <span className="record-label">Più episodi in un giorno</span>
               <strong>{records.max_episodes_day}</strong>
               <small>{formatRecordDate(records.max_episodes_day_date)}</small>
             </div>
