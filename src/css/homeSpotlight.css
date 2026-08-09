@@ -1,11 +1,11 @@
 .home-spotlight {
   position: relative;
-  height: 85vh;
+  height: min(92vh, 980px);
   min-height: 500px;
   margin: -95px -18px 0; /* Aumentato il margine negativo per salire sotto la navbar */
   overflow: hidden;
   isolation: isolate;
-  background: #030407;
+  background: #050607;
   border-bottom: none;
 }
 

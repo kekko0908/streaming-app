@@ -22,6 +22,7 @@ interface HomeRouteContentProps {
     animation: TmdbItem[];
     horror: TmdbItem[];
     newReleases: TmdbItem[];
+    digitalReleases: TmdbItem[];
   };
   spotlightItem?: TmdbItem;
   homeSpotlightReady: boolean;
@@ -83,7 +84,7 @@ function HomeLandingView({
   "session" | "myList" | "homeLists" | "spotlightItem" | "homeSpotlightReady" | "getProgress" | "onPlay" | "onSelectItem"
 >) {
   return (
-    <div style={{ marginTop: "20px" }}>
+    <div className="cinematic-home">
       {homeSpotlightReady ? (
         <HomeSpotlight
           item={spotlightItem}
@@ -94,9 +95,7 @@ function HomeLandingView({
         <section className="home-spotlight" aria-hidden="true" />
       )}
 
-      <div className="home-content-overlap" style={{ position: "relative", zIndex: 10, marginTop: "-12vh", paddingBottom: "20px" }}>
-        {session && <CommunityPulse onItemClick={onSelectItem} />}
-
+      <div className="home-content-overlap">
         {session && myList.some((item) => item.status === "in-corso") && (
           <CarouselSection
             title="Continua a guardare"
@@ -104,17 +103,21 @@ function HomeLandingView({
             items={myList.filter((item) => item.status === "in-corso")}
             onSelect={onSelectItem}
             getProgress={getProgress}
+            variant="landscape"
           />
         )}
 
+        <CarouselSection title="Disponibili in digitale" items={homeLists.digitalReleases} onSelect={onSelectItem} variant="landscape" />
+        <CarouselSection title="Da guardare" items={myList.filter((item) => item.status === "da-guardare")} onSelect={onSelectItem} />
+        <CarouselSection title="La mia lista" items={myList} onSelect={onSelectItem} />
+        <CarouselSection title="Scelti per te" items={homeLists.popular} onSelect={onSelectItem} />
+        <CarouselSection title="Top 10 oggi" items={homeLists.trending.slice(0, 10)} onSelect={onSelectItem} variant="ranked" />
+        {session && <CommunityPulse onItemClick={onSelectItem} />}
         {session && <CommunityShelf onSelect={onSelectItem} />}
-
-        <CarouselSection title="I titoli del momento" icon={"\uD83D\uDD25"} items={homeLists.popular} onSelect={onSelectItem} />
-        <CarouselSection title="Aggiunti di recente" icon={"\uD83C\uDD95"} items={homeLists.newReleases} onSelect={onSelectItem} />
-        <CarouselSection title="Top 10 titoli di oggi" icon={"\uD83D\uDCC8"} items={homeLists.trending.slice(0, 10)} onSelect={onSelectItem} />
+        <CarouselSection title="Aggiunti di recente" items={homeLists.newReleases} onSelect={onSelectItem} />
         <CarouselSection title="In arrivo" icon={"\uD83D\uDCC5"} items={homeLists.upcoming} onSelect={onSelectItem} isUpcoming={true} formatDate={formatDate} />
         <CarouselSection title="Dramma" icon={"\uD83C\uDFAD"} items={homeLists.drama} onSelect={onSelectItem} />
-        <CarouselSection title="Azione e Avventura" icon={"\uD83D\uDCA5"} items={homeLists.action} onSelect={onSelectItem} />
+        <CarouselSection title="Azione e avventura" items={homeLists.action} onSelect={onSelectItem} />
         <CarouselSection title="Animazione" icon={"\u2728"} items={homeLists.animation} onSelect={onSelectItem} />
         <CarouselSection title="Horror" icon={"\uD83D\uDD6F\uFE0F"} items={homeLists.horror} onSelect={onSelectItem} />
       </div>

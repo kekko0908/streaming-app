@@ -1,17 +1,16 @@
 /* src/css/global.css */
-@import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap");
-
 :root {
-  --bg-color: #050508;
-  --bg-color-light: #0d0e15;
-  --text-color: #e2e8f0;
-  --text-muted: #94a3b8;
-  --primary: #00e6ff;
-  --primary-glow: #00e6ffaa;
-  --secondary: #ff005a;
-  --secondary-glow: #ff005aaa;
-  --glass-bg: rgba(13, 14, 21, 0.65);
-  --border-color: rgba(255, 255, 255, 0.06);
+  --bg-color: #050607;
+  --bg-color-light: #101316;
+  --surface-raised: #171b1f;
+  --text-color: #f6f8f9;
+  --text-muted: #9ca7ad;
+  --primary: #4ae8ff;
+  --primary-glow: #4ae8ff88;
+  --secondary: #ff365f;
+  --secondary-glow: #ff365f88;
+  --glass-bg: rgba(5, 6, 7, 0.76);
+  --border-color: rgba(255, 255, 255, 0.09);
   --accent: #8b5cf6;
 }
 
@@ -28,10 +27,9 @@ body {
   margin: 0;
   min-height: 100vh;
   background-color: var(--bg-color);
-  background-image: 
-    radial-gradient(circle at 20% 20%, rgba(0, 230, 255, 0.12), transparent 30%),
-    radial-gradient(circle at 85% 30%, rgba(139, 92, 246, 0.15), transparent 40%),
-    radial-gradient(circle at 50% 80%, rgba(255, 0, 90, 0.08), transparent 30%);
+  background-image:
+    radial-gradient(circle at 14% 6%, rgba(74, 232, 255, 0.08), transparent 28%),
+    radial-gradient(circle at 88% 32%, rgba(255, 54, 95, 0.07), transparent 34%);
   background-attachment: fixed;
   font-family: "Space Grotesk", system-ui, -apple-system, sans-serif;
   color: var(--text-color);
@@ -44,6 +42,33 @@ body {
   max-width: none;
   margin: 0 0 80px;
   padding: 16px 18px 72px;
+}
+
+h1, h2, h3, .carousel-title, .logo-title {
+  font-family: "Barlow Condensed", "Space Grotesk Variable", sans-serif;
+}
+
+.cinematic-home { margin-top: 20px; }
+.home-content-overlap {
+  position: relative;
+  z-index: 10;
+  margin-top: -14vh;
+  padding-bottom: 32px;
+}
+.security-inline-message { margin: 8px 0 0; font-size: 0.86rem; }
+.security-inline-message.error { color: #ff7690; }
+.security-inline-message.success { color: #6cf3c1; }
+.session-action-buttons { display: grid; gap: 10px; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  .home-spotlight-bg-video { display: none !important; }
+  .home-spotlight-backdrop { opacity: 1 !important; }
 }
 
 button, input, select {

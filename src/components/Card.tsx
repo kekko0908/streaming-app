@@ -18,6 +18,8 @@ interface CardProps {
   showRating?: boolean;
   formatDate?: (d?: string) => string;
   onTypeChange?: (nextType: MediaType) => void;
+  variant?: "portrait" | "landscape" | "ranked";
+  rank?: number;
 }
 
 function getRatingColor(rating: number) {
@@ -36,7 +38,7 @@ function formatProgressTime(totalSeconds: number) {
   return `${minutes}:${String(seconds).padStart(2, "0")}`;
 }
 
-export default function Card({ item, onClick, progress, onRemove, isUpcoming, showRating, formatDate, onTypeChange }: CardProps) {
+export default function Card({ item, onClick, progress, onRemove, isUpcoming, showRating, formatDate, onTypeChange, variant = "portrait", rank }: CardProps) {
   
   const [trailerKey, setTrailerKey] = useState<string | null>(null);
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
@@ -321,21 +323,23 @@ export default function Card({ item, onClick, progress, onRemove, isUpcoming, sh
 
   return (
     <div
-      className={`card-wrapper ${isHoverBlocked ? 'is-hover-blocked' : ''}`}
+      className={`card-wrapper card-wrapper--${variant} ${isHoverBlocked ? 'is-hover-blocked' : ''}`}
       ref={cardWrapperRef}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
     >
         <article 
-            className={`card ${isCompleted ? 'is-completed' : ''}`} 
+            className={`card card--${variant} ${isCompleted ? 'is-completed' : ''}`}
             onClick={onClick}
         >
           <img 
-            src={getTmdbImageUrl(item.poster, "w500", "https://via.placeholder.com/500x750")} 
+            src={getTmdbImageUrl(variant === "landscape" ? (item.backdrop || item.poster) : item.poster, variant === "landscape" ? "w780" : "w500", "https://via.placeholder.com/500x750")}
             alt={item.title} 
             loading="lazy" 
             decoding="async"
           />
+
+          {variant === "ranked" && rank && <span className="card-rank" aria-label={`Posizione ${rank}`}>{rank}</span>}
 
           <span
             className={`card-notification-button ${hasReleaseNotification ? "active" : ""}`}
@@ -372,8 +376,8 @@ export default function Card({ item, onClick, progress, onRemove, isUpcoming, sh
             <div className="resume-progress-badge">Riprendi da {formatProgressTime(tvResumeSeconds)}</div>
           )}
 
-          {isUpcoming && item.releaseDateFull && formatDate && (
-             <div className="upcoming-date">{formatDate(item.releaseDateFull)}</div>
+          {isUpcoming && item.releaseInfo?.date && formatDate && (
+             <div className="upcoming-date">{formatDate(item.releaseInfo.date)}</div>
           )}
 
           {(effectiveProgress !== null && effectiveProgress !== undefined && (effectiveProgress > 0 || (item.type === 'tv' && progress))) && (

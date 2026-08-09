@@ -11,9 +11,10 @@ interface CarouselProps {
   isUpcoming?: boolean;
   formatDate?: (d?: string) => string;
   getProgress?: (tmdbId: string) => { season: number; episode: number; watchedEpisodes?: number; totalEpisodes?: number; progressSeconds?: number; progressMinutes?: number };
+  variant?: "portrait" | "landscape" | "ranked";
 }
 
-export default function CarouselSection({ title, icon, items, onSelect, isUpcoming, formatDate, getProgress }: CarouselProps) {
+export default function CarouselSection({ title, icon, items, onSelect, isUpcoming, formatDate, getProgress, variant = "portrait" }: CarouselProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
 
   if (!items || items.length === 0) return null;
@@ -39,7 +40,7 @@ export default function CarouselSection({ title, icon, items, onSelect, isUpcomi
   };
 
   return (
-    <div className="carousel-wrapper">
+    <section className={`carousel-wrapper carousel-wrapper--${variant}`}>
       <div className="carousel-header">
         {icon && <span className="carousel-icon">{icon}</span>}
         <h3 className="carousel-title">{title}</h3>
@@ -49,7 +50,7 @@ export default function CarouselSection({ title, icon, items, onSelect, isUpcomi
 
       <div className="carousel-track" ref={scrollRef}>
         {items.map((item, index) => (
-          <div key={`${item.tmdbId}-${index}`} className="carousel-item">
+          <div key={`${item.tmdbId}-${index}`} className={`carousel-item carousel-item--${variant}`}>
             <Card 
                 item={item} 
                 onClick={() => onSelect(item)} 
@@ -57,12 +58,14 @@ export default function CarouselSection({ title, icon, items, onSelect, isUpcomi
                 formatDate={formatDate}
                 showRating={false}
                 progress={item.type === "tv" && getProgress ? getProgress(item.tmdbId) : undefined}
+                variant={variant}
+                rank={variant === "ranked" ? index + 1 : undefined}
             />
           </div>
         ))}
       </div>
 
       <button className="carousel-btn right" onClick={() => scroll("right")}>{">"}</button>
-    </div>
+    </section>
   );
 }

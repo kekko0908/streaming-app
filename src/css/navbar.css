@@ -9,9 +9,18 @@
   gap: 20px;
   padding: 12px 24px;
   margin: -16px -18px 24px;
-  background: var(--glass-bg);
+  background: rgba(5, 6, 7, 0.08);
   border-bottom: 1px solid var(--border-color);
-  backdrop-filter: blur(12px);
+  backdrop-filter: blur(2px);
+  transition: padding 220ms ease, background 220ms ease, backdrop-filter 220ms ease, box-shadow 220ms ease;
+}
+
+.nav.nav--scrolled {
+  padding-top: 7px;
+  padding-bottom: 7px;
+  background: rgba(5, 6, 7, 0.94);
+  backdrop-filter: blur(18px) saturate(1.25);
+  box-shadow: 0 12px 35px rgba(0, 0, 0, 0.34);
 }
 
 .nav-left {

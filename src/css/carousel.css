@@ -11,6 +11,27 @@
   }
 }
 
+/* SFA cinematic rails */
+.carousel-wrapper--landscape { margin-top: 22px; }
+.carousel-title {
+  font-size: clamp(1.45rem, 2vw, 2rem);
+  letter-spacing: 0.015em;
+}
+.carousel-track { scroll-snap-type: x proximity; }
+.carousel-item--landscape {
+  width: clamp(310px, 34vw, 520px);
+  scroll-snap-align: start;
+}
+.carousel-item--ranked {
+  width: 230px;
+  padding-left: 36px;
+  scroll-snap-align: start;
+}
+@media (max-width: 768px) {
+  .carousel-item--landscape { width: min(82vw, 360px); }
+  .carousel-item--ranked { width: 176px; padding-left: 24px; }
+}
+
 .carousel-header {
   display: flex;
   align-items: center;
@@ -20,7 +41,7 @@
 }
 
 .carousel-title {
-  font-size: 1.4rem;
+  font-size: clamp(1.45rem, 2vw, 2rem);
   font-weight: 700;
   color: #fff;
   margin: 0;
@@ -171,4 +192,11 @@
     width: 140px; /* Card leggermente più piccole */
     scroll-snap-align: start;
   }
+}
+
+.carousel-item.carousel-item--landscape { width: clamp(310px, 34vw, 520px); }
+.carousel-item.carousel-item--ranked { width: 230px; padding-left: 36px; }
+@media (max-width: 768px) {
+  .carousel-item.carousel-item--landscape { width: min(82vw, 360px); }
+  .carousel-item.carousel-item--ranked { width: 176px; padding-left: 24px; }
 }

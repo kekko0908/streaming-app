@@ -26,6 +26,7 @@ export type HomeLists = {
   animation: TmdbItem[];
   horror: TmdbItem[];
   newReleases: TmdbItem[];
+  digitalReleases: TmdbItem[];
 };
 
 export function AppRoutes({

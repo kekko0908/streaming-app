@@ -77,15 +77,16 @@ export function DetailRouteContent({
       setActorCredits([]);
       return;
     }
+    const currentRoute = routeInfo;
 
     let isActive = true;
 
     async function loadDetailFromRoute() {
       try {
-        const fullItem = await fetchDetails(routeInfo.tmdbId, routeInfo.type);
+        const fullItem = await fetchDetails(currentRoute.tmdbId, currentRoute.type);
         const [recsResult, castResult] = await Promise.allSettled([
-          fetchRecommendations(routeInfo.tmdbId, routeInfo.type),
-          fetchCredits(routeInfo.tmdbId, routeInfo.type),
+          fetchRecommendations(currentRoute.tmdbId, currentRoute.type),
+          fetchCredits(currentRoute.tmdbId, currentRoute.type),
         ]);
 
         if (!isActive) return;

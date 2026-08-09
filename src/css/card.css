@@ -1071,3 +1071,35 @@
   0% { transform: translateX(-100%); }
   100% { transform: translateX(100%); }
 }
+
+/* Shared card variants keep the existing interaction layer. */
+.card--landscape { aspect-ratio: 16 / 9; border-radius: 12px; }
+.card--landscape .card-info-overlay {
+  opacity: 1;
+  padding-top: 48px;
+  background: linear-gradient(180deg, transparent, rgba(3, 5, 6, 0.94));
+}
+.card--landscape .card-info-overlay h3 { font-size: clamp(1rem, 1.5vw, 1.35rem); }
+.card-wrapper--ranked { margin-left: 8px; }
+.card--ranked { overflow: visible; }
+.card--ranked > img { border-radius: 16px; overflow: hidden; }
+.card-rank {
+  position: absolute;
+  left: -48px;
+  bottom: -17px;
+  z-index: 7;
+  color: #050607;
+  font-family: "Barlow Condensed", sans-serif;
+  font-size: 9rem;
+  font-weight: 700;
+  line-height: 1;
+  -webkit-text-stroke: 2px rgba(255, 255, 255, 0.82);
+  text-shadow: 0 12px 24px rgba(0, 0, 0, 0.8);
+  pointer-events: none;
+}
+@media (hover: none), (pointer: coarse) {
+  .card:hover { transform: none; }
+  .card-expanded-modal { display: none; }
+  .card-info-overlay { opacity: 1; }
+  .carousel-track { scroll-snap-type: x mandatory; }
+}
