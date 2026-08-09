@@ -49,9 +49,18 @@ export function parseMediaRoute(pathname: string): { type: "movie" | "tv"; tmdbI
   };
 }
 
+const VIXSRC_BASE_URL = String(import.meta.env.VITE_VIXSRC_BASE_URL || "https://vixsrc.to")
+  .replace(/\/+$/, "");
+
 export function buildEmbedUrl(tmdbId: string, type: string, season: number, episode: number, startAt?: number) {
-  const timeParam = startAt ? `?startAt=${Math.floor(startAt)}` : "";
-  return type === "tv"
-    ? `https://vixsrc.to/tv/${tmdbId}/${season}/${episode}${timeParam}`
-    : `https://vixsrc.to/movie/${tmdbId}${timeParam}`;
+  const path = type === "tv"
+    ? `${VIXSRC_BASE_URL}/tv/${tmdbId}/${season}/${episode}`
+    : `${VIXSRC_BASE_URL}/movie/${tmdbId}`;
+  const params = new URLSearchParams({ lang: "it" });
+
+  if (Number.isFinite(startAt) && Number(startAt) > 0) {
+    params.set("startAt", String(Math.floor(Number(startAt))));
+  }
+
+  return `${path}?${params.toString()}`;
 }

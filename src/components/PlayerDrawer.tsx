@@ -1,6 +1,6 @@
 /* src/components/PlayerDrawer.tsx */
 import { useState, useRef, useEffect } from "react";
-import { buildEmbedUrl, formatDate, getTmdbImageUrl } from "../utils/helper";
+import { buildEmbedUrl } from "../utils/helper";
 import { fetchSeasonEpisodes } from "../utils/api";
 import { hasFutureAirDate, isEpisodeTargetBlockedByKnownFuture } from "../utils/episodeAvailability";
 import { logDevError } from "../utils/logging";
@@ -26,42 +26,6 @@ interface PlayerProps {
     nextTarget?: { season: number; episode: number } | null
   ) => void;
   startAt?: number;
-}
-
-function UnavailablePlayerState({ item, onRetry }: { item: TmdbItem; onRetry: () => void }) {
-  const releaseLabel = item.releaseDateFull ? formatDate(item.releaseDateFull) : "Data non confermata";
-
-  return (
-    <div className="unavailable-player unavailable-player-inline">
-      <div
-        className="unavailable-player-art"
-        style={{ backgroundImage: `url(${getTmdbImageUrl(item.backdrop || item.poster, "w1280")})` }}
-        aria-hidden="true"
-      />
-      <div className="unavailable-player-scrim" aria-hidden="true" />
-      <div className="unavailable-player-content">
-        <img
-          src={getTmdbImageUrl(item.poster, "w500")}
-          alt={`Poster ${item.title}`}
-          className="unavailable-player-poster"
-        />
-        <div className="unavailable-player-copy">
-          <span className="unavailable-player-kicker">Catalogo non disponibile</span>
-          <h3>{item.title}</h3>
-          <div className="unavailable-release-card">
-            <span>{item.releaseDateFull ? "Data di uscita" : "Uscita"}</span>
-            <strong>{releaseLabel}</strong>
-          </div>
-          <p>
-            Il film risulta uscito, ma la sorgente streaming non ha ancora un player valido per questo titolo.
-          </p>
-          <button className="pill solid unavailable-player-action" onClick={onRetry}>
-            Riprova player
-          </button>
-        </div>
-      </div>
-    </div>
-  );
 }
 
 export default function PlayerDrawer({ 
@@ -97,9 +61,6 @@ export default function PlayerDrawer({
   const durationRef = useRef(0);
   const currentProgressRef = useRef(item.progressSeconds || 0);
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
-  const playerSignalRef = useRef(false);
-  const [catalogUnavailable, setCatalogUnavailable] = useState(false);
-  const [forceShowPlayer, setForceShowPlayer] = useState(false);
   const { previousTarget, nextTarget, nextLabel } = resolveEpisodeNavigation(
     item.seasonsDetails,
     season,
@@ -187,71 +148,41 @@ export default function PlayerDrawer({
   // --- TRACCIAMENTO AUTOMATICO ---
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
-      // Filtro sicurezza (opzionale se conosciamo l'origin esatto)
-      // if (!event.origin.includes('vixsrc.to')) return;
+      if (event.source !== iframeRef.current?.contentWindow) return;
+
+      const iframeOrigin = iframeRef.current?.src
+        ? new URL(iframeRef.current.src).origin
+        : null;
+      if (!iframeOrigin || event.origin !== iframeOrigin) return;
 
       try {
-        if (event.source === iframeRef.current?.contentWindow) {
-          playerSignalRef.current = true;
-          setCatalogUnavailable(false);
-        }
+        const rawPayload = typeof event.data === "string"
+          ? JSON.parse(event.data)
+          : event.data;
+        if (!rawPayload || typeof rawPayload !== "object" || rawPayload.type !== "PLAYER_EVENT") return;
 
-        const data = event.data;
-        
-        // Logica specifica per i messaggi del player
-        // Molti player mandano { event: 'timeupdate', currentTime: 123 }
-        // Altri mandano stringhe
-        const payload = typeof data === "string" && data.trim().startsWith("{")
-          ? JSON.parse(data)
-          : data;
+        const eventPayload = rawPayload.event && typeof rawPayload.event === "object"
+          ? rawPayload.event
+          : rawPayload.data && typeof rawPayload.data === "object"
+            ? rawPayload.data
+            : null;
+        if (!eventPayload) return;
 
-        let time = 0;
-        if (typeof payload === 'object' && payload) {
-          const eventName = String(payload.event || payload.type || payload.name || "").toLowerCase();
-          if (eventName.includes("time") || eventName.includes("progress")) {
-            time = Number(payload.currentTime ?? payload.current_time ?? payload.time ?? payload.seconds ?? payload.position ?? 0) || 0;
-          }
-          const duration = Number(payload.duration ?? payload.totalDuration ?? payload.total_duration ?? 0);
-          if (Number.isFinite(duration) && duration > 0) durationRef.current = duration;
-        } else if (typeof data === 'string' && data.startsWith('timeupdate:')) {
-           time = parseFloat(data.split(':')[1]);
-        }
+        const eventName = String(eventPayload.event || "").toLowerCase();
+        const duration = Number(eventPayload.duration ?? 0);
+        const time = Number(eventPayload.currentTime ?? 0);
 
-        if (time > 0) updateProgressFromTime(time);
-      } catch (e) { /* ignore */ }
+        if (Number.isFinite(duration) && duration > 0) durationRef.current = duration;
+        if (Number.isFinite(time) && time > 0) updateProgressFromTime(time);
+        if (eventName === "ended" && item.type === "tv") markEpisodeWatched();
+      } catch {
+        // Ignora messaggi non JSON o non appartenenti al player.
+      }
     };
 
     window.addEventListener('message', handleMessage);
     return () => window.removeEventListener('message', handleMessage);
   }, [fallbackDurationSeconds, item.tmdbId, item.type, onProgressUpdate, onEpisodeWatched, season, episode]);
-
-  useEffect(() => {
-    playerSignalRef.current = false;
-    setCatalogUnavailable(false);
-    setForceShowPlayer(false);
-  }, [item.tmdbId, item.type, season, episode]);
-
-  useEffect(() => {
-    if (item.type !== "movie" || forceShowPlayer) return;
-
-    const timer = window.setTimeout(() => {
-      if (!playerSignalRef.current) setCatalogUnavailable(true);
-    }, 4500);
-
-    return () => window.clearTimeout(timer);
-  }, [item.tmdbId, item.type, season, episode, forceShowPlayer]);
-
-  useEffect(() => {
-    if (showResumePrompt) return;
-
-    const timer = window.setInterval(() => {
-      const completionKey = `${item.tmdbId}-${season}-${episode}`;
-      if (completionSavedRef.current === completionKey) return;
-      updateProgressFromTime(currentProgressRef.current + 1);
-    }, 1000);
-
-    return () => window.clearInterval(timer);
-  }, [fallbackDurationSeconds, item.tmdbId, item.type, onProgressUpdate, onEpisodeWatched, season, episode, showResumePrompt]);
 
   const handleResume = () => {
     setShowResumePrompt(false);
@@ -483,27 +414,16 @@ export default function PlayerDrawer({
                 </div>
             </div>
             
-            {!catalogUnavailable && (
-                <iframe
-                    ref={iframeRef}
-                    key={`${season}-${episode}-${showResumePrompt}`}
-                    src={buildEmbedUrl(item.tmdbId, item.type, season, episode, showResumePrompt ? 0 : (startAt || item.progressSeconds))}
-                    allowFullScreen
-                    title="Player"
-                    className="video-frame"
-                />
-            )}
-
-            {catalogUnavailable && (
-                <UnavailablePlayerState
-                    item={item}
-                    onRetry={() => {
-                      playerSignalRef.current = true;
-                      setForceShowPlayer(true);
-                      setCatalogUnavailable(false);
-                    }}
-                />
-            )}
+            <iframe
+                ref={iframeRef}
+                key={`${season}-${episode}-${showResumePrompt}`}
+                src={buildEmbedUrl(item.tmdbId, item.type, season, episode, showResumePrompt ? 0 : (startAt || item.progressSeconds))}
+                allow="autoplay; fullscreen; encrypted-media; picture-in-picture"
+                allowFullScreen
+                referrerPolicy="origin"
+                title="Player"
+                className="video-frame"
+            />
 
             {showResumePrompt && (
                 <div className="resume-overlay animate-fadeIn">
