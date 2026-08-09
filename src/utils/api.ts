@@ -64,6 +64,26 @@ export async function fetchPopularTV(): Promise<TmdbItem[]> {
   return getCached("popular-tv", CATALOG_TTL_MS, () => invokeTmdb<TmdbItem[]>({ action: "popular_tv" }));
 }
 
+export async function fetchCommunityTopTitles(periodDays = 30): Promise<TmdbItem[]> {
+  const safePeriod = Math.min(365, Math.max(1, Math.round(periodDays)));
+  return getCached(`community-top:${safePeriod}`, CATALOG_TTL_MS, async () => {
+    const { data, error } = await supabase.rpc("get_community_top_titles", { period_days: safePeriod });
+    if (error) throw error;
+    return (Array.isArray(data) ? data : []).map((row: any) => ({
+      tmdbId: String(row.tmdb_id),
+      type: row.media_type === "tv" ? "tv" : "movie",
+      title: String(row.title || ""),
+      year: "",
+      overview: "",
+      poster: String(row.poster_path || ""),
+      backdrop: "",
+      rating: Number(row.community_rating || 0),
+      communityWatched: Number(row.watched_count || 0),
+      communityCompleted: Number(row.completed_count || 0),
+    } as TmdbItem));
+  });
+}
+
 export async function fetchUpcoming(region: string = "IT"): Promise<TmdbItem[]> {
   return getCached(`upcoming:${region}`, CATALOG_TTL_MS, () =>
     invokeTmdb<TmdbItem[]>({ action: "upcoming", region })

@@ -23,6 +23,7 @@ export type HomeLists = {
   trending: TmdbItem[];
   upcoming: TmdbItem[];
   popular: TmdbItem[];
+  monthlyTop: TmdbItem[];
   drama: TmdbItem[];
   action: TmdbItem[];
   adventure: TmdbItem[];

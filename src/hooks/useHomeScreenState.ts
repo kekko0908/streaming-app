@@ -3,6 +3,7 @@ import { Session } from "@supabase/supabase-js";
 import { SavedItem, TmdbItem } from "../types/types";
 import {
   fetchByGenre,
+  fetchCommunityTopTitles,
   fetchTrending,
   fetchDetails,
   fetchNowPlaying,
@@ -19,6 +20,7 @@ type HomeScreenLists = {
   trending: TmdbItem[];
   upcoming: TmdbItem[];
   popular: TmdbItem[];
+  monthlyTop: TmdbItem[];
   drama: TmdbItem[];
   action: TmdbItem[];
   adventure: TmdbItem[];
@@ -42,6 +44,7 @@ const EMPTY_HOME_LISTS: HomeScreenLists = {
   trending: [],
   upcoming: [],
   popular: [],
+  monthlyTop: [],
   drama: [],
   action: [],
   adventure: [],
@@ -83,11 +86,12 @@ export function useHomeScreenState({
 
     async function loadCoreData() {
       try {
-        const [trending, rawUpcoming, popular, newReleases] = await Promise.all([
+        const [trending, rawUpcoming, popular, newReleases, communityMonthly] = await Promise.all([
           fetchTrending(),
           fetchUpcomingFromStore("IT"),
           fetchPopularMovies("IT"),
           fetchNowPlaying("IT"),
+          fetchCommunityTopTitles(30).catch(() => []),
         ]);
 
         const realUpcoming = rawUpcoming.filter((item) =>
@@ -95,11 +99,15 @@ export function useHomeScreenState({
         );
 
         if (!isActive) return;
+        const monthlyTop = Array.from(new Map(
+          [...communityMonthly, ...popular].map((item) => [`${item.type}:${item.tmdbId}`, item])
+        ).values()).slice(0, 10);
         setHomeLists((current) => ({
           ...current,
           trending: trending || [],
           upcoming: realUpcoming || [],
           popular: popular || [],
+          monthlyTop,
           newReleases: newReleases || [],
         }));
       } catch (error) {

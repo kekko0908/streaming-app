@@ -18,6 +18,7 @@ interface HomeRouteContentProps {
     trending: TmdbItem[];
     upcoming: TmdbItem[];
     popular: TmdbItem[];
+    monthlyTop: TmdbItem[];
     drama: TmdbItem[];
     action: TmdbItem[];
     adventure: TmdbItem[];
@@ -143,7 +144,7 @@ function HomeLandingView({
           onSelect={onSelectItem}
         />
         <CarouselSection title="Top 10 oggi" items={homeLists.trending.slice(0, 10)} onSelect={onSelectItem} variant="ranked" />
-        <CarouselSection title="Top 10 del mese" items={homeLists.popular.slice(0, 10)} onSelect={onSelectItem} variant="ranked" />
+        <CarouselSection title="Top 10 del mese" items={homeLists.monthlyTop} onSelect={onSelectItem} variant="ranked" />
         {session && <CommunityShelf onSelect={onSelectItem} />}
         <CarouselSection title="Da guardare" items={myList.filter((item) => item.status === "da-guardare")} onSelect={onSelectItem} />
         <CarouselSection title="Aggiunti di recente" items={homeLists.newReleases} onSelect={onSelectItem} />
