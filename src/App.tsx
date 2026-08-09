@@ -10,27 +10,9 @@ import { useReleaseNotifications } from "./hooks/useReleaseNotifications";
 import { useSelectedMedia } from "./hooks/useSelectedMedia";
 import { useStore } from "./hooks/useStore";
 import Navbar from "./components/Navbar";
-import SiteLock from "./components/SiteLock";
 import { AppOverlays } from "./components/app/AppOverlays";
 import { AppRoutes } from "./components/app/AppRoutes";
 import { UPDATES_VERSION, updatesItems } from "./components/app/appUpdates";
-
-function isProtectedAppRoute(pathname: string) {
-  return (
-    pathname === "/" ||
-    pathname === "/profile" ||
-    pathname === "/admin" ||
-    pathname === "/archive" ||
-    pathname === "/archivio" ||
-    pathname === "/list" ||
-    pathname === "/ranking" ||
-    pathname === "/classifica" ||
-    pathname === "/suggestions" ||
-    pathname === "/calendario" ||
-    pathname.startsWith("/film/") ||
-    pathname.startsWith("/serie-tv/")
-  );
-}
 
 export default function App() {
   const location = useLocation();
@@ -140,11 +122,6 @@ export default function App() {
     await handleLogout();
   };
 
-  const isAuthRoute = location.pathname === "/auth";
-  if (!session && !isAuthRoute && isProtectedAppRoute(location.pathname)) {
-    return <SiteLock onLogin={() => navigate("/auth")} />;
-  }
-
   return (
     <div className="app">
       {session && (
@@ -164,7 +141,6 @@ export default function App() {
           releaseNotificationsUnread={releaseNotifications.unreadMessages}
           releaseNotificationsUnreadCount={releaseNotifications.unreadCount}
           onReleaseNotificationRead={releaseNotifications.markRead}
-          onReleaseNotificationsOpen={releaseNotifications.markAllRead}
           onDisableReleaseNotification={releaseNotifications.disableNotifications}
         />
       )}

@@ -6,24 +6,31 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:e2e": "playwright test",
     "preview": "vite preview"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.87.0",
+    "@fontsource-variable/space-grotesk": "^5.3.0",
+    "@fontsource/barlow-condensed": "^5.3.0",
+    "@supabase/supabase-js": "^2.112.2",
     "@vercel/analytics": "^2.0.1",
     "framer-motion": "^12.38.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "react-router-dom": "^7.14.0",
+    "react-router-dom": "^7.18.2",
     "react-youtube": "^10.1.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.62.1",
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",
     "@vitejs/plugin-react": "^6.0.1",
     "agent-browser": "^0.26.0",
     "supabase": "^2.95.0",
     "typescript": "^5.4.5",
-    "vite": "^8.0.10"
+    "vite": "^8.0.10",
+    "vitest": "^4.1.10"
   }
 }

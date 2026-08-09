@@ -23,6 +23,9 @@ export default function Profile() {
   
   // STATI FORM
   const [newPassword, setNewPassword] = useState("");
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [securityMessage, setSecurityMessage] = useState<{ type: "error" | "success"; text: string } | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
 
   // CARICAMENTO INIZIALE
@@ -91,11 +94,42 @@ export default function Profile() {
     setShowAvatarModal(false);
   };
   const handleUpdatePassword = async () => {
+    setSecurityMessage(null);
+    if (!currentPassword) {
+      setSecurityMessage({ type: "error", text: "Inserisci la password attuale." });
+      return;
+    }
+    if (newPassword.length < 12) {
+      setSecurityMessage({ type: "error", text: "La nuova password deve avere almeno 12 caratteri." });
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setSecurityMessage({ type: "error", text: "Le nuove password non coincidono." });
+      return;
+    }
     setActionLoading(true);
-    const { error } = await supabase.auth.updateUser({ password: newPassword });
-    alert(error ? "Errore: " + error.message : "Password aggiornata!");
+    const { error } = await supabase.auth.updateUser({ password: newPassword, current_password: currentPassword });
+    if (error) {
+      setSecurityMessage({ type: "error", text: error.message });
+    } else {
+      await supabase.auth.signOut({ scope: "others" });
+      setSecurityMessage({ type: "success", text: "Password aggiornata. Le altre sessioni sono state revocate." });
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+    }
     setActionLoading(false);
-    setNewPassword("");
+  };
+
+  const handleSessionLogout = async (scope: "local" | "global") => {
+    setActionLoading(true);
+    const { error } = await supabase.auth.signOut({ scope });
+    if (error) {
+      setSecurityMessage({ type: "error", text: error.message });
+      setActionLoading(false);
+      return;
+    }
+    window.location.assign("/auth");
   };
 
   // Click su "Resetta Statistiche" (Apre la conferma)
@@ -446,20 +480,49 @@ export default function Profile() {
             
             <div className="form-group">
                <label>Cambia Password</label>
+               <input
+                 type="password"
+                 placeholder="Password attuale"
+                 value={currentPassword}
+                 onChange={e => setCurrentPassword(e.target.value)}
+                 className="form-input glass-input"
+                 autoComplete="current-password"
+               />
                <input 
                  type="password" 
-                 placeholder="Nuova password..." 
+                 placeholder="Nuova password (minimo 12 caratteri)"
                  value={newPassword} 
                  onChange={e => setNewPassword(e.target.value)} 
                  className="form-input glass-input" 
+                 autoComplete="new-password"
+                 minLength={12}
                />
+               <input
+                 type="password"
+                 placeholder="Conferma nuova password"
+                 value={confirmPassword}
+                 onChange={e => setConfirmPassword(e.target.value)}
+                 className="form-input glass-input"
+                 autoComplete="new-password"
+                 minLength={12}
+               />
+               {securityMessage && <p className={`security-inline-message ${securityMessage.type}`} role="status">{securityMessage.text}</p>}
                <button 
                  className="action-btn btn-primary glass-btn-primary" 
                  onClick={handleUpdatePassword} 
-                 disabled={!newPassword || actionLoading}
+                 disabled={!currentPassword || newPassword.length < 12 || !confirmPassword || actionLoading}
                >
                   {actionLoading ? "..." : "Aggiorna Password"}
                </button>
+            </div>
+
+            <div className="form-group session-actions">
+              <label>Sessioni</label>
+              <p className="warning-text">Durata massima 7 giorni, inattività massima 24 ore su questo dispositivo.</p>
+              <div className="session-action-buttons">
+                <button className="action-btn glass-btn" disabled={actionLoading} onClick={() => handleSessionLogout("local")}>Esci da questo dispositivo</button>
+                <button className="action-btn btn-danger glass-btn-danger" disabled={actionLoading} onClick={() => handleSessionLogout("global")}>Esci da tutti i dispositivi</button>
+              </div>
             </div>
 
             {/* DANGER ZONE */}

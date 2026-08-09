@@ -1,6 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.49.8";
-import { corsHeaders } from "../_shared/cors.ts";
+import { getCorsHeaders } from "../_shared/cors.ts";
 
 type MediaType = "movie" | "tv";
 
@@ -22,12 +22,13 @@ const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 const TMDB_API_KEY = Deno.env.get("TMDB_API_KEY") ?? "";
+const syncWindows = new Map<string, { count: number; startedAt: number }>();
 
-function jsonResponse(status: number, body: unknown) {
+function baseJsonResponse(status: number, body: unknown, headers: Record<string, string>) {
   return new Response(JSON.stringify(body), {
     status,
     headers: {
-      ...corsHeaders,
+      ...headers,
       "Content-Type": "application/json",
     },
   });
@@ -100,6 +101,8 @@ async function fetchTmdbMedia(tmdbId: number, type: MediaType) {
 }
 
 Deno.serve(async (req) => {
+  const corsHeaders = getCorsHeaders(req);
+  const jsonResponse = (status: number, body: unknown) => baseJsonResponse(status, body, corsHeaders);
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
@@ -107,6 +110,8 @@ Deno.serve(async (req) => {
   if (req.method !== "POST") {
     return jsonResponse(405, { error: "Method not allowed" });
   }
+  const requestId = crypto.randomUUID();
+  if (Number(req.headers.get("content-length") || 0) > 4_096) return jsonResponse(413, { error: "Payload too large", requestId });
 
   if (!SUPABASE_URL || !SUPABASE_ANON_KEY || !SUPABASE_SERVICE_ROLE_KEY) {
     return jsonResponse(500, { error: "Missing Supabase function secrets" });
@@ -132,6 +137,16 @@ Deno.serve(async (req) => {
 
   if (userError || !user) {
     return jsonResponse(401, { error: "Invalid JWT" });
+  }
+
+  const now = Date.now();
+  const windowState = syncWindows.get(user.id);
+  if (!windowState || now - windowState.startedAt > 5 * 60_000) {
+    syncWindows.set(user.id, { count: 1, startedAt: now });
+  } else if (windowState.count >= 30) {
+    return jsonResponse(429, { error: "Too many sync requests", requestId });
+  } else {
+    windowState.count += 1;
   }
 
   const adminClient = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
@@ -160,12 +175,14 @@ Deno.serve(async (req) => {
         .upsert(mediaItem, { onConflict: "tmdb_id" });
 
       if (error) {
-        return jsonResponse(500, { error: error.message });
+        console.error("sync-media-item", requestId, error);
+        return jsonResponse(500, { error: "Sync failed", requestId });
       }
 
       return jsonResponse(200, { ok: true, mediaItem });
     } catch (error) {
-      return jsonResponse(500, { error: error instanceof Error ? error.message : "Sync failed" });
+      console.error("sync-media-item", requestId, error);
+      return jsonResponse(500, { error: "Sync failed", requestId });
     }
   }
 

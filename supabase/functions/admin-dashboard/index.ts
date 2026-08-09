@@ -1,6 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.49.8";
-import { corsHeaders } from "../_shared/cors.ts";
+import { getCorsHeaders } from "../_shared/cors.ts";
 
 type MediaType = "movie" | "tv";
 type WatchStatus = "da-guardare" | "in-corso" | "gia-guardato";
@@ -17,11 +17,11 @@ const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 const DEFAULT_AVATAR = "https://api.dicebear.com/7.x/adventurer/svg?seed=Default";
 
-function jsonResponse(status: number, body: Record<string, unknown>) {
+function baseJsonResponse(status: number, body: Record<string, unknown>, headers: Record<string, string>) {
   return new Response(JSON.stringify(body), {
     status,
     headers: {
-      ...corsHeaders,
+      ...headers,
       "Content-Type": "application/json",
     },
   });
@@ -118,6 +118,8 @@ function mapSuggestion(row: Record<string, unknown>) {
 }
 
 Deno.serve(async (req) => {
+  const corsHeaders = getCorsHeaders(req);
+  const jsonResponse = (status: number, body: Record<string, unknown>) => baseJsonResponse(status, body, corsHeaders);
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
