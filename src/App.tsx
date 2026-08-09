@@ -67,6 +67,7 @@ export default function App() {
     setConfiguredSpotlight,
   } = useHomeScreenState({
     session,
+    myList,
     onSearchResultsShown: () => {
       goHome();
       clearSelected();

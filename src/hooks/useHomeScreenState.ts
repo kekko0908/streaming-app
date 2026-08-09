@@ -1,18 +1,19 @@
 import { useEffect, useMemo, useState } from "react";
 import { Session } from "@supabase/supabase-js";
-import { TmdbItem } from "../types/types";
+import { SavedItem, TmdbItem } from "../types/types";
 import {
   fetchByGenre,
   fetchTrending,
   fetchDetails,
   fetchNowPlaying,
   fetchPopularMovies,
-  fetchRecentlyReleasedDigital,
+  fetchPopularTV,
   fetchUpcomingFromStore,
   searchTmdb,
 } from "../utils/api";
 import { getHomeSpotlightSetting } from "../utils/siteSettings";
 import { classifyDate } from "../utils/release";
+import { buildViewingProfile, getGenreId, GenrePreference, rankPersonalizedItems } from "../utils/recommendations";
 
 type HomeScreenLists = {
   trending: TmdbItem[];
@@ -20,6 +21,7 @@ type HomeScreenLists = {
   popular: TmdbItem[];
   drama: TmdbItem[];
   action: TmdbItem[];
+  adventure: TmdbItem[];
   animation: TmdbItem[];
   horror: TmdbItem[];
   comedy: TmdbItem[];
@@ -32,7 +34,8 @@ type HomeScreenLists = {
   romance: TmdbItem[];
   mystery: TmdbItem[];
   newReleases: TmdbItem[];
-  digitalReleases: TmdbItem[];
+  recommendations: TmdbItem[];
+  genreProfile: GenrePreference[];
 };
 
 const EMPTY_HOME_LISTS: HomeScreenLists = {
@@ -41,6 +44,7 @@ const EMPTY_HOME_LISTS: HomeScreenLists = {
   popular: [],
   drama: [],
   action: [],
+  adventure: [],
   animation: [],
   horror: [],
   comedy: [],
@@ -53,14 +57,17 @@ const EMPTY_HOME_LISTS: HomeScreenLists = {
   romance: [],
   mystery: [],
   newReleases: [],
-  digitalReleases: [],
+  recommendations: [],
+  genreProfile: [],
 };
 
 export function useHomeScreenState({
   session,
+  myList,
   onSearchResultsShown,
 }: {
   session: Session | null;
+  myList: SavedItem[];
   onSearchResultsShown?: () => void;
 }) {
   const [query, setQuery] = useState("");
@@ -74,16 +81,38 @@ export function useHomeScreenState({
 
     let isActive = true;
 
-    async function loadData() {
+    async function loadCoreData() {
       try {
-        const [trending, rawUpcoming, popular, newReleases, digitalReleases, drama, action, animation, horror, comedy, thriller, scienceFiction, fantasy, crime, documentary, family, romance, mystery] = await Promise.all([
+        const [trending, rawUpcoming, popular, newReleases] = await Promise.all([
           fetchTrending(),
           fetchUpcomingFromStore("IT"),
           fetchPopularMovies("IT"),
           fetchNowPlaying("IT"),
-          fetchRecentlyReleasedDigital("IT").catch(() => []),
+        ]);
+
+        const realUpcoming = rawUpcoming.filter((item) =>
+          item.releaseInfo?.verification === "verified_it" && classifyDate(item.releaseInfo.date) === "upcoming"
+        );
+
+        if (!isActive) return;
+        setHomeLists((current) => ({
+          ...current,
+          trending: trending || [],
+          upcoming: realUpcoming || [],
+          popular: popular || [],
+          newReleases: newReleases || [],
+        }));
+      } catch (error) {
+        console.error(error);
+      }
+    }
+
+    async function loadGenreRails() {
+      try {
+        const [drama, action, adventure, animation, horror, comedy, thriller, scienceFiction, fantasy, crime, documentary, family, romance, mystery] = await Promise.all([
           fetchByGenre(18, "movie"),
           fetchByGenre(28, "movie"),
+          fetchByGenre(12, "movie"),
           fetchByGenre(16, "movie"),
           fetchByGenre(27, "movie"),
           fetchByGenre(35, "movie"),
@@ -97,18 +126,12 @@ export function useHomeScreenState({
           fetchByGenre(9648, "movie"),
         ]);
 
-        const realUpcoming = rawUpcoming.filter((item) =>
-          item.releaseInfo?.verification === "verified_it" && classifyDate(item.releaseInfo.date) === "upcoming"
-        );
-
         if (!isActive) return;
-
-        setHomeLists({
-          trending: trending || [],
-          upcoming: realUpcoming || [],
-          popular: popular || [],
+        setHomeLists((current) => ({
+          ...current,
           drama: drama || [],
           action: action || [],
+          adventure: adventure || [],
           animation: animation || [],
           horror: horror || [],
           comedy: comedy || [],
@@ -120,19 +143,53 @@ export function useHomeScreenState({
           family: family || [],
           romance: romance || [],
           mystery: mystery || [],
-          newReleases: newReleases || [],
-          digitalReleases: digitalReleases || [],
-        });
+        }));
       } catch (error) {
         console.error(error);
       }
     }
 
-    loadData();
+    loadCoreData();
+    loadGenreRails();
     return () => {
       isActive = false;
     };
   }, [session]);
+
+  const viewingSignature = useMemo(() => myList.map((item) =>
+    `${item.type}:${item.tmdbId}:${item.status}:${item.rating}:${item.watchedEpisodes || 0}:${(item.genres || []).join(",")}`
+  ).join("|"), [myList]);
+
+  useEffect(() => {
+    if (!session) return;
+    let isActive = true;
+
+    async function loadRecommendations() {
+      const profile = buildViewingProfile(myList);
+      const strongestGenres = profile.slice(0, 5);
+      try {
+        const genreCandidates = strongestGenres.length > 0
+          ? await Promise.all(strongestGenres.flatMap((genre) => [
+              fetchByGenre(getGenreId(genre, "movie"), "movie"),
+              fetchByGenre(getGenreId(genre, "tv"), "tv"),
+            ]))
+          : [];
+        const [popularMovies, popularSeries] = await Promise.all([fetchPopularMovies("IT"), fetchPopularTV()]);
+        if (!isActive) return;
+        const candidates = [...genreCandidates.flat(), ...popularMovies, ...popularSeries];
+        setHomeLists((current) => ({
+          ...current,
+          genreProfile: profile,
+          recommendations: rankPersonalizedItems(candidates, myList, profile, 40),
+        }));
+      } catch (error) {
+        console.error("Errore caricamento consigli personalizzati", error);
+      }
+    }
+
+    loadRecommendations();
+    return () => { isActive = false; };
+  }, [session, viewingSignature]);
 
   useEffect(() => {
     if (!session) {

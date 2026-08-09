@@ -1,4 +1,5 @@
 import { useRef } from "react";
+import { Link } from "react-router-dom";
 import "../css/carousel.css";
 import { TmdbItem } from "../types/types";
 import Card from "./Card";
@@ -6,6 +7,8 @@ import Card from "./Card";
 interface CarouselProps {
   title: string;
   description?: string;
+  actionLabel?: string;
+  actionHref?: string;
   icon?: string;
   items: TmdbItem[];
   onSelect: (item: TmdbItem) => void;
@@ -15,7 +18,7 @@ interface CarouselProps {
   variant?: "portrait" | "landscape" | "ranked";
 }
 
-export default function CarouselSection({ title, description, icon, items, onSelect, isUpcoming, formatDate, getProgress, variant = "portrait" }: CarouselProps) {
+export default function CarouselSection({ title, description, actionLabel, actionHref, icon, items, onSelect, isUpcoming, formatDate, getProgress, variant = "portrait" }: CarouselProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
 
   if (!items || items.length === 0) return null;
@@ -43,11 +46,14 @@ export default function CarouselSection({ title, description, icon, items, onSel
   return (
     <section className={`carousel-wrapper carousel-wrapper--${variant}`}>
       <div className="carousel-header">
-        {icon && <span className="carousel-icon">{icon}</span>}
-        <div>
-          <h3 className="carousel-title">{title}</h3>
-          {description && <p className="carousel-description">{description}</p>}
+        <div className="carousel-heading-group">
+          {icon && <span className="carousel-icon">{icon}</span>}
+          <div>
+            <h3 className="carousel-title">{title}</h3>
+            {description && <p className="carousel-description">{description}</p>}
+          </div>
         </div>
+        {actionLabel && actionHref && <Link className="carousel-header-action" to={actionHref}>{actionLabel}</Link>}
       </div>
 
       <button className="carousel-btn left" onClick={() => scroll("left")}>{"<"}</button>

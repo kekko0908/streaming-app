@@ -82,18 +82,28 @@
   100% { box-shadow: 0 0 0 0 rgba(255, 54, 95, 0); }
 }
 
+.activity-viewport {
+  width: 100%;
+  overflow: hidden;
+  mask-image: linear-gradient(90deg, transparent, #000 2.5%, #000 97.5%, transparent);
+}
+
 .activity-track {
   display: flex;
   gap: 8px;
-  width: 100%;
-  overflow-x: auto;
+  width: max-content;
   padding: 6px 22px 18px;
-  scrollbar-width: none;
-  scroll-snap-type: x proximity;
-  overscroll-behavior-inline: contain;
+  animation: sfaLiveMarquee 72s linear infinite;
+  will-change: transform;
 }
 
-.activity-track::-webkit-scrollbar { display: none; }
+.activity-viewport:hover .activity-track,
+.activity-viewport:focus-within .activity-track { animation-play-state: paused; }
+
+@keyframes sfaLiveMarquee {
+  from { transform: translateX(0); }
+  to { transform: translateX(calc(-50% - 4px)); }
+}
 
 .activity-card {
   position: relative;
@@ -224,5 +234,6 @@
 
 @media (prefers-reduced-motion: reduce) {
   .pulse-dot { animation: none; }
+  .activity-track { animation: none; }
   .activity-card, .activity-poster { transition: none; }
 }

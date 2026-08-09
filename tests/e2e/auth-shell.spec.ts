@@ -17,3 +17,9 @@ test("il controllo password è accessibile e non crea overflow orizzontale", asy
   const dimensions = await page.evaluate(() => ({ width: document.documentElement.clientWidth, scroll: document.documentElement.scrollWidth }));
   expect(dimensions.scroll).toBeLessThanOrEqual(dimensions.width);
 });
+
+test("protegge anche la pagina dei consigli personalizzati", async ({ page }) => {
+  await page.goto("/per-te");
+  await expect(page).toHaveURL(/\/auth$/);
+  await expect(page.getByRole("heading", { name: "Area Riservata" })).toBeVisible();
+});

@@ -3,6 +3,7 @@ import { Routes, Route, Navigate, Location } from "react-router-dom";
 import { AnimatePresence } from "framer-motion";
 import { Session } from "@supabase/supabase-js";
 import { SavedItem, TmdbItem, WatchStatus } from "../../types/types";
+import type { GenrePreference } from "../../utils/recommendations";
 import { DeferredSection, PageTransition, RequireAdmin, RequireAuth } from "./AppShell";
 import { DetailRouteContent } from "./DetailRouteContent";
 import { HomeRouteContent } from "./HomeRouteContent";
@@ -16,6 +17,7 @@ const Suggestions = lazy(() => import("../Suggestions"));
 const ReleaseCalendar = lazy(() => import("../ReleaseCalendar"));
 const AdminDashboard = lazy(() => import("../AdminDashboard"));
 const NotFoundPage = lazy(() => import("../NotFoundPage"));
+const PersonalizedRecommendations = lazy(() => import("../PersonalizedRecommendations"));
 
 export type HomeLists = {
   trending: TmdbItem[];
@@ -23,6 +25,7 @@ export type HomeLists = {
   popular: TmdbItem[];
   drama: TmdbItem[];
   action: TmdbItem[];
+  adventure: TmdbItem[];
   animation: TmdbItem[];
   horror: TmdbItem[];
   comedy: TmdbItem[];
@@ -35,7 +38,8 @@ export type HomeLists = {
   romance: TmdbItem[];
   mystery: TmdbItem[];
   newReleases: TmdbItem[];
-  digitalReleases: TmdbItem[];
+  recommendations: TmdbItem[];
+  genreProfile: GenrePreference[];
 };
 
 export function AppRoutes({
@@ -235,6 +239,7 @@ export function AppRoutes({
         <Route path="/ranking" element={<Navigate to="/classifica" replace />} />
         <Route path="/classifica" element={<RequireAuth session={session}><DeferredSection><PageTransition><Ranking /></PageTransition></DeferredSection></RequireAuth>} />
         <Route path="/calendario" element={<RequireAuth session={session}><DeferredSection><PageTransition><ReleaseCalendar upcoming={homeLists.upcoming} myList={myList} onSelect={onSelectItem} /></PageTransition></DeferredSection></RequireAuth>} />
+        <Route path="/per-te" element={<RequireAuth session={session}><DeferredSection><PageTransition><PersonalizedRecommendations items={homeLists.recommendations} profile={homeLists.genreProfile} historyCount={myList.filter((item) => item.status !== "da-guardare").length} onSelect={onSelectItem} /></PageTransition></DeferredSection></RequireAuth>} />
         <Route path="/suggestions" element={<RequireAuth session={session}><DeferredSection><PageTransition><Suggestions onSelect={onSelectItem} session={session} /></PageTransition></DeferredSection></RequireAuth>} />
         <Route path="/404" element={<DeferredSection><PageTransition><NotFoundPage /></PageTransition></DeferredSection>} />
         <Route path="*" element={<DeferredSection><PageTransition><NotFoundPage /></PageTransition></DeferredSection>} />

@@ -1075,7 +1075,7 @@
 /* Shared card variants keep the existing interaction layer. */
 .card--landscape { aspect-ratio: 16 / 9; border-radius: 12px; }
 .card--landscape:hover {
-  transform: translateY(-4px);
+  transform: none;
   border-color: rgba(74, 232, 255, 0.28);
 }
 .card--landscape .card-info-overlay {

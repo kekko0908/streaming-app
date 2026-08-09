@@ -63,6 +63,8 @@ export default function CommunityPulse({ onItemClick }: CommunityPulseProps) {
     });
   };
 
+  const loopActivities = [...activities, ...activities];
+
   return (
     <section className="community-pulse-container" aria-labelledby="sfa-live-title">
       <div className="community-header">
@@ -82,8 +84,9 @@ export default function CommunityPulse({ onItemClick }: CommunityPulseProps) {
       ) : activities.length === 0 ? (
         <div className="community-pulse-empty">Nessuna attività live disponibile in questo momento.</div>
       ) : (
-        <div className="activity-track">
-          {activities.map((activity, index) => {
+        <div className="activity-viewport">
+          <div className="activity-track">
+          {loopActivities.map((activity, index) => {
             const type = activity.media_type === "tv" ? "tv" : "movie";
             const config = getActionConfig(activity, type);
             const maskedName = activity.user_name.includes("@")
@@ -98,6 +101,8 @@ export default function CommunityPulse({ onItemClick }: CommunityPulseProps) {
                 className="activity-card"
                 onClick={() => openActivity(activity)}
                 aria-label={`${maskedName} ${config.text} ${activity.media_title}`}
+                aria-hidden={index >= activities.length}
+                tabIndex={index >= activities.length ? -1 : 0}
               >
                 <img
                   src={getTmdbImageUrl(activity.media_poster, "w500", "https://via.placeholder.com/500x750")}
@@ -127,6 +132,7 @@ export default function CommunityPulse({ onItemClick }: CommunityPulseProps) {
               </button>
             );
           })}
+          </div>
         </div>
       )}
     </section>

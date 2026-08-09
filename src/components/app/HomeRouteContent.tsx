@@ -7,6 +7,7 @@ import CarouselSection from "../CarouselSection";
 import CommunityPulse from "../CommunityPulse";
 import CommunityShelf from "../CommunityShelf";
 import HomeSpotlight from "../HomeSpotlight";
+import type { GenrePreference } from "../../utils/recommendations";
 
 interface HomeRouteContentProps {
   session: Session | null;
@@ -19,6 +20,7 @@ interface HomeRouteContentProps {
     popular: TmdbItem[];
     drama: TmdbItem[];
     action: TmdbItem[];
+    adventure: TmdbItem[];
     animation: TmdbItem[];
     horror: TmdbItem[];
     comedy: TmdbItem[];
@@ -31,7 +33,8 @@ interface HomeRouteContentProps {
     romance: TmdbItem[];
     mystery: TmdbItem[];
     newReleases: TmdbItem[];
-    digitalReleases: TmdbItem[];
+    recommendations: TmdbItem[];
+    genreProfile: GenrePreference[];
   };
   spotlightItem?: TmdbItem;
   homeSpotlightReady: boolean;
@@ -92,6 +95,10 @@ function HomeLandingView({
   HomeRouteContentProps,
   "session" | "myList" | "homeLists" | "spotlightItem" | "homeSpotlightReady" | "getProgress" | "onPlay" | "onSelectItem"
 >) {
+  const recommendationReason = homeLists.genreProfile.length > 0
+    ? `Il tuo profilo di visione: ${homeLists.genreProfile.slice(0, 3).map((genre) => `${genre.label} ${genre.percentage}%`).join(", ")}.`
+    : "Inizia a guardare e valutare qualche titolo: SFA imparerà progressivamente i tuoi gusti.";
+
   return (
     <div className="cinematic-home">
       {homeSpotlightReady ? (
@@ -119,26 +126,36 @@ function HomeLandingView({
         )}
 
         <CarouselSection
-          title="Nuove uscite digitali"
-          description="Film pubblicati per acquisto, noleggio o streaming digitale in Italia. Data verificata su TMDB."
-          items={homeLists.digitalReleases}
+          title="In arrivo"
+          description="Prossime uscite italiane con data verificata."
+          icon={"\uD83D\uDCC5"}
+          items={homeLists.upcoming}
+          onSelect={onSelectItem}
+          isUpcoming={true}
+          formatDate={formatDate}
+        />
+        <CarouselSection
+          title="Scelti per te"
+          description={recommendationReason}
+          actionLabel="Mostra di più"
+          actionHref="/per-te"
+          items={homeLists.recommendations.slice(0, 18)}
           onSelect={onSelectItem}
         />
-        <CarouselSection title="Da guardare" items={myList.filter((item) => item.status === "da-guardare")} onSelect={onSelectItem} />
-        <CarouselSection title="La mia lista" items={myList} onSelect={onSelectItem} />
-        <CarouselSection title="Scelti per te" items={homeLists.popular} onSelect={onSelectItem} />
         <CarouselSection title="Top 10 oggi" items={homeLists.trending.slice(0, 10)} onSelect={onSelectItem} variant="ranked" />
+        <CarouselSection title="Top 10 del mese" items={homeLists.popular.slice(0, 10)} onSelect={onSelectItem} variant="ranked" />
         {session && <CommunityShelf onSelect={onSelectItem} />}
+        <CarouselSection title="Da guardare" items={myList.filter((item) => item.status === "da-guardare")} onSelect={onSelectItem} />
         <CarouselSection title="Aggiunti di recente" items={homeLists.newReleases} onSelect={onSelectItem} />
-        <CarouselSection title="In arrivo" icon={"\uD83D\uDCC5"} items={homeLists.upcoming} onSelect={onSelectItem} isUpcoming={true} formatDate={formatDate} />
-        <CarouselSection title="Dramma" icon={"\uD83C\uDFAD"} items={homeLists.drama} onSelect={onSelectItem} />
-        <CarouselSection title="Azione e avventura" items={homeLists.action} onSelect={onSelectItem} />
-        <CarouselSection title="Animazione" icon={"\u2728"} items={homeLists.animation} onSelect={onSelectItem} />
-        <CarouselSection title="Horror" icon={"\uD83D\uDD6F\uFE0F"} items={homeLists.horror} onSelect={onSelectItem} />
         <div className="home-genre-divider">
           <span>Esplora senza limiti</span>
           <h2>Un genere per ogni serata</h2>
         </div>
+        <CarouselSection title="Dramma" icon={"\uD83C\uDFAD"} items={homeLists.drama} onSelect={onSelectItem} />
+        <CarouselSection title="Azione" items={homeLists.action} onSelect={onSelectItem} />
+        <CarouselSection title="Avventura" items={homeLists.adventure} onSelect={onSelectItem} />
+        <CarouselSection title="Animazione" icon={"\u2728"} items={homeLists.animation} onSelect={onSelectItem} />
+        <CarouselSection title="Horror" icon={"\uD83D\uDD6F\uFE0F"} items={homeLists.horror} onSelect={onSelectItem} />
         <CarouselSection title="Commedie" items={homeLists.comedy} onSelect={onSelectItem} />
         <CarouselSection title="Thriller" items={homeLists.thriller} onSelect={onSelectItem} />
         <CarouselSection title="Fantascienza" items={homeLists.scienceFiction} onSelect={onSelectItem} />
