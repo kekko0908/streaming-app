@@ -19,7 +19,6 @@ interface NavbarProps {
   releaseNotificationsUnread: ReleaseNotificationMessage[];
   releaseNotificationsUnreadCount: number;
   onReleaseNotificationRead: (message: ReleaseNotificationMessage) => void;
-  onReleaseNotificationsOpen: () => void;
   onDisableReleaseNotification: (item: ReleaseNotificationMessage["item"]) => void;
 }
 
@@ -38,7 +37,6 @@ export default function Navbar({
   releaseNotificationsUnread,
   releaseNotificationsUnreadCount,
   onReleaseNotificationRead,
-  onReleaseNotificationsOpen,
   onDisableReleaseNotification,
 }: NavbarProps) {
   const navigate = useNavigate();
@@ -58,6 +56,7 @@ export default function Navbar({
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [isScrolled, setIsScrolled] = useState(false);
   const [releaseToast, setReleaseToast] = useState<ReleaseNotificationMessage | null>(null);
   const dismissedReleaseToastIdsRef = useRef<Set<string>>(new Set());
   const menuRefDesktop = useRef<HTMLDivElement | null>(null);
@@ -68,6 +67,13 @@ export default function Navbar({
   const searchInputRef = useRef<HTMLInputElement | null>(null);
 
   // DEBOUNCE RICERCA
+  useEffect(() => {
+    const updateScrolled = () => setIsScrolled(window.scrollY > 24);
+    updateScrolled();
+    window.addEventListener("scroll", updateScrolled, { passive: true });
+    return () => window.removeEventListener("scroll", updateScrolled);
+  }, []);
+
   useEffect(() => {
     if (query.trim().length > 1) {
       const timer = setTimeout(() => {
@@ -130,11 +136,10 @@ export default function Navbar({
     );
     if (nextToast) {
       setReleaseToast(nextToast);
-      onReleaseNotificationRead(nextToast);
       return;
     }
     setReleaseToast(null);
-  }, [releaseNotificationsUnread, releaseToast, onReleaseNotificationRead]);
+  }, [releaseNotificationsUnread, releaseToast]);
 
   useEffect(() => {
     if (!releaseToast) return;
@@ -189,7 +194,6 @@ export default function Navbar({
       if (next) {
         setIsMenuOpen(false);
         setReleaseToast(null);
-        onReleaseNotificationsOpen();
       }
       return next;
     });
@@ -200,7 +204,6 @@ export default function Navbar({
     setIsSearchOpen(false);
     setIsNotificationsOpen(true);
     setReleaseToast(null);
-    onReleaseNotificationsOpen();
   };
 
   const dismissReleaseToast = () => {
@@ -225,7 +228,7 @@ export default function Navbar({
   };
 
   return (
-    <nav className="nav">
+    <nav className={`nav ${isScrolled ? "nav--scrolled" : "nav--overlay"}`}>
       <div className="nav-left">
         {/* LOGO */}
         <div className="logo" onClick={() => handleMenuNavigate("/")}>
@@ -262,6 +265,7 @@ export default function Navbar({
             {isNotificationsOpen && (
               <NotificationsPanel
                 notifications={releaseNotifications}
+                onRead={onReleaseNotificationRead}
                 onDisable={onDisableReleaseNotification}
               />
             )}
@@ -385,6 +389,7 @@ export default function Navbar({
             {isNotificationsOpen && (
               <NotificationsPanel
                 notifications={releaseNotifications}
+                onRead={onReleaseNotificationRead}
                 onDisable={onDisableReleaseNotification}
               />
             )}
@@ -493,9 +498,11 @@ export default function Navbar({
 
 function NotificationsPanel({
   notifications,
+  onRead,
   onDisable,
 }: {
   notifications: ReleaseNotificationMessage[];
+  onRead: (message: ReleaseNotificationMessage) => void;
   onDisable: (item: ReleaseNotificationMessage["item"]) => void;
 }) {
   return (
@@ -510,12 +517,16 @@ function NotificationsPanel({
       {notifications.length === 0 ? (
         <div className="notifications-empty">
           <Icon name="bell-off" size={22} />
-          <p>Nessuna campanella attiva.</p>
+          <p>Nessun evento di uscita.</p>
         </div>
       ) : (
         <div className="notifications-list">
           {notifications.map((notification) => (
-            <article key={notification.id} className={`notification-row ${notification.kind} ${notification.unread ? "unread" : ""} ${notification.phase === "released" ? "released" : ""}`}>
+            <article
+              key={notification.id}
+              className={`notification-row ${notification.kind} ${notification.unread ? "unread" : ""} ${notification.phase === "released" ? "released" : ""}`}
+              onClick={() => onRead(notification)}
+            >
               <img src={notification.item.poster || "https://via.placeholder.com/80x120"} alt={notification.title} />
               <div>
                 <span>{notification.meta}</span>
@@ -525,7 +536,7 @@ function NotificationsPanel({
               <button
                 type="button"
                 className="notification-dismiss"
-                onClick={() => onDisable(notification.item)}
+                onClick={(event) => { event.stopPropagation(); onDisable(notification.item); }}
                 aria-label={`Disattiva notifiche per ${notification.title}`}
                 title="Disattiva notifiche"
               >

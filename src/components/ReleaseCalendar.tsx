@@ -3,6 +3,7 @@ import type { MouseEvent } from "react";
 import { motion } from "framer-motion";
 import { SavedItem, TmdbItem } from "../types/types";
 import { Icon } from "./ui/Icon";
+import { getDateKey } from "../utils/release";
 import "../css/releaseCalendar.css";
 
 type CalendarMode = "day" | "week" | "month";
@@ -16,6 +17,7 @@ type ReleaseEvent = {
   meta: string;
   genres: string;
   description: string;
+  provenance: string;
   poster: string;
   item: TmdbItem;
 };
@@ -64,20 +66,22 @@ function formatLongDate(date: Date) {
 
 function buildEvents(upcoming: TmdbItem[], myList: SavedItem[]) {
   const events = new Map<string, ReleaseEvent>();
-  const todayKey = toDateKey(new Date());
+  const todayKey = getDateKey();
 
   upcoming.forEach((item) => {
-    if (!item.releaseDateFull || item.releaseDateFull < todayKey) return;
-    const id = `movie-${item.tmdbId}-${item.releaseDateFull}`;
+    const releaseDate = item.releaseInfo?.date;
+    if (!releaseDate || item.releaseInfo?.verification !== "verified_it" || item.releaseInfo.kind !== "digital" || releaseDate < todayKey) return;
+    const id = `movie-${item.tmdbId}-${releaseDate}`;
     events.set(id, {
       id,
-      date: item.releaseDateFull,
+      date: releaseDate,
       kind: "movie",
       title: item.title,
       subtitle: "Film",
       meta: "",
       genres: item.genres?.slice(0, 2).join(", ") || "Fantascienza, Avventura",
       description: item.overview || "Disponibile in uscita.",
+      provenance: "Uscita digitale Italia · verificata TMDB",
       poster: item.poster,
       item,
     });
@@ -96,6 +100,7 @@ function buildEvents(upcoming: TmdbItem[], myList: SavedItem[]) {
       meta: `S${episode.season_number || 1} • Ep. ${episode.episode_number}`,
       genres: item.genres?.slice(0, 2).join(", ") || "Fantasy, Mistero",
       description: episode.overview || item.overview || "Nuovo episodio in arrivo.",
+      provenance: "Messa in onda originale · TMDB",
       poster: item.poster,
       item,
     });
@@ -163,8 +168,6 @@ export default function ReleaseCalendar({ upcoming, myList, onSelect }: { upcomi
   const visibleDays = useMemo(() => getVisibleDays(anchorDate, mode), [anchorDate, mode]);
   const selectedEvents = eventsByDay[selectedDateKey] || [];
   const selectedDate = parseDateKey(selectedDateKey);
-  const nextEvents = events.filter((event) => event.date >= toDateKey(new Date())).slice(0, 5);
-
   const handleDaySelect = (dateKey: string) => {
     setSelectedDateKey(dateKey);
     setIsExpanded(false);
@@ -180,7 +183,7 @@ export default function ReleaseCalendar({ upcoming, myList, onSelect }: { upcomi
       <section className="release-calendar-hero">
         <div>
           <h1>Calendario <span>Uscite</span></h1>
-          <p>Scopri tutti i film e le serie in arrivo. Non perderti nulla.</p>
+          <p>Film con uscita digitale italiana verificata ed episodi delle serie che segui.</p>
         </div>
       </section>
 
@@ -250,7 +253,7 @@ export default function ReleaseCalendar({ upcoming, myList, onSelect }: { upcomi
           <div className="calendar-legend">
             <span><Icon name="film" size={17} /> Film</span>
             <span><Icon name="tv" size={17} /> Nuovo episodio</span>
-            <p>Le date possono subire variazioni. Torna a controllare per aggiornamenti.</p>
+            <p>I film usano la data digitale italiana; gli episodi indicano la messa in onda originale.</p>
           </div>
         </div>
 
@@ -279,7 +282,7 @@ export default function ReleaseCalendar({ upcoming, myList, onSelect }: { upcomi
                       <p>{event.description}</p>
                       <div className="release-availability">
                         <Icon name="clock" size={14} />
-                        <span>Disponibile da mezzanotte</span>
+                        <span>{event.provenance}</span>
                       </div>
                       <button type="button" className="add-list-btn" onClick={() => onSelect(event.item)}>
                         <Icon name="plus" size={14} /> La mia lista
@@ -290,7 +293,7 @@ export default function ReleaseCalendar({ upcoming, myList, onSelect }: { upcomi
               </div>
               {selectedEvents.length > 2 && !isExpanded && (
                 <button type="button" className="view-all-btn" onClick={() => setIsExpanded(true)}>
-                  Vedi tutte le uscite del giorno <Icon name="arrow-right" size={16} />
+                  Vedi tutte le uscite del giorno <Icon name="chevron-right" size={16} />
                 </button>
               )}
             </>
